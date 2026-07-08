@@ -1,0 +1,47 @@
+# PR-Center conventions
+
+Project context and conventions for this repo. See [`docs/pr-center-idea.md`](docs/pr-center-idea.md)
+for the product concept and [`docs/pr-center-state.md`](docs/pr-center-state.md) for the derived
+state machines.
+
+## What this is
+
+A single-user, self-hosted "review inbox" for GitHub PRs awaiting the user's review across
+multiple orgs (PerfectServe, ps-unite) and a personal account (farooq-teqniqly). Read-only
+projection of GitHub state: it never mutates PRs. Runs in Podman/Docker on a workstation.
+
+## Stack
+
+- **Backend:** ASP.NET Core (C#/.NET), hitting the GitHub API directly (REST/GraphQL) — no `gh` CLI dependency.
+- **Frontend:** Blazor Server (interactive C# components; SignalR circuit is the render transport, not a chosen freshness mechanism).
+- **State:** local SQLite/JSON file on a mounted host volume. No external database.
+- **Auth to GitHub:** one fine-grained PAT per owner, entered in-app, encrypted at rest with an app-password-derived key.
+
+## Design invariants
+
+Do not violate these without updating the idea/state docs first:
+
+- **All PR state is evaluated relative to the user only.** Another reviewer's activity never removes a PR from the list; the user's own commits/comments/reviews never flip the "has an update" indicator.
+- **Membership is derived each poll** as a pure function of current GitHub facts — no stored transition FSM.
+- **"Has an update"** = new commits/pushes, new comments/replies, or a new review by another reviewer since last looked. A bare `updatedAt` bump does not count.
+- **Draft PRs are excluded** entirely, even when the user is a requested reviewer.
+- **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
+- **Never mutate PR state** (no approve/comment/request-changes from the app).
+
+## Writing style
+
+- U.S. English spelling and punctuation in all prose, code comments, commit messages, and docs ("color", "behavior", "organize", "center").
+- Do not silently rewrite existing British spellings in unrelated files; flag inconsistencies in files you are already editing.
+- Match the spelling of existing identifiers, public API names, and external/vendor strings exactly.
+
+## Commits
+
+- Conventional Commits, enforced by the `commit-msg` hook (see [README](README.md#commit-message-format)). Format: `<type>(<scope>)!: <description>`.
+- Do not skip hooks (`--no-verify`) unless the user explicitly asks.
+
+## PowerShell authoring rules
+
+Scripts under `docs/` (e.g. `Get-PRQueue.ps1`) target Windows PowerShell 5.1.
+
+- **No em dashes or smart quotes in string literals.** 5.1 reads UTF-8-without-BOM as Windows-1252; em dash (—) and curly quotes corrupt and break parsing. Use `--` or `-`, and straight `"` / `'` only.
+- **`param()` must be the very first statement** in any parameterized script.

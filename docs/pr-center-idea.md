@@ -1,0 +1,74 @@
+# Pull Request Center (PR-Center)
+
+## Problem
+
+A single location where I can see what PR's need reviewing across all repos in all orgs I have access to.
+
+I review 4-6 PR's per day. The PR's are spread across at least 10 repositories in two Github orgs (PerfectServe, ps-unite) as well as my personal account (farooq-teqniqly). I periodically run a Powershell script that gives me a list of PR's needing my review (Get-PRQueue.ps1). I open the PR, make my comments, and submit the review. Rarely, do I approve the PR on first review. I usually have questions if not requests for code changes. When changes are made to the PR, I get an email notification. These notifications pile up and I have to open the email to see which PR changed. I browse to the PR in the browser again and repeat. PR information is spread between the script output, emails, and the Github web site. This gives me more cognitive load that I'd like.
+
+## Goals
+
+- Easily view all PR's needing my approval across multiple github orgs and my personal account.
+- Easily see if a PR has an update.
+- Easily see when the PR was last updated and by who.
+- Easily see when I last updated the PR.
+- The web app should be runnable in Podman/Docker on an engineer's workstation.
+
+## Non-Goals
+
+- Changing the state of the PR, e.g approving, requesting changes, etc.
+- Invoking an in-app AI assistant to review the PR and show me the results.
+
+## Core Concept
+
+A single-user "review inbox" for GitHub pull requests. PR-Center is a self-hosted, containerized web app that consolidates every PR awaiting my review — across multiple orgs and my personal account — into one list, and layers a read-vs-unread model on top of it. It maintains per-PR state (last-seen marker) so it can answer the one question email notifications and the browser can't answer at a glance: *which of my open reviews have changed since I last looked, and when.*
+
+It is strictly a read/triage surface. All review actions (approving, commenting, requesting changes) still happen on GitHub; PR-Center never mutates PR state. Think "notification aggregator + staleness tracker," not "review client." The app is a read-only projection of GitHub state — see [pr-center-state.md](./pr-center-state.md) for the state machines it observes and derives (membership, seen/updated, app lock).
+
+## Scope for v1
+
+- Aggregated list of PRs needing my review across the configured orgs + personal account (PerfectServe, ps-unite, farooq-teqniqly), including PRs I've reviewed (non-approved) that await re-review.
+- Per-PR "has an update since I last looked" indicator, driven by new commits, new comments/replies, or new reviews by others.
+- Each row shows: repo, PR title, author, PR number, update badge, last-updated time + who, when I last looked, when I last reviewed, and the full reviewer roster with each reviewer's current state (approved / changes-requested / commented / pending), plus a derived "already covered" flag when at least one other reviewer has submitted any review.
+- Click-through to the PR on GitHub, which marks the PR as seen.
+- Background polling on a configurable interval + manual refresh.
+- Runs in Podman/Docker on an engineer's workstation, with state persisted to a mounted volume.
+- In-app settings to enter one GitHub PAT per configured owner and the org/account list.
+
+## Key Decisions Already Made
+
+- **Auth/data source: one fine-grained PAT per owner.** Fine-grained PATs are scoped to a single resource owner, so each configured owner (PerfectServe, ps-unite, farooq-teqniqly) has its own token. Each token needs read access to pull requests (and the metadata/contents needed to read reviews, commits, and comments) on the repos in that owner. The app maps each token to its owner and uses it for that owner's queries. App calls the GitHub API directly (REST/GraphQL) rather than shelling out to `gh` CLI, so the container has no dependency on `gh` being installed.
+- **PR inclusion set: requested + in-flight reviewed.** The list shows (a) open PRs where I am a currently-requested reviewer, and (b) open PRs I have already reviewed with a non-approved state (changes requested / commented) that are awaiting my re-review. Comment-only reviews intentionally count (not just changes-requested): I usually leave questions/comments and want to circle back regardless of whether the review formally blocks merging. A PR I have approved drops off the list (unless I am re-requested). This requires tracking my own past reviews per PR, not just GitHub's `review-requested` flag. **All state is evaluated relative to me only:** another reviewer approving/reviewing never removes a PR from my list, and a PR stays while I am a requested reviewer regardless of others' review states. (Note: the existing `Get-PRQueue.ps1` filter `-not (reviews.state -contains "APPROVED")` drops a PR when *anyone* approves — wrong for this workflow; PR-Center must filter on my review only.) **No app-side staleness expiry:** a set-(b) PR stays as long as it is open and I have not approved it; GitHub is the source of truth, and abandoned PRs get closed there eventually. No age cutoff, de-emphasis, or manual dismiss in v1.
+- **Draft PRs excluded.** Draft PRs are filtered out of the list entirely, even if I am a requested reviewer, since a draft isn't ready for review. A PR reappears once it is marked ready for review.
+- **State storage: local SQLite/file on a mounted volume.** Per-PR state (last-seen timestamp, last-seen commit/comment marker, etc.) persists to a SQLite DB or JSON file on a host volume mounted into the container, so "seen/unseen" and "when I last looked" survive container restarts. No external database or service; single-user. The last-seen marker is keyed by PR id and persists indefinitely — it is never proactively deleted, so a PR that leaves and later re-enters the list is not falsely flagged as updated. No marker cleanup/GC in v1.
+- **Membership is derived each poll, not a stored FSM.** A PR's list state is recomputed every poll as a pure function of current GitHub facts (am I a requested reviewer? do I have a prior non-approved review? draft/closed?), with no stored transition history. This keeps the logic simple and self-healing (e.g. a draft marked ready just recomputes to the right state). See [pr-center-state.md](./pr-center-state.md).
+- **"Has an update" = new commits/pushes, new comments/replies, or a new review by another reviewer, since I last looked.** A bare bump of GitHub's `updatedAt` (labels, title edits, base-branch changes) does NOT count as an update on its own. The indicator compares the current state of these three signals against the last-seen marker stored for the PR. **My own activity is excluded:** my own commits, comments, or reviews never flip the update indicator — only other people's activity counts as "an update since I looked."
+- **Refresh: background poll on an interval + manual refresh button.** The app polls GitHub on a configurable interval and updates the list automatically; a manual refresh button forces an immediate fetch. Polling must stay within GitHub API rate limits (default interval TBD — see Open Questions).
+- **Mark-as-seen: clicking the PR link in-app.** When I click through to open a PR (link opens the PR on GitHub), the app records that as "looked at" — it does a quick live fetch of that PR's current state, records THAT as the last-seen marker, and clears the update indicator. Fetching fresh on click (rather than reusing the possibly-stale last-polled snapshot) guarantees I never clear an update that landed between the last poll and my click. This is what drives the "when I last looked" value.
+- **Review requests are direct-only.** I am always added as a reviewer by username, not via a team, so `review-requested:@me` (direct request) is sufficient; the app does NOT need `team-review-requested` / `user-review-requested` handling or team-membership discovery. (If team-routed requests ever start being used, PRs requested only through a team would silently not appear — revisit then.)
+- **Repo scope: configured org/account list.** The orgs and personal account to search (PerfectServe, ps-unite, farooq-teqniqly) are listed in config. The app runs the review-requested search per configured owner, mirroring the existing `Get-PRQueue.ps1` approach. Adding a new org means adding it to config and supplying its token — predictable, and each token is naturally confined to its own owner.
+- **Stack: ASP.NET Core + Blazor Server.** C#/.NET backend hitting the GitHub API and local SQLite, with a Blazor Server frontend (interactive C# components). Containerized for Podman/Docker. Matches the engineer's existing toolchain and keeps everything in C#. Note: the SignalR circuit is inherent to Blazor Server (its rendering transport), not a separately chosen freshness mechanism. Data freshness comes from a server-side background poll (see refresh decision) that updates state; because the circuit already exists, Blazor pushes the re-render to the browser over it automatically, with no extra push/hub code. The persistent WebSocket connection is the accepted cost of this model.
+- **Default poll interval: 5 minutes (configurable).** Balances freshness against GitHub rate limits (~5,000 req/hr; note the primary limit is largely per authenticated user, so multiple tokens on the same account share headroom). Each poll costs one review-requested search per configured owner plus per-PR detail calls to compute update signals, so effective cost scales with open-PR count; interval is user-adjustable in settings.
+- **Error handling: per-owner status + global banner.** Each configured org/account shows its own fetch status (ok / error / needs-SSO-authorization), and a global banner appears on auth failure (invalid/expired PAT) or rate-limit exhaustion. The last successful data stays visible rather than being wiped on error. This disambiguates "org returned nothing because I have no PRs there" from "org fetch failed / PAT not SSO-authorized." Distinguishing a true empty result from a silent SSO block may require inspecting the API response (e.g. checking the org is reachable via a separate call).
+- **Show all reviewers and their states per PR.** Each PR displays every reviewer (including my own row) with their current state: approved, changes-requested, commented, or pending (requested but no review yet). Bot/app reviewers (e.g. Copilot, qodo-merge bot) also appear as GitHub lists them. Data comes from the PR's requested-reviewers list plus its reviews (using each reviewer's latest review state).
+- **Derived "already covered" flag, non-hiding.** The signal to deprioritize is *coverage*, not review type: when at least one other reviewer has submitted a review of any kind (approved, changes-requested, or commented), my marginal value is low and I typically skip the PR unless my queue is otherwise empty. The PR is flagged accordingly (e.g. "already reviewed by mprysork, jay") and lists who is engaged, but it stays in my list — nothing is auto-hidden or moved; I decide. Pending reviewers (requested but no review yet) do NOT count as coverage. (Possible future refinement: use this flag as a sort tiebreaker to push covered PRs down within their group — deferred, since the current decision is non-moving.)
+- **List ordering: grouped by org/repo.** PRs are grouped into sections by org then repo. Within a group, default sort is unseen (has-update) first, then most-recently-updated. (Confirm intra-group sort during implementation.)
+- **Empty state: "all caught up" message.** When no PRs need review, show a simple "You're all caught up" message (per group and/or overall).
+- **Approved-PR transition: silent drop, no history (v1).** Once I approve a PR it leaves the list on the next refresh with no confirmation or archive/history view in v1.
+- **PAT delivery: in-app config entry, one token per owner.** Each owner's token is pasted into an in-app settings page, mapped to its owner. Keeps tokens out of shell history, env vars, and `container inspect` output. **SSO caveat:** PerfectServe (and possibly ps-unite) likely enforce SAML SSO — each org's fine-grained token must be created under / authorized for that org, or its queries silently return nothing.
+- **Tokens encrypted at rest with an app-password-derived key.** Tokens are stored encrypted in the SQLite DB on the mounted volume. On app open I enter an app password; a KDF (Argon2/PBKDF2) derives the encryption key from it, and tokens are decrypted into memory for the session. The password itself is never stored — only a salt and a verifier (to check the entered password). Full-disk/volume access alone cannot reveal the tokens without the password. This app password also serves as the app's access gate (no separate login), so the app runs localhost-bound with the password as the only guard.
+  - **Consequence — polling needs an unlock.** Background polling requires the decrypted key in memory, so after a container restart no polling/data refresh happens until I open the app and enter the password. Acceptable: I unlock when I sit down to use it.
+  - **Auto-lock: none while running.** Once unlocked, the key stays in memory (server-side in the Blazor process, shared across tabs) until the container stops. No idle timeout in v1.
+  - **Forgot password: no recovery.** Forgetting the app password means the stored tokens are unrecoverable; the path is to reset (wipe) stored tokens and re-enter all three fine-grained PATs (they are revocable/re-creatable). No recovery key in v1.
+
+## Open Questions
+
+*None outstanding — all resolved into Key Decisions.*
+
+## Success Criteria
+
+- I can see every PR awaiting my review across all configured orgs + my personal account in one place, without running the PowerShell script or opening email.
+- For any listed PR I can tell at a glance whether it has changed since I last looked, when it last changed and by whom, when I last looked, and when I last reviewed.
+- Clicking through to a PR clears its update indicator and records the look; the indicator reappears only when a real update (commit/comment/other review) lands afterward.
+- The app runs in Podman/Docker on my workstation and retains seen/last-looked state across container restarts.
+- I no longer rely on email notifications to notice PR changes.
