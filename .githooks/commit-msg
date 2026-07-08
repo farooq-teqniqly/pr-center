@@ -26,7 +26,9 @@ fi
 echo "Aborting commit: subject does not follow Conventional Commits." >&2
 echo "" >&2
 echo "  Got:      $subject" >&2
-echo "  Expected: <type>(<scope>)!: <description>" >&2
+echo "  Expected: <type>(<scope>)?<!>?: <description>   (scope and ! are optional)" >&2
 echo "  Types:    feat fix docs style refactor perf test build ci chore revert" >&2
-echo "  Example:  feat(client): add player season stats lookup" >&2
+echo "  Examples: docs: document rate-limit handling" >&2
+	echo "            feat(api): add review-requested search" >&2
+	echo "            fix!: drop legacy last-seen marker format" >&2
 exit 1
