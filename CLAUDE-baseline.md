@@ -6,7 +6,8 @@ Shared conventions for all farooq-teqniqly .NET projects. Source of truth:
 `CLAUDE.md`; update the template first, then re-sync copies. Project-specific rules
 belong in the repo's own `CLAUDE.md`, not here.
 
-`PrCenter` is replaced with the solution/project prefix at bootstrap time.
+`PrCenter` is this repo's solution/project prefix, substituted from the template's
+double-braced PROJECT_NAME token when the baseline copy is synced.
 
 ## Language and spelling
 
@@ -14,7 +15,10 @@ belong in the repo's own `CLAUDE.md`, not here.
   ("color", "behavior", "organize", "canceled", "license" as a noun).
 - Do not "correct" .NET API names or existing identifiers that use other spellings
   (e.g. `CancellationToken` stays as-is) -- match identifiers exactly.
-- No emojis in docs. No em dashes -- use regular hyphens or `--`.
+- No emojis in docs. Prefer hyphens or `--` over em dashes in new prose; never use em
+  dashes or smart quotes inside PowerShell 5.1 string literals (5.1 reads
+  UTF-8-without-BOM as Windows-1252, so they corrupt and break parsing). Do not sweep
+  existing docs to retrofit this rule.
 
 ## Stack defaults
 
