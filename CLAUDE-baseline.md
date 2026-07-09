@@ -15,10 +15,12 @@ double-braced PROJECT_NAME token when the baseline copy is synced.
   ("color", "behavior", "organize", "canceled", "license" as a noun).
 - Do not "correct" .NET API names or existing identifiers that use other spellings
   (e.g. `CancellationToken` stays as-is) -- match identifiers exactly.
-- No emojis in docs. Prefer hyphens or `--` over em dashes in new prose; never use em
-  dashes or smart quotes inside PowerShell 5.1 string literals (5.1 reads
-  UTF-8-without-BOM as Windows-1252, so they corrupt and break parsing). Do not sweep
-  existing docs to retrofit this rule.
+- No emojis in docs.
+- Prefer hyphens or `--` over em dashes in new prose. Do not sweep existing docs to
+  retrofit this preference.
+- Never use em dashes or smart quotes inside PowerShell 5.1 string literals -- 5.1 reads
+  UTF-8-without-BOM as Windows-1252, so they corrupt and break parsing. This is a hard
+  rule, not a style preference.
 
 ## Stack defaults
 
