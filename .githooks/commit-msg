@@ -6,6 +6,11 @@
 #
 msg_file="$1"
 
+if [ -z "$msg_file" ] || [ ! -r "$msg_file" ]; then
+	echo "commit-msg hook: message file '$msg_file' is missing or unreadable." >&2
+	exit 2
+fi
+
 # First non-comment, non-blank line = the subject.
 subject=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -n1)
 

@@ -4,6 +4,12 @@ Project context and conventions for this repo. See [`docs/pr-center-idea.md`](do
 for the product concept and [`docs/pr-center-state.md`](docs/pr-center-state.md) for the derived
 state machines.
 
+Shared .NET conventions are imported from the baseline below (source of truth:
+[farooq-teqniqly/claude-templates](https://github.com/farooq-teqniqly/claude-templates)).
+Rules in this file are project-specific and override the baseline where they conflict.
+
+@CLAUDE-baseline.md
+
 ## What this is
 
 A single-user, self-hosted "review inbox" for GitHub PRs awaiting the user's review across
@@ -14,7 +20,9 @@ projection of GitHub state: it never mutates PRs. Runs in Podman/Docker on a wor
 
 - **Backend:** ASP.NET Core (C#/.NET), hitting the GitHub API directly (REST/GraphQL) — no `gh` CLI dependency.
 - **Frontend:** Blazor Server (interactive C# components; SignalR circuit is the render transport, not a chosen freshness mechanism).
-- **State:** local SQLite/JSON file on a mounted host volume. No external database.
+- **State:** local SQLite/JSON file on a mounted host volume. No external database. (Baseline
+  override: this project uses SQLite, not SQL Server; integration tests exercise the real
+  SQLite file, so Testcontainers is not required for the database.)
 - **Auth to GitHub:** one fine-grained PAT per owner, entered in-app, encrypted at rest with an app-password-derived key.
 
 ## Design invariants
@@ -28,16 +36,13 @@ Do not violate these without updating the idea/state docs first:
 - **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
 - **Never mutate PR state** (no approve/comment/request-changes from the app).
 
-## Writing style
+## Writing style (beyond baseline)
 
-- U.S. English spelling and punctuation in all prose, code comments, commit messages, and docs ("color", "behavior", "organize", "center").
 - Do not silently rewrite existing British spellings in unrelated files; flag inconsistencies in files you are already editing.
-- Match the spelling of existing identifiers, public API names, and external/vendor strings exactly.
 
-## Commits
+## Commits (beyond baseline)
 
-- Conventional Commits, enforced by the `commit-msg` hook (see [README](README.md#commit-message-format)). Format: `<type>(<scope>)!: <description>`.
-- Do not skip hooks (`--no-verify`) unless the user explicitly asks.
+- The `commit-msg` hook lives in `.githooks/` (see [README](README.md#commit-message-format)).
 
 ## PowerShell authoring rules
 
