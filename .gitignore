@@ -427,3 +427,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local PR review artifacts (not tracked)
+docs/pr-review/
