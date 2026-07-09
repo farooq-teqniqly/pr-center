@@ -1,8 +1,9 @@
 # PR-Center conventions
 
 Project context and conventions for this repo. See [`docs/pr-center-idea.md`](docs/pr-center-idea.md)
-for the product concept and [`docs/pr-center-state.md`](docs/pr-center-state.md) for the derived
-state machines.
+for the product concept, [`docs/pr-center-state.md`](docs/pr-center-state.md) for the derived
+state machines, and [`docs/pr-center-roadmap.md`](docs/pr-center-roadmap.md) for the planned
+sequence of OpenSpec changes.
 
 Shared .NET conventions are imported from the baseline below (source of truth:
 [farooq-teqniqly/claude-templates](https://github.com/farooq-teqniqly/claude-templates)).
