@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PrCenter.Core\PrCenter.Core.csproj" />
+    <ProjectReference Include="..\..\src\PrCenter.GitHub\PrCenter.GitHub.csproj" />
+    <ProjectReference Include="..\..\src\PrCenter.Persistence\PrCenter.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\PrCenter.Web\PrCenter.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,42 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+end_of_line = lf
+
+# CRLF for solution and Windows script files (mirror .gitattributes).
+[*.{sln,slnx}]
+end_of_line = crlf
+
+[*.{ps1,bat,cmd}]
+end_of_line = crlf
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.{xml,csproj,props,targets}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# Namespace must match folder structure.
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = warning
+
+# No primary constructors for classes/structs (baseline convention).
+csharp_style_prefer_primary_constructors = false
+dotnet_diagnostic.IDE0290.severity = none
+
+# Prefer file-scoped namespaces.
+csharp_style_namespace_declarations = file_scoped:warning
+
+# var wherever the compiler allows.
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true

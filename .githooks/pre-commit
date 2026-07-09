@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# pre-commit hook: enforce CSharpier formatting before a commit lands.
+# Formatting is owned by CSharpier (local dotnet tool); this hook rejects a
+# commit whose tree has formatting violations.
+#
+# Skipped automatically when there are no .cs files staged.
+#
+
+staged_cs=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.cs$')
+
+if [ -z "$staged_cs" ]; then
+	exit 0
+fi
+
+if ! command -v dotnet >/dev/null 2>&1; then
+	echo "pre-commit hook: 'dotnet' not found on PATH; skipping CSharpier check." >&2
+	exit 0
+fi
+
+echo "pre-commit: running CSharpier check..."
+if ! dotnet csharpier check . ; then
+	echo "" >&2
+	echo "Aborting commit: CSharpier found formatting violations." >&2
+	echo "Run 'dotnet csharpier format .' to fix, then re-stage." >&2
+	exit 1
+fi
+
+exit 0

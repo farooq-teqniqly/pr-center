@@ -1,0 +1,15 @@
+<Solution>
+    <Folder Name="/src/">
+        <Project Path="src/PrCenter.Core/PrCenter.Core.csproj" />
+        <Project Path="src/PrCenter.GitHub/PrCenter.GitHub.csproj" />
+        <Project Path="src/PrCenter.Persistence/PrCenter.Persistence.csproj" />
+        <Project Path="src/PrCenter.Web/PrCenter.Web.csproj" />
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/PrCenter.ArchitectureTests/PrCenter.ArchitectureTests.csproj" />
+        <Project Path="tests/PrCenter.Core.Tests/PrCenter.Core.Tests.csproj" />
+        <Project Path="tests/PrCenter.GitHub.Tests/PrCenter.GitHub.Tests.csproj" />
+        <Project Path="tests/PrCenter.Persistence.Tests/PrCenter.Persistence.Tests.csproj" />
+        <Project Path="tests/PrCenter.Web.Tests/PrCenter.Web.Tests.csproj" />
+    </Folder>
+</Solution>
