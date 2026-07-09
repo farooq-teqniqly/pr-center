@@ -1,0 +1,59 @@
+schema: spec-driven
+
+context: |
+  PR-Center: single-user, self-hosted "review inbox" for GitHub PRs awaiting the
+  user's review across orgs (PerfectServe, ps-unite) and a personal account
+  (farooq-teqniqly). Read-only projection of GitHub state -- never mutates PRs.
+  Runs in Podman/Docker on a workstation.
+
+  Source docs: docs/pr-center-idea.md (product concept, Key Decisions win
+  conflicts), docs/pr-center-state.md (derived state machines). Conventions:
+  CLAUDE.md + CLAUDE-baseline.md (shared farooq-teqniqly .NET baseline).
+
+  Stack: ASP.NET Core on net10.0, Blazor Server frontend, EF Core + SQLite on a
+  mounted volume (baseline override: SQLite, not SQL Server; integration tests
+  hit the real SQLite file -- no Testcontainers needed for the DB). GitHub API
+  called directly (REST/GraphQL), no gh CLI. One fine-grained PAT per owner,
+  entered in-app, encrypted at rest with an app-password-derived key.
+
+  Solution layout: one project per concern, PrCenter.<Area>, each with a
+  sibling <Project>.Tests. Central Package Management (Directory.Packages.props).
+  Formatting owned by CSharpier. xUnit v3 + NSubstitute; bUnit for Blazor
+  component tests. TDD for production behavior: red-green-refactor.
+
+  Design invariants (do not violate without updating the idea/state docs first):
+  - All PR state is evaluated relative to the user only; others' activity never
+    removes a PR, and the user's own activity never flips the update indicator.
+  - Membership is derived each poll as a pure function of current GitHub facts;
+    no stored transition FSM.
+  - "Has an update" = new commits/pushes, comments/replies, or a review by
+    another reviewer since last looked; a bare updatedAt bump does not count.
+  - Draft PRs are excluded entirely.
+  - Mark-as-seen happens on click-through via a fresh live fetch of that PR.
+  - Never mutate PR state from the app.
+
+  Code conventions (baseline highlights): internal sealed by default; no primary
+  constructors; null-guard public/internal entry points (except DI-injected
+  deps); source-generated logging ([LoggerMessage]); Async suffix; XML docs on
+  public/internal members in non-test projects; cyclomatic complexity <= 15.
+
+  Writing style: U.S. English; no emojis in docs; prefer hyphens or -- over em
+  dashes in new prose; never em dashes or smart quotes in PowerShell 5.1 string
+  literals. Conventional Commits enforced by .githooks/commit-msg; PR
+  descriptions under 200 words.
+
+rules:
+  proposal:
+    - Keep scope aligned with docs/pr-center-idea.md v1 scope; call out any
+      deviation from a Key Decision explicitly.
+    - Include a "Non-goals" section.
+  design:
+    - Verify inference-based decisions against source docs/code before recording
+      them; mark unverified assumptions as open questions.
+    - Respect the design invariants listed in the project context.
+  specs:
+    - State requirements relative to the user only (never another reviewer's
+      perspective).
+  tasks:
+    - Follow TDD ordering: failing test first, then implementation, then
+      refactor.
