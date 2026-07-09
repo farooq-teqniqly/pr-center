@@ -1,17 +1,16 @@
 <Project>
   <!--
     Best-effort activation of the version-controlled git hooks. Runs once per
-    build (guarded by a repo-root marker) and never fails the build. Fallback if
-    this does not run: git config core.hooksPath .githooks
+    project in a solution build; the git config command is idempotent, so the
+    redundant runs are harmless, and ContinueOnError keeps any failure from
+    breaking the build. Fallback if this does not run:
+    git config core.hooksPath .githooks
   -->
   <Target
     Name="ActivateGitHooks"
     BeforeTargets="Build"
-    Condition="'$(_GitHooksActivated)' == '' and Exists('$(MSBuildThisFileDirectory).githooks')"
+    Condition="Exists('$(MSBuildThisFileDirectory).githooks')"
   >
-    <PropertyGroup>
-      <_GitHooksActivated>true</_GitHooksActivated>
-    </PropertyGroup>
     <Exec
       Command="git config core.hooksPath .githooks"
       WorkingDirectory="$(MSBuildThisFileDirectory)"

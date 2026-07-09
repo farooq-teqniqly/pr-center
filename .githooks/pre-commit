@@ -2,7 +2,12 @@
 #
 # pre-commit hook: enforce CSharpier formatting before a commit lands.
 # Formatting is owned by CSharpier (local dotnet tool); this hook rejects a
-# commit whose tree has formatting violations.
+# commit when any staged .cs file has formatting violations.
+#
+# Scoped to staged paths so unstaged files cannot block a commit. Limitation:
+# CSharpier reads working-tree content, not the staged snapshot, so formatting
+# a file after staging it lets the unformatted staged copy through -- re-stage
+# after formatting.
 #
 # Skipped automatically when there are no .cs files staged.
 #
@@ -18,8 +23,8 @@ if ! command -v dotnet >/dev/null 2>&1; then
 	exit 0
 fi
 
-echo "pre-commit: running CSharpier check..."
-if ! dotnet csharpier check . ; then
+echo "pre-commit: running CSharpier check on staged .cs files..."
+if ! printf '%s\n' "$staged_cs" | tr '\n' '\0' | xargs -0 dotnet csharpier check ; then
 	echo "" >&2
 	echo "Aborting commit: CSharpier found formatting violations." >&2
 	echo "Run 'dotnet csharpier format .' to fix, then re-stage." >&2
