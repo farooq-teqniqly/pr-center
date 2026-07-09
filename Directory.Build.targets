@@ -1,0 +1,22 @@
+<Project>
+  <!--
+    Best-effort activation of the version-controlled git hooks. Runs once per
+    project in a solution build; the git config command is idempotent, so the
+    redundant runs are harmless, and ContinueOnError keeps any failure from
+    breaking the build. Fallback if this does not run:
+    git config core.hooksPath .githooks
+  -->
+  <Target
+    Name="ActivateGitHooks"
+    BeforeTargets="Build"
+    Condition="Exists('$(MSBuildThisFileDirectory).githooks')"
+  >
+    <Exec
+      Command="git config core.hooksPath .githooks"
+      WorkingDirectory="$(MSBuildThisFileDirectory)"
+      ContinueOnError="true"
+      StandardOutputImportance="low"
+      StandardErrorImportance="low"
+    />
+  </Target>
+</Project>

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PR-Center UX Mockups</title>
+<style>
+  :root {
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-2: #EDF0F3;
+    --ink: #1B2430;
+    --ink-2: #55606E;
+    --ink-3: #8A94A1;
+    --line: #D8DEE5;
+    --signal: #B97718;          /* has-update amber */
+    --signal-bg: #F7EDD9;
+    --ok: #2E7D4F;
+    --ok-bg: #E2F0E8;
+    --err: #B3392E;
+    --err-bg: #F6E3E1;
+    --info: #2B6CB0;
+    --info-bg: #E2ECF6;
+    --pending: #8A94A1;
+    --pending-bg: #EDF0F3;
+    --chrome: #E4E8EC;
+    --focus: #2B6CB0;
+    --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", "Cascadia Code", ui-monospace, "Consolas", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181F;
+      --surface: #1C222B;
+      --surface-2: #232A35;
+      --ink: #E6E9EE;
+      --ink-2: #9AA5B3;
+      --ink-3: #6B7686;
+      --line: #2E3644;
+      --signal: #E8A33D;
+      --signal-bg: #3A2F1B;
+      --ok: #3E9960;
+      --ok-bg: #1D3327;
+      --err: #C75248;
+      --err-bg: #3A2320;
+      --info: #5B8DD6;
+      --info-bg: #1F2C3F;
+      --pending: #8A94A1;
+      --pending-bg: #262E3A;
+      --chrome: #0F1319;
+      --focus: #5B8DD6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181F; --surface: #1C222B; --surface-2: #232A35;
+    --ink: #E6E9EE; --ink-2: #9AA5B3; --ink-3: #6B7686; --line: #2E3644;
+    --signal: #E8A33D; --signal-bg: #3A2F1B;
+    --ok: #3E9960; --ok-bg: #1D3327; --err: #C75248; --err-bg: #3A2320;
+    --info: #5B8DD6; --info-bg: #1F2C3F; --pending: #8A94A1; --pending-bg: #262E3A;
+    --chrome: #0F1319; --focus: #5B8DD6;
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F6F8; --surface: #FFFFFF; --surface-2: #EDF0F3;
+    --ink: #1B2430; --ink-2: #55606E; --ink-3: #8A94A1; --line: #D8DEE5;
+    --signal: #B97718; --signal-bg: #F7EDD9;
+    --ok: #2E7D4F; --ok-bg: #E2F0E8; --err: #B3392E; --err-bg: #F6E3E1;
+    --info: #2B6CB0; --info-bg: #E2ECF6; --pending: #8A94A1; --pending-bg: #EDF0F3;
+    --chrome: #E4E8EC; --focus: #2B6CB0;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 48px 24px 96px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+
+  header.intro { max-width: 64ch; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--signal); margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--display); font-size: 34px; font-weight: 650;
+    letter-spacing: -0.01em; margin: 0 0 12px; text-wrap: balance;
+  }
+  .intro p { color: var(--ink-2); margin: 0 0 8px; }
+
+  section.screen { display: flex; flex-direction: column; gap: 14px; }
+  .screen-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .screen-num {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+    letter-spacing: 0.08em;
+  }
+  h2 { font-family: var(--display); font-size: 21px; font-weight: 650; margin: 0; }
+  .screen-note { color: var(--ink-2); font-size: 14px; max-width: 72ch; margin: 0; }
+  .screen-note code { font-family: var(--mono); font-size: 12.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 3px; }
+
+  /* browser frame */
+  .frame {
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+    background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .frame-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--chrome); border-bottom: 1px solid var(--line);
+    padding: 8px 14px;
+  }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-3); opacity: 0.45; }
+  .urlbox {
+    flex: 1; font-family: var(--mono); font-size: 12px; color: var(--ink-2);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 3px 12px; max-width: 420px;
+  }
+  .frame-body { overflow-x: auto; }
+  .app { min-width: 720px; }
+
+  /* app top bar */
+  .appbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px; border-bottom: 1px solid var(--line);
+  }
+  .logo { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+  .logo .amp { color: var(--signal); }
+  .appbar .spacer { flex: 1; }
+  .polled { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .btn {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 5px 14px; cursor: pointer;
+  }
+  .btn.primary { background: var(--signal); border-color: var(--signal); color: #fff; }
+  :root[data-theme="dark"] .btn.primary, .btn.primary { color: #1B1608; }
+  @media (prefers-color-scheme: light) { .btn.primary { color: #fff; } }
+  :root[data-theme="light"] .btn.primary { color: #fff; }
+  .icon-btn { padding: 5px 10px; }
+
+  /* owner status strip */
+  .owners {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+  }
+  .owners .lbl { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 4px; }
+  .owner-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-2);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+    padding: 3px 12px 3px 9px;
+  }
+  .st { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .st.ok { background: var(--ok); }
+  .st.err { background: var(--err); }
+  .st.warn { background: var(--signal); }
+
+  /* banner */
+  .banner {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--err-bg); color: var(--err);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 20px; font-size: 13.5px;
+  }
+  .banner strong { font-weight: 650; }
+  .banner .fix { margin-left: auto; font-weight: 600; color: var(--err); text-decoration: underline; white-space: nowrap; }
+
+  /* groups + rows */
+  .group-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 18px 20px 8px;
+  }
+  .group-head .org { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .group-head .repo { font-family: var(--display); font-weight: 650; font-size: 15px; }
+  .group-head .count {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+    background: var(--surface-2); border-radius: 999px; padding: 1px 9px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 14px 1fr 220px;
+    gap: 4px 14px;
+    padding: 12px 20px 14px;
+    border-top: 1px solid var(--line);
+    align-items: start;
+  }
+  .row.unseen { background: color-mix(in srgb, var(--signal-bg) 45%, var(--surface)); }
+  .row .stripe { width: 4px; border-radius: 2px; background: transparent; align-self: stretch; grid-row: 1 / span 3; }
+  .row.unseen .stripe { background: var(--signal); }
+
+  .row-main { min-width: 0; }
+  .title-line { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .pr-num { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); }
+  .pr-title { font-weight: 600; font-size: 15px; }
+  .pr-title a { color: var(--ink); text-decoration: none; }
+  .pr-title a:hover, .pr-title a:focus-visible { text-decoration: underline; outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+  .upd-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--signal); background: var(--signal-bg);
+    border-radius: 999px; padding: 2px 10px; text-transform: uppercase;
+  }
+  .upd-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); }
+  .covered {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; color: var(--ink-2);
+    background: var(--surface-2); border-radius: 999px; padding: 2px 10px;
+  }
+  .byline { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .byline .who { font-weight: 600; color: var(--ink); }
+  .byline .what { color: var(--ink-3); }
+
+  .roster { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .rev {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    border-radius: 999px; padding: 2px 10px 2px 8px;
+  }
+  .rev .rst { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .rev.approved { color: var(--ok); background: var(--ok-bg); }
+  .rev.approved .rst { background: var(--ok); }
+  .rev.changes { color: var(--err); background: var(--err-bg); }
+  .rev.changes .rst { background: var(--err); }
+  .rev.commented { color: var(--info); background: var(--info-bg); }
+  .rev.commented .rst { background: var(--info); }
+  .rev.pending { color: var(--pending); background: var(--pending-bg); }
+  .rev.pending .rst { background: transparent; border: 1.5px solid var(--pending); width: 5px; height: 5px; }
+  .rev.me { outline: 1px dashed var(--ink-3); outline-offset: 1px; }
+
+  .times {
+    display: grid; grid-template-columns: auto 1fr; gap: 2px 10px;
+    font-size: 12px; color: var(--ink-2); align-content: start;
+    font-variant-numeric: tabular-nums;
+  }
+  .times .k { color: var(--ink-3); text-align: right; }
+  .times .v { font-family: var(--mono); font-size: 11.5px; }
+  .times .v.hot { color: var(--signal); font-weight: 600; }
+
+  /* empty state */
+  .empty {
+    padding: 72px 20px; text-align: center; color: var(--ink-2);
+  }
+  .empty .mark { font-family: var(--mono); font-size: 30px; color: var(--ok); display: block; margin-bottom: 12px; }
+  .empty h3 { font-family: var(--display); font-size: 19px; margin: 0 0 6px; color: var(--ink); }
+  .empty p { margin: 0; font-size: 14px; }
+
+  /* unlock */
+  .unlock-body {
+    display: flex; align-items: center; justify-content: center;
+    padding: 64px 20px; background: var(--bg);
+  }
+  .unlock-card {
+    width: 360px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 28px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .unlock-card h3 { font-family: var(--display); margin: 0; font-size: 19px; }
+  .unlock-card p { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field input {
+    width: 100%; box-sizing: border-box; font-family: var(--mono); font-size: 14px;
+    color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px;
+  }
+  .field input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .locknote { font-size: 12px; color: var(--ink-3); }
+
+  /* settings */
+  .settings { padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+  .settings h3 { font-family: var(--display); font-size: 16px; margin: 0 0 4px; }
+  .settings .hint { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; max-width: 62ch; }
+  .pat-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .pat-table th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-3); font-weight: 600; padding: 6px 12px; border-bottom: 1px solid var(--line);
+  }
+  .pat-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .pat-table .owner { font-family: var(--mono); font-size: 12.5px; }
+  .tok { font-family: var(--mono); font-size: 12px; color: var(--ink-3); letter-spacing: 0.06em; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 650; border-radius: 999px; padding: 2px 10px; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.err { color: var(--err); background: var(--err-bg); }
+  .link-btn { font-size: 12.5px; font-weight: 600; color: var(--info); background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
+  .poll-row { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
+  .poll-row input {
+    width: 64px; font-family: var(--mono); font-size: 13px; text-align: right;
+    color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 8px;
+  }
+  .danger-zone { border: 1px solid var(--err); border-radius: 8px; padding: 14px 16px; }
+  .danger-zone h4 { margin: 0 0 4px; font-size: 13.5px; color: var(--err); }
+  .danger-zone p { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-2); max-width: 60ch; }
+  .btn.danger { color: var(--err); border-color: var(--err); background: transparent; }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  @media (max-width: 760px) {
+    .row { grid-template-columns: 14px 1fr; }
+    .times { grid-column: 2; grid-template-columns: auto 1fr; margin-top: 8px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .row.unseen .stripe { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="intro">
+    <p class="eyebrow">PR-Center · UX mockups · v1</p>
+    <h1>The review inbox, four screens</h1>
+    <p>One question drives every pixel: <em>which of my open reviews changed since I last
+    looked?</em> Amber is spent on exactly that signal and nothing else. Reviewer states get
+    semantic colors; everything the app merely knows (timestamps, numbers, tokens) is set in
+    mono so data reads as data.</p>
+  </header>
+
+  <!-- ====================== 1. UNLOCK ====================== -->
+  <section class="screen">
+    <div class="screen-head">
+      <span class="screen-num">01</span>
+      <h2>Unlock</h2>
+    </div>
+    <p class="screen-note">First screen after container start. The app password derives the
+    token-decryption key, so no polling happens until this succeeds — the screen says so
+    instead of pretending data is fresh. No recovery path, by design; the reset wipes tokens.</p>
+    <div class="frame">
+      <div class="frame-bar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="urlbox">localhost:8080/unlock</div>
+      </div>
+      <div class="frame-body"><div class="app">
+        <div class="unlock-body">
+          <form class="unlock-card">
+            <h3>PR-Center is locked</h3>
+            <p>Enter your app password to decrypt the stored GitHub tokens and start polling.
+            Polling has been paused since the container started.</p>
+            <div class="field">
+              <label for="pw">App password</label>
+              <input id="pw" type="password" value="•••••••••••••" readonly>
+            </div>
+            <button class="btn primary" type="button">Unlock and start polling</button>
+            <span class="locknote">Forgot it? There is no recovery — <button class="link-btn" type="button">reset stored tokens</button> and re-enter your PATs.</span>
+          </form>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ====================== 2. INBOX ====================== -->
+  <section class="screen">
+    <div class="screen-head">
+      <span class="screen-num">02</span>
+      <h2>Review inbox — the main screen</h2>
+    </div>
+    <p class="screen-note">Grouped by org, then repo. Unseen-first inside each group. An amber
+    stripe + badge means someone else committed, commented, or reviewed since I last looked —
+    my own activity never lights it. The right column answers the three time questions per PR.
+    Clicking a title opens GitHub and marks the PR seen via a fresh live fetch. The
+    ps-unite chip and banner show the per-owner error model: stale data stays visible, the
+    failure is labeled.</p>
+    <div class="frame">
+      <div class="frame-bar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="urlbox">localhost:8080</div>
+      </div>
+      <div class="frame-body"><div class="app">
+
+        <div class="appbar">
+          <span class="logo">PR<span class="amp">&raquo;</span>Center</span>
+          <span class="spacer"></span>
+          <span class="polled">polled 14:32:07 · next 14:37</span>
+          <button class="btn icon-btn" type="button" title="Refresh now">&#8635; Refresh</button>
+          <button class="btn icon-btn" type="button">Settings</button>
+        </div>
+
+        <div class="banner">
+          <strong>ps-unite fetch failed:</strong>&nbsp;token is not SSO-authorized for this org. Showing data from 13:55.
+          <a class="fix" href="#s4">Fix token &rarr;</a>
+        </div>
+
+        <div class="owners">
+          <span class="lbl">Owners</span>
+          <span class="owner-chip"><span class="st ok"></span>PerfectServe · 4 PRs</span>
+          <span class="owner-chip"><span class="st err"></span>ps-unite · stale 13:55</span>
+          <span class="owner-chip"><span class="st ok"></span>farooq-teqniqly · 1 PR</span>
+        </div>
+
+        <!-- PerfectServe / Voice -->
+        <div class="group-head">
+          <span class="org">PerfectServe /</span>
+          <span class="repo">Voice</span>
+          <span class="count">2 awaiting · 1 updated</span>
+        </div>
+
+        <div class="row unseen">
+          <div class="stripe"></div>
+          <div class="row-main">
+            <div class="title-line">
+              <span class="pr-num">#482</span>
+              <span class="pr-title"><a href="#s2">Add retry policy to transfer-target lookup</a></span>
+              <span class="upd-badge">Updated</span>
+            </div>
+            <div class="byline"><span class="who">dkellner</span> pushed 2 commits <span class="what">· 22 min ago</span></div>
+            <div class="roster">
+              <span class="rev commented me"><span class="rst"></span>me · commented</span>
+              <span class="rev pending"><span class="rst"></span>mprysork</span>
+              <span class="rev commented"><span class="rst"></span>qodo-merge[bot]</span>
+            </div>
+          </div>
+          <div class="times">
+            <span class="k">updated</span><span class="v hot">22m ago · dkellner</span>
+            <span class="k">I looked</span><span class="v">yesterday 16:40</span>
+            <span class="k">I reviewed</span><span class="v">yesterday 16:38</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="stripe"></div>
+          <div class="row-main">
+            <div class="title-line">
+              <span class="pr-num">#479</span>
+              <span class="pr-title"><a href="#s2">Normalize on-call schedule timezone handling</a></span>
+              <span class="covered">covered · mprysork, jay</span>
+            </div>
+            <div class="byline"><span class="who">sgupta</span> opened <span class="what">· 3 days ago</span></div>
+            <div class="roster">
+              <span class="rev pending me"><span class="rst"></span>me · requested</span>
+              <span class="rev approved"><span class="rst"></span>mprysork</span>
+              <span class="rev changes"><span class="rst"></span>jay</span>
+              <span class="rev commented"><span class="rst"></span>Copilot</span>
+            </div>
+          </div>
+          <div class="times">
+            <span class="k">updated</span><span class="v">2d ago · jay</span>
+            <span class="k">I looked</span><span class="v">2d ago 09:12</span>
+            <span class="k">I reviewed</span><span class="v">&mdash;</span>
+          </div>
+        </div>
+
+        <!-- PerfectServe / SystemApi -->
+        <div class="group-head">
+          <span class="org">PerfectServe /</span>
+          <span class="repo">SystemApi</span>
+          <span class="count">2 awaiting · 1 updated</span>
+        </div>
+
+        <div class="row unseen">
+          <div class="stripe"></div>
+          <div class="row-main">
+            <div class="title-line">
+              <span class="pr-num">#1311</span>
+              <span class="pr-title"><a href="#s2">Fix paging cursor drift in directory search</a></span>
+              <span class="upd-badge">Updated</span>
+            </div>
+            <div class="byline"><span class="who">tnguyen</span> replied to my comment <span class="what">· 1 h ago</span></div>
+            <div class="roster">
+              <span class="rev changes me"><span class="rst"></span>me · changes requested</span>
+              <span class="rev pending"><span class="rst"></span>bharris</span>
+            </div>
+          </div>
+          <div class="times">
+            <span class="k">updated</span><span class="v hot">1h ago · tnguyen</span>
+            <span class="k">I looked</span><span class="v">Mon 11:02</span>
+            <span class="k">I reviewed</span><span class="v">Mon 10:58</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="stripe"></div>
+          <div class="row-main">
+            <div class="title-line">
+              <span class="pr-num">#1307</span>
+              <span class="pr-title"><a href="#s2">Bump Polly to v8 and migrate resilience pipelines</a></span>
+            </div>
+            <div class="byline"><span class="who">bharris</span> opened <span class="what">· 5 h ago</span></div>
+            <div class="roster">
+              <span class="rev pending me"><span class="rst"></span>me · requested</span>
+              <span class="rev pending"><span class="rst"></span>tnguyen</span>
+            </div>
+          </div>
+          <div class="times">
+            <span class="k">updated</span><span class="v">5h ago · bharris</span>
+            <span class="k">I looked</span><span class="v">never</span>
+            <span class="k">I reviewed</span><span class="v">&mdash;</span>
+          </div>
+        </div>
+
+        <!-- farooq-teqniqly -->
+        <div class="group-head">
+          <span class="org">farooq-teqniqly /</span>
+          <span class="repo">pr-center</span>
+          <span class="count">1 awaiting</span>
+        </div>
+
+        <div class="row">
+          <div class="stripe"></div>
+          <div class="row-main">
+            <div class="title-line">
+              <span class="pr-num">#3</span>
+              <span class="pr-title"><a href="#s2">feat: scaffold ports-and-adapters solution skeleton</a></span>
+              <span class="covered">covered · qodo-merge, Copilot</span>
+            </div>
+            <div class="byline"><span class="who">farooq-teqniqly</span> pushed 2 commits <span class="what">· 2 h ago</span></div>
+            <div class="roster">
+              <span class="rev pending me"><span class="rst"></span>me · requested</span>
+              <span class="rev commented"><span class="rst"></span>qodo-merge[bot]</span>
+              <span class="rev commented"><span class="rst"></span>Copilot</span>
+            </div>
+          </div>
+          <div class="times">
+            <span class="k">updated</span><span class="v">2h ago · me</span>
+            <span class="k">I looked</span><span class="v">2h ago</span>
+            <span class="k">I reviewed</span><span class="v">&mdash;</span>
+          </div>
+        </div>
+
+      </div></div>
+    </div>
+    <div class="legend">
+      <span><span class="st warn"></span> amber = update since I last looked (never my own activity)</span>
+      <span><span class="st ok"></span> approved</span>
+      <span><span class="st err"></span> changes requested</span>
+      <span><span class="st" style="background: var(--info)"></span> commented</span>
+      <span>dashed ring = my own reviewer row</span>
+    </div>
+  </section>
+
+  <!-- ====================== 3. EMPTY ====================== -->
+  <section class="screen">
+    <div class="screen-head">
+      <span class="screen-num">03</span>
+      <h2>All caught up</h2>
+    </div>
+    <p class="screen-note">The success criterion is an empty screen. Owner chips stay visible so
+    "no PRs" is provably different from "an owner's fetch failed and returned nothing" — the
+    SSO-silent-empty trap the design doc calls out.</p>
+    <div class="frame">
+      <div class="frame-bar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="urlbox">localhost:8080</div>
+      </div>
+      <div class="frame-body"><div class="app">
+        <div class="appbar">
+          <span class="logo">PR<span class="amp">&raquo;</span>Center</span>
+          <span class="spacer"></span>
+          <span class="polled">polled 09:05:12 · next 09:10</span>
+          <button class="btn icon-btn" type="button">&#8635; Refresh</button>
+          <button class="btn icon-btn" type="button">Settings</button>
+        </div>
+        <div class="owners">
+          <span class="lbl">Owners</span>
+          <span class="owner-chip"><span class="st ok"></span>PerfectServe · 0 PRs</span>
+          <span class="owner-chip"><span class="st ok"></span>ps-unite · 0 PRs</span>
+          <span class="owner-chip"><span class="st ok"></span>farooq-teqniqly · 0 PRs</span>
+        </div>
+        <div class="empty">
+          <span class="mark">&#10003;</span>
+          <h3>You're all caught up</h3>
+          <p>No pull requests are waiting on your review across 3 owners. Checked 09:05.</p>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ====================== 4. SETTINGS ====================== -->
+  <section class="screen" id="s4">
+    <div class="screen-head">
+      <span class="screen-num">04</span>
+      <h2>Settings — tokens and polling</h2>
+    </div>
+    <p class="screen-note">One fine-grained PAT per owner, pasted in-app (never env vars or
+    compose files), shown only as a masked fingerprint after save. Status column repeats the
+    per-owner fetch state so a bad token is diagnosed where it is fixed. The reset action is
+    the "forgot password" path.</p>
+    <div class="frame">
+      <div class="frame-bar">
+        <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="urlbox">localhost:8080/settings</div>
+      </div>
+      <div class="frame-body"><div class="app">
+        <div class="appbar">
+          <span class="logo">PR<span class="amp">&raquo;</span>Center</span>
+          <span class="spacer"></span>
+          <button class="btn icon-btn" type="button">&larr; Back to inbox</button>
+        </div>
+        <div class="settings">
+          <div>
+            <h3>GitHub tokens</h3>
+            <p class="hint">One fine-grained PAT per owner, with read access to pull requests on
+            that owner's repos. Tokens are encrypted at rest with your app password. For SSO
+            orgs, the token must be authorized for the org or its queries silently return nothing.</p>
+            <table class="pat-table">
+              <thead><tr><th>Owner</th><th>Token</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="owner">PerfectServe</td>
+                  <td class="tok">github_pat_&hellip;9F2K · saved May 12</td>
+                  <td><span class="pill ok">OK · last poll 14:32</span></td>
+                  <td><button class="link-btn" type="button">Replace</button></td>
+                </tr>
+                <tr>
+                  <td class="owner">ps-unite</td>
+                  <td class="tok">github_pat_&hellip;T7QA · saved May 12</td>
+                  <td><span class="pill err">Not SSO-authorized</span></td>
+                  <td><button class="link-btn" type="button">Replace</button></td>
+                </tr>
+                <tr>
+                  <td class="owner">farooq-teqniqly</td>
+                  <td class="tok">github_pat_&hellip;M3XZ · saved Jun 02</td>
+                  <td><span class="pill ok">OK · last poll 14:32</span></td>
+                  <td><button class="link-btn" type="button">Replace</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="hint" style="margin-top: 10px;"><button class="link-btn" type="button">+ Add owner</button></p>
+          </div>
+          <div>
+            <h3>Polling</h3>
+            <div class="poll-row">
+              <span>Poll GitHub every</span>
+              <input type="text" value="5" readonly>
+              <span>minutes. Each poll costs one search per owner plus per-PR detail calls.</span>
+            </div>
+          </div>
+          <div class="danger-zone">
+            <h4>Reset stored tokens</h4>
+            <p>Deletes all encrypted tokens and the app password. Use this if you forgot the
+            password — tokens are unrecoverable without it. You will re-enter all PATs.</p>
+            <button class="btn danger" type="button">Wipe tokens and password&hellip;</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <footer style="color: var(--ink-3); font-size: 12.5px; max-width: 72ch;">
+    <p>Interaction notes: rows are not expandable in v1 — everything needed for the skip/review
+    decision is on the row. No approve/comment actions exist anywhere; the only mutation the
+    app ever performs is recording "I looked." Covered PRs are flagged, never hidden or moved.
+    Approved PRs silently leave the list on the next poll.</p>
+  </footer>
+
+</div>
+</body>
+</html>

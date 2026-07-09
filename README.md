@@ -9,14 +9,49 @@ state machines it observes.
 
 ## Developer setup
 
+### Prerequisites
+
+- **.NET SDK 10** (`net10.0`). The exact version is pinned in [`global.json`](global.json)
+  (`10.0.301`, `rollForward: latestFeature`). Verify with `dotnet --version`.
+
+### Solution layout
+
+- `src/PrCenter.Core` — use cases, derivers, app lock, and the ports
+  (`IGitHubFacts`, `IStateStore`, `ITokenVault`). References no GitHub or EF packages.
+- `src/PrCenter.GitHub` — adapter implementing `IGitHubFacts`.
+- `src/PrCenter.Persistence` — EF Core + SQLite adapter (`IStateStore`, `ITokenVault`).
+- `src/PrCenter.Web` — Blazor Server host and DI composition root.
+- `tests/*` — sibling `<Project>.Tests` for each, plus `PrCenter.ArchitectureTests`
+  (NetArchTest) enforcing the dependency direction rules.
+
+### Build, test, format
+
+```sh
+dotnet tool restore              # restore CSharpier (local tool), once per clone
+dotnet build PrCenter.slnx       # zero warnings (TreatWarningsAsErrors=true)
+dotnet test PrCenter.slnx        # all test projects (xUnit v3)
+dotnet csharpier format .        # apply formatting (CSharpier owns formatting)
+dotnet csharpier check .         # verify formatting; run by the pre-commit hook
+```
+
+Run the app locally:
+
+```sh
+dotnet run --project src/PrCenter.Web
+```
+
+Package versions are centrally managed in [`Directory.Packages.props`](Directory.Packages.props);
+`.csproj` files reference packages without a `Version` attribute.
+
 ### Git hooks
 
-This repo ships a version-controlled git hook in [`.githooks/`](.githooks):
+This repo ships version-controlled git hooks in [`.githooks/`](.githooks):
 
 - **`commit-msg`** — enforces [Conventional Commits](https://www.conventionalcommits.org) on the subject line.
+- **`pre-commit`** — runs `dotnet csharpier check .` and rejects commits with formatting violations.
 
-Git does not use hooks under `.githooks/` until it is pointed at the directory.
-Run once per clone:
+A best-effort MSBuild target activates the hooks path on build. If it does not run,
+point Git at the directory once per clone:
 
 ```sh
 git config core.hooksPath .githooks
