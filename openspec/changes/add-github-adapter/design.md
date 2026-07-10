@@ -98,6 +98,30 @@ via `IHttpClientFactory` (named client registered in Web's composition root);
 per-owner variation is only the auth header, set per request, so a single
 named client suffices.
 
+### D4a: Standard resilience handler on the named client
+
+The named `HttpClient` gets `AddStandardResilienceHandler()` from
+`Microsoft.Extensions.Http.Resilience` (Polly v8-based; package version in
+`Directory.Packages.props`, referenced by `PrCenter.Web` where the client is
+registered -- the adapter never sees the pipeline). Defaults are accepted:
+rate-limiter, total-timeout, retry with backoff (handles transient 5xx/408/429
+and honors `Retry-After`), circuit breaker, attempt timeout.
+
+Layering with D9 and #5, so retries do not stack up confusingly:
+
+- The resilience handler owns **transient, per-request** recovery (network
+  blips, 5xx, secondary-rate-limit 429s). The adapter only sees the final
+  outcome.
+- D9's status mapping owns turning that final outcome into a per-owner status.
+  GraphQL *primary* rate-limit exhaustion arrives as a 200 payload with
+  errors, which the handler correctly does not retry -- it maps to `Error`
+  and the next poll tick is the retry.
+- #5's poll loop owns **cadence-level** recovery (an owner in `Error` simply
+  gets retried next tick). No poll-level retry logic belongs here.
+
+Retrying the POST is safe: the GraphQL document is a read-only query
+(idempotent by construction; the app never mutates PR state).
+
 ### D5: Facts model gains actor-type on reviews and comments only
 
 `ReviewFact` and `CommentFact` gain an `IsBot` flag (GraphQL
