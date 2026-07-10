@@ -55,6 +55,46 @@ public sealed class MembershipDeriverTests
         Assert.Equal(MembershipResult.Shown(MembershipState.AwaitingReReview), result);
     }
 
+    [Theory]
+    [InlineData(ReviewState.Commented)]
+    [InlineData(ReviewState.ChangesRequested)]
+    public void Derive_WhenApprovalTiesANonApprovedReviewOnTimestamp_AwaitsReReview(
+        ReviewState nonApproved
+    )
+    {
+        // Arrange
+        var reviews = new[]
+        {
+            Review(MyLogin, ReviewState.Approved, TestTime.At(2)),
+            Review(MyLogin, nonApproved, TestTime.At(2)),
+        };
+        var facts = TestFacts.Create(reviews: reviews);
+
+        // Act
+        var result = MembershipDeriver.Derive(facts, MyLogin);
+
+        // Assert
+        Assert.Equal(MembershipResult.Shown(MembershipState.AwaitingReReview), result);
+    }
+
+    [Fact]
+    public void Derive_WhenApprovalIsStrictlyLaterThanAComment_DropsThePullRequest()
+    {
+        // Arrange
+        var reviews = new[]
+        {
+            Review(MyLogin, ReviewState.Commented, TestTime.At(1)),
+            Review(MyLogin, ReviewState.Approved, TestTime.At(2)),
+        };
+        var facts = TestFacts.Create(reviews: reviews);
+
+        // Act
+        var result = MembershipDeriver.Derive(facts, MyLogin);
+
+        // Assert
+        Assert.Equal(MembershipResult.Hidden(MembershipExclusion.Approved), result);
+    }
+
     [Fact]
     public void Derive_WhenRequestedLoginDiffersOnlyByCase_MatchesTheUser()
     {

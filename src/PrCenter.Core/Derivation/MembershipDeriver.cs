@@ -63,5 +63,20 @@ internal static class MembershipDeriver
         facts
             .Activity.Reviews.Where(review => GitHubLogin.IsMe(review.ReviewerLogin, myLogin))
             .OrderByDescending(review => review.SubmittedAt)
+            .ThenBy(review => TieBreakRank(review.State))
             .FirstOrDefault();
+
+    // Tie-break only, applied when two of the user's reviews share the same
+    // SubmittedAt (GitHub timestamps are second-granularity). The most
+    // actionable verdict wins so a tie keeps the pull request in the queue
+    // rather than dropping it: non-approved (owes a re-review) outranks
+    // Approved. It never overrides a strictly-later review.
+    private static int TieBreakRank(ReviewState state) =>
+        state switch
+        {
+            ReviewState.Commented => 0,
+            ReviewState.ChangesRequested => 1,
+            ReviewState.Approved => 2,
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+        };
 }

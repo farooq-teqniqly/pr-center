@@ -54,6 +54,19 @@ requested reviewer, and what is my *latest* review verdict.
 The single lever is "is my latest review non-approved?" -> `AwaitingReReview`
 in both rows. `myLatest` is the user's review with the greatest `SubmittedAt`.
 
+**Same-timestamp tie-break (resolves the review's tie Question).** GitHub review
+timestamps are second-granularity, so two of the user's reviews can share the
+greatest `SubmittedAt` with different verdicts. The tie breaks toward the most
+actionable verdict -- commented, then changes-requested, then approved -- so a
+tie keeps the PR shown rather than dropping it. Rationale: on a genuine tie the
+"later" review is undefined, and erring toward shown is safe -- a wrongly-shown
+PR costs a glance, a wrongly-hidden one is a missed re-review. The intra-
+non-approved order (commented before changes-requested) is behaviorally invisible
+today (both -> `AwaitingReReview`, not carried on `QueueItem`), so the meaningful
+guarantee is only "non-approved beats approved on an equal timestamp." Implemented
+as a `ThenBy` secondary sort so it applies to ties only and never overrides a
+strictly-later review.
+
 This satisfies the state doc's derived-not-remembered requirement: a
 draft-marked-ready PR lands in `AwaitingReReview` iff a prior non-approved
 review by the user exists, else `AwaitingFirstReview`, with no special-casing.

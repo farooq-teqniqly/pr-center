@@ -15,7 +15,12 @@ pull request SHALL be excluded even when the user is a requested reviewer. A
 closed or merged pull request SHALL be dropped. Otherwise membership SHALL
 follow the latest-review-verdict rule: let `amRequested` be whether `myLogin`
 is a directly requested reviewer, and `myLatest` be the user's review with the
-greatest submitted timestamp.
+greatest submitted timestamp. When two of the user's reviews share the greatest
+timestamp (GitHub review timestamps are second-granularity), the tie SHALL be
+broken toward the most actionable verdict -- commented, then changes-requested,
+then approved -- so a tie keeps the pull request shown rather than dropping it.
+This tie-break SHALL apply only to equal timestamps and SHALL NOT override a
+strictly-later review.
 
 - `amRequested` and `myLatest` is null: **AwaitingFirstReview**.
 - `amRequested` and `myLatest` is approved: **AwaitingFirstReview**.
@@ -67,6 +72,19 @@ Only `AwaitingFirstReview` and `AwaitingReReview` are shown states.
 - **WHEN** the user is not a requested reviewer and has no review on the pull
   request
 - **THEN** the deriver returns a hidden (untracked) result
+
+#### Scenario: Same-timestamp tie keeps the pull request shown
+
+- **WHEN** the user has an approving review and a non-approving review with the
+  same submitted timestamp, and is not a requested reviewer
+- **THEN** the deriver returns AwaitingReReview, because the tie breaks toward
+  the non-approving verdict
+
+#### Scenario: A strictly-later approval still drops the pull request
+
+- **WHEN** the user's approving review has a later submitted timestamp than a
+  prior non-approving review, and is not a requested reviewer
+- **THEN** the deriver returns a hidden (approved) result
 
 ### Requirement: Update detection flags only other people's activity since the marker
 
