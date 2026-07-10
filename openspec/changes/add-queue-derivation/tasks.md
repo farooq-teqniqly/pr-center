@@ -38,6 +38,6 @@ changes.
 
 ## 6. Wrap-up
 
-- [ ] 6.1 `dotnet build` clean (warnings-as-errors) and `dotnet test` green
-- [ ] 6.2 `dotnet csharpier check .` clean
-- [ ] 6.3 Confirm no `IStateStore`/`IGitHubFacts` implementation or call crept in (derivers stay pure); leave the Open Questions in design.md for #2 to resolve
+- [x] 6.1 `dotnet build` clean (warnings-as-errors) and `dotnet test` green
+- [x] 6.2 `dotnet csharpier check .` clean
+- [x] 6.3 Confirm no `IStateStore`/`IGitHubFacts` implementation or call crept in (derivers stay pure); leave the Open Questions in design.md for #2 to resolve
