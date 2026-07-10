@@ -70,13 +70,14 @@ internal static class MembershipDeriver
     // SubmittedAt (GitHub timestamps are second-granularity). The most
     // actionable verdict wins so a tie keeps the pull request in the queue
     // rather than dropping it: non-approved (owes a re-review) outranks
-    // Approved. It never overrides a strictly-later review.
+    // Approved. It never overrides a strictly-later review. Commented -- and any
+    // unknown/future state -- falls to the lowest rank (most actionable, keep
+    // shown), so there is no unreachable throwing arm.
     private static int TieBreakRank(ReviewState state) =>
         state switch
         {
-            ReviewState.Commented => 0,
-            ReviewState.ChangesRequested => 1,
             ReviewState.Approved => 2,
-            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+            ReviewState.ChangesRequested => 1,
+            _ => 0,
         };
 }
