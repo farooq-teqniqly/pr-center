@@ -5,8 +5,8 @@ namespace PrCenter.Core.Tests.Derivation;
 
 public sealed class QueueItemDeriverTests
 {
-    private const string MyLogin = "octocat";
-    private const string Other = "hubot";
+    private const string MyLogin = TestLogins.Me;
+    private const string Other = TestLogins.Other;
 
     private const string Draft = "draft";
     private const string Closed = "closed";

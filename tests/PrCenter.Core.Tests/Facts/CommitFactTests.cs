@@ -23,10 +23,10 @@ public sealed class CommitFactTests
         var landedAt = DateTimeOffset.UtcNow;
 
         // Act
-        var commit = new CommitFact("octocat", landedAt);
+        var commit = new CommitFact(TestLogins.Me, landedAt);
 
         // Assert
-        Assert.Equal("octocat", commit.AuthorLogin);
+        Assert.Equal(TestLogins.Me, commit.AuthorLogin);
         Assert.Equal(landedAt, commit.LandedAt);
     }
 }

@@ -54,7 +54,7 @@ public sealed class PullRequestFactsTests
         new(
             isDraft: false,
             isClosedOrMerged: false,
-            lastUpdatedBy: "octocat",
+            lastUpdatedBy: TestLogins.Me,
             lastUpdatedAt: DateTimeOffset.UtcNow
         );
 

@@ -23,10 +23,10 @@ public sealed class ReviewFactTests
         var submittedAt = DateTimeOffset.UtcNow;
 
         // Act
-        var review = new ReviewFact("octocat", ReviewState.ChangesRequested, submittedAt);
+        var review = new ReviewFact(TestLogins.Me, ReviewState.ChangesRequested, submittedAt);
 
         // Assert
-        Assert.Equal("octocat", review.ReviewerLogin);
+        Assert.Equal(TestLogins.Me, review.ReviewerLogin);
         Assert.Equal(ReviewState.ChangesRequested, review.State);
         Assert.Equal(submittedAt, review.SubmittedAt);
     }

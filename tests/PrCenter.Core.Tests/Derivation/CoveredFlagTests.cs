@@ -5,8 +5,8 @@ namespace PrCenter.Core.Tests.Derivation;
 
 public sealed class CoveredFlagTests
 {
-    private const string MyLogin = "octocat";
-    private const string Other = "hubot";
+    private const string MyLogin = TestLogins.Me;
+    private const string Other = TestLogins.Other;
 
     [Theory]
     [InlineData(ReviewState.Approved)]

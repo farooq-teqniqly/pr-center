@@ -23,10 +23,10 @@ public sealed class CommentFactTests
         var createdAt = DateTimeOffset.UtcNow;
 
         // Act
-        var comment = new CommentFact("octocat", createdAt);
+        var comment = new CommentFact(TestLogins.Me, createdAt);
 
         // Assert
-        Assert.Equal("octocat", comment.AuthorLogin);
+        Assert.Equal(TestLogins.Me, comment.AuthorLogin);
         Assert.Equal(createdAt, comment.CreatedAt);
     }
 }

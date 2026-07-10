@@ -5,8 +5,8 @@ namespace PrCenter.Core.Tests.Derivation;
 
 public sealed class UpdateDetectorTests
 {
-    private const string MyLogin = "octocat";
-    private const string Other = "hubot";
+    private const string MyLogin = TestLogins.Me;
+    private const string Other = TestLogins.Other;
 
     private const string Commit = "commit";
     private const string Comment = "comment";

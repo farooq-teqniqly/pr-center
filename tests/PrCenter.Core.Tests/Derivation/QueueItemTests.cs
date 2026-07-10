@@ -12,7 +12,7 @@ public sealed class QueueItemTests
         Assert.Throws<ArgumentNullException>(() =>
             new QueueItem(
                 identity: null!,
-                lastUpdatedBy: "author",
+                lastUpdatedBy: TestLogins.Author,
                 lastUpdatedAt: TestTime.At(1),
                 state: MembershipState.AwaitingFirstReview,
                 hasUpdate: false,

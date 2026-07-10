@@ -5,7 +5,7 @@ namespace PrCenter.Core.Tests.Derivation;
 
 public sealed class MembershipDeriverTests
 {
-    private const string MyLogin = "octocat";
+    private const string MyLogin = TestLogins.Me;
 
     private const string Draft = "draft";
     private const string Closed = "closed";
@@ -99,7 +99,7 @@ public sealed class MembershipDeriverTests
     public void Derive_WhenRequestedLoginDiffersOnlyByCase_MatchesTheUser()
     {
         // Arrange
-        var facts = TestFacts.Create(requested: ["OCTOCAT"]);
+        var facts = TestFacts.Create(requested: [TestLogins.Me.ToUpperInvariant()]);
 
         // Act
         var result = MembershipDeriver.Derive(facts, MyLogin);

@@ -24,7 +24,7 @@ internal static class TestFacts
             new PullRequestStatus(
                 isDraft: isDraft,
                 isClosedOrMerged: isClosedOrMerged,
-                lastUpdatedBy: "author",
+                lastUpdatedBy: TestLogins.Author,
                 lastUpdatedAt: TestTime.At(1)
             ),
             new PullRequestActivity(requested ?? [], reviews ?? [], commits ?? [], comments ?? [])

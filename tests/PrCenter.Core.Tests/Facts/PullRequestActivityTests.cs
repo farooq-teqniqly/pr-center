@@ -39,11 +39,11 @@ public sealed class PullRequestActivityTests
     public void Constructor_DoesNotObserveLaterMutationOfSourceCollections()
     {
         // Arrange
-        var logins = new List<string> { "octocat" };
+        var logins = new List<string> { TestLogins.Me };
         var activity = new PullRequestActivity(logins, [], [], []);
 
         // Act
-        logins.Add("hubot");
+        logins.Add(TestLogins.Other);
 
         // Assert
         Assert.Single(activity.RequestedReviewerLogins);
@@ -53,7 +53,7 @@ public sealed class PullRequestActivityTests
     public void Constructor_ExposesCollectionsThatCannotBeCastToAMutableArray()
     {
         // Arrange
-        var activity = new PullRequestActivity(["octocat"], [], [], []);
+        var activity = new PullRequestActivity([TestLogins.Me], [], [], []);
 
         // Act / Assert
         Assert.Null(activity.RequestedReviewerLogins as string[]);
