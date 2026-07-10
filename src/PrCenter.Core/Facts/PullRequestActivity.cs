@@ -20,6 +20,9 @@ public sealed record PullRequestActivity
     /// <paramref name="reviews"/>, <paramref name="commits"/>, or
     /// <paramref name="comments"/> is null.
     /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when any of the collections contains a null element.
+    /// </exception>
     public PullRequestActivity(
         IReadOnlyList<string> requestedReviewerLogins,
         IReadOnlyList<ReviewFact> reviews,
@@ -32,10 +35,29 @@ public sealed record PullRequestActivity
         ArgumentNullException.ThrowIfNull(commits);
         ArgumentNullException.ThrowIfNull(comments);
 
-        RequestedReviewerLogins = requestedReviewerLogins;
-        Reviews = reviews;
-        Commits = commits;
-        Comments = comments;
+        // Copy each collection so the snapshot cannot be mutated through the
+        // caller's reference, and reject null elements up front so a deriver
+        // never dereferences one.
+        RequestedReviewerLogins = CopyWithoutNulls(
+            requestedReviewerLogins,
+            nameof(requestedReviewerLogins)
+        );
+        Reviews = CopyWithoutNulls(reviews, nameof(reviews));
+        Commits = CopyWithoutNulls(commits, nameof(commits));
+        Comments = CopyWithoutNulls(comments, nameof(comments));
+    }
+
+    private static IReadOnlyList<T> CopyWithoutNulls<T>(IReadOnlyList<T> items, string paramName)
+        where T : class
+    {
+        var copy = items.ToArray();
+
+        if (Array.Exists(copy, item => item is null))
+        {
+            throw new ArgumentException("Collection contains a null element.", paramName);
+        }
+
+        return copy;
     }
 
     /// <summary>Gets the logins of directly requested reviewers (team-routed requests excluded).</summary>

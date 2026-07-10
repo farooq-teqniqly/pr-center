@@ -8,10 +8,10 @@ public sealed class PullRequestFactsTests
     [InlineData("identity")]
     [InlineData("status")]
     [InlineData("activity")]
-    public void Constructor_WithMissingRequiredArgument_Throws(string nullArgument)
+    public void Constructor_WithNullSubRecord_Throws(string nullArgument)
     {
         // Act / Assert
-        Assert.ThrowsAny<ArgumentException>(() => ConstructWithNull(nullArgument));
+        Assert.Throws<ArgumentNullException>(() => ConstructWithNull(nullArgument));
     }
 
     [Fact]
