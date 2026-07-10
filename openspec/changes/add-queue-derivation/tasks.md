@@ -22,8 +22,8 @@ changes.
 
 ## 3. Update detector
 
-- [ ] 3.1 Tests first: null marker -> update; other-author commit/comment/review after marker -> update; own-only activity after marker -> no update; other activity at/before marker -> no update
-- [ ] 3.2 Implement `UpdateDetector` (pure; inputs facts + `myLogin` + `DateTimeOffset?` marker) to green using strict `> marker` and `author != myLogin`
+- [x] 3.1 Tests first: null marker -> update; other-author commit/comment/review after marker -> update; own-only activity after marker -> no update; other activity at/before marker -> no update
+- [x] 3.2 Implement `UpdateDetector` (pure; inputs facts + `myLogin` + `DateTimeOffset?` marker) to green using strict `> marker` and `author != myLogin`
 
 ## 4. Covered flag
 

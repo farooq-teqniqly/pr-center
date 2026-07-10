@@ -45,7 +45,9 @@ internal static class MembershipDeriver
             return MembershipResult.Shown(MembershipState.AwaitingReReview);
         }
 
-        var amRequested = facts.Activity.RequestedReviewerLogins.Any(login => IsMe(login, myLogin));
+        var amRequested = facts.Activity.RequestedReviewerLogins.Any(login =>
+            GitHubLogin.IsMe(login, myLogin)
+        );
 
         if (amRequested)
         {
@@ -59,10 +61,7 @@ internal static class MembershipDeriver
 
     private static ReviewFact? LatestReviewBy(PullRequestFacts facts, string myLogin) =>
         facts
-            .Activity.Reviews.Where(review => IsMe(review.ReviewerLogin, myLogin))
+            .Activity.Reviews.Where(review => GitHubLogin.IsMe(review.ReviewerLogin, myLogin))
             .OrderByDescending(review => review.SubmittedAt)
             .FirstOrDefault();
-
-    private static bool IsMe(string login, string myLogin) =>
-        string.Equals(login, myLogin, StringComparison.OrdinalIgnoreCase);
 }
