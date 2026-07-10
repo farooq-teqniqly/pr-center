@@ -27,8 +27,8 @@ changes.
 
 ## 4. Covered flag
 
-- [ ] 4.1 Tests first: other reviewer's review -> covered; only pending requests -> not covered; only own reviews -> not covered
-- [ ] 4.2 Implement `CoveredFlag` (pure; inputs facts + `myLogin`) to green
+- [x] 4.1 Tests first: other reviewer's review -> covered; only pending requests -> not covered; only own reviews -> not covered
+- [x] 4.2 Implement `CoveredFlag` (pure; inputs facts + `myLogin`) to green
 
 ## 5. Queue item
 

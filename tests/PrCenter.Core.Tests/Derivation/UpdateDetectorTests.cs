@@ -12,13 +12,13 @@ public sealed class UpdateDetectorTests
     private const string Comment = "comment";
     private const string Review = "review";
 
-    private static readonly DateTimeOffset Marker = At(2);
+    private static readonly DateTimeOffset Marker = TestTime.At(2);
 
     [Fact]
     public void HasUpdate_WhenNeverSeen_ReturnsTrue()
     {
         // Arrange
-        var facts = Facts();
+        var facts = TestFacts.Create();
 
         // Act
         var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, lastSeen: null);
@@ -34,7 +34,7 @@ public sealed class UpdateDetectorTests
     public void HasUpdate_WhenOtherPersonActivityAfterMarker_ReturnsTrue(string eventType)
     {
         // Arrange
-        var facts = FactsWithOtherEventAt(eventType, At(3));
+        var facts = FactsWithOtherEventAt(eventType, TestTime.At(3));
 
         // Act
         var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
@@ -50,8 +50,8 @@ public sealed class UpdateDetectorTests
     public void HasUpdate_WhenOtherPersonActivityAtOrBeforeMarker_ReturnsFalse(string eventType)
     {
         // Arrange
-        var atMarker = FactsWithOtherEventAt(eventType, At(2));
-        var beforeMarker = FactsWithOtherEventAt(eventType, At(1));
+        var atMarker = FactsWithOtherEventAt(eventType, TestTime.At(2));
+        var beforeMarker = FactsWithOtherEventAt(eventType, TestTime.At(1));
 
         // Act
         var atResult = UpdateDetector.HasUpdate(atMarker, MyLogin, Marker);
@@ -66,10 +66,10 @@ public sealed class UpdateDetectorTests
     public void HasUpdate_WhenOnlyOwnActivityAfterMarker_ReturnsFalse()
     {
         // Arrange
-        var facts = Facts(
-            commits: [new CommitFact(MyLogin, At(3))],
-            comments: [new CommentFact(MyLogin, At(3))],
-            reviews: [new ReviewFact(MyLogin, ReviewState.Commented, At(3))]
+        var facts = TestFacts.Create(
+            commits: [new CommitFact(MyLogin, TestTime.At(3))],
+            comments: [new CommentFact(MyLogin, TestTime.At(3))],
+            reviews: [new ReviewFact(MyLogin, ReviewState.Commented, TestTime.At(3))]
         );
 
         // Act
@@ -83,7 +83,7 @@ public sealed class UpdateDetectorTests
     public void HasUpdate_WhenNoActivitySinceMarker_ReturnsFalse()
     {
         // Arrange
-        var facts = Facts();
+        var facts = TestFacts.Create();
 
         // Act
         var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
@@ -109,41 +109,16 @@ public sealed class UpdateDetectorTests
     {
         // Act / Assert
         Assert.ThrowsAny<ArgumentException>(() =>
-            UpdateDetector.HasUpdate(Facts(), myLogin!, Marker)
+            UpdateDetector.HasUpdate(TestFacts.Create(), myLogin!, Marker)
         );
     }
 
     private static PullRequestFacts FactsWithOtherEventAt(string eventType, DateTimeOffset at) =>
         eventType switch
         {
-            Commit => Facts(commits: [new CommitFact(Other, at)]),
-            Comment => Facts(comments: [new CommentFact(Other, at)]),
-            Review => Facts(reviews: [new ReviewFact(Other, ReviewState.Commented, at)]),
+            Commit => TestFacts.Create(commits: [new CommitFact(Other, at)]),
+            Comment => TestFacts.Create(comments: [new CommentFact(Other, at)]),
+            Review => TestFacts.Create(reviews: [new ReviewFact(Other, ReviewState.Commented, at)]),
             _ => throw new ArgumentOutOfRangeException(nameof(eventType), eventType, null),
         };
-
-    private static PullRequestFacts Facts(
-        IReadOnlyList<CommitFact>? commits = null,
-        IReadOnlyList<CommentFact>? comments = null,
-        IReadOnlyList<ReviewFact>? reviews = null
-    ) =>
-        new(
-            new PullRequestIdentity(
-                id: "owner/repo#1",
-                owner: "owner",
-                repository: "repo",
-                number: 1,
-                title: "Add feature",
-                url: "https://github.com/owner/repo/pull/1"
-            ),
-            new PullRequestStatus(
-                isDraft: false,
-                isClosedOrMerged: false,
-                lastUpdatedBy: "author",
-                lastUpdatedAt: At(1)
-            ),
-            new PullRequestActivity([], reviews ?? [], commits ?? [], comments ?? [])
-        );
-
-    private static DateTimeOffset At(int hour) => new(2026, 1, 1, hour, 0, 0, TimeSpan.Zero);
 }

@@ -43,10 +43,10 @@ public sealed class MembershipDeriverTests
         // Arrange
         var reviews = new[]
         {
-            Review(MyLogin, ReviewState.Approved, At(1)),
-            Review(MyLogin, ReviewState.Commented, At(2)),
+            Review(MyLogin, ReviewState.Approved, TestTime.At(1)),
+            Review(MyLogin, ReviewState.Commented, TestTime.At(2)),
         };
-        var facts = Facts(reviews: reviews);
+        var facts = TestFacts.Create(reviews: reviews);
 
         // Act
         var result = MembershipDeriver.Derive(facts, MyLogin);
@@ -59,7 +59,7 @@ public sealed class MembershipDeriverTests
     public void Derive_WhenRequestedLoginDiffersOnlyByCase_MatchesTheUser()
     {
         // Arrange
-        var facts = Facts(requested: ["OCTOCAT"]);
+        var facts = TestFacts.Create(requested: ["OCTOCAT"]);
 
         // Act
         var result = MembershipDeriver.Derive(facts, MyLogin);
@@ -82,82 +82,58 @@ public sealed class MembershipDeriverTests
     public void Derive_WithMissingMyLogin_Throws(string? myLogin)
     {
         // Act / Assert
-        Assert.ThrowsAny<ArgumentException>(() => MembershipDeriver.Derive(Facts(), myLogin!));
+        Assert.ThrowsAny<ArgumentException>(() =>
+            MembershipDeriver.Derive(TestFacts.Create(), myLogin!)
+        );
     }
 
     private static (PullRequestFacts Facts, MembershipResult Expected) Scenario(string scenario) =>
         scenario switch
         {
             Draft => (
-                Facts(isDraft: true, requested: [MyLogin]),
+                TestFacts.Create(isDraft: true, requested: [MyLogin]),
                 MembershipResult.Hidden(MembershipExclusion.Draft)
             ),
             Closed => (
-                Facts(
+                TestFacts.Create(
                     isClosedOrMerged: true,
-                    reviews: [Review(MyLogin, ReviewState.ChangesRequested, At(1))]
+                    reviews: [Review(MyLogin, ReviewState.ChangesRequested, TestTime.At(1))]
                 ),
                 MembershipResult.Hidden(MembershipExclusion.ClosedOrMerged)
             ),
             RequestedNoReview => (
-                Facts(requested: [MyLogin]),
+                TestFacts.Create(requested: [MyLogin]),
                 MembershipResult.Shown(MembershipState.AwaitingFirstReview)
             ),
             CommentedNotRequested => (
-                Facts(reviews: [Review(MyLogin, ReviewState.Commented, At(1))]),
+                TestFacts.Create(reviews: [Review(MyLogin, ReviewState.Commented, TestTime.At(1))]),
                 MembershipResult.Shown(MembershipState.AwaitingReReview)
             ),
             ChangesRequestedRequested => (
-                Facts(
+                TestFacts.Create(
                     requested: [MyLogin],
-                    reviews: [Review(MyLogin, ReviewState.ChangesRequested, At(1))]
+                    reviews: [Review(MyLogin, ReviewState.ChangesRequested, TestTime.At(1))]
                 ),
                 MembershipResult.Shown(MembershipState.AwaitingReReview)
             ),
             ApprovedNotRequested => (
-                Facts(reviews: [Review(MyLogin, ReviewState.Approved, At(1))]),
+                TestFacts.Create(reviews: [Review(MyLogin, ReviewState.Approved, TestTime.At(1))]),
                 MembershipResult.Hidden(MembershipExclusion.Approved)
             ),
             ApprovedRequested => (
-                Facts(
+                TestFacts.Create(
                     requested: [MyLogin],
-                    reviews: [Review(MyLogin, ReviewState.Approved, At(1))]
+                    reviews: [Review(MyLogin, ReviewState.Approved, TestTime.At(1))]
                 ),
                 MembershipResult.Shown(MembershipState.AwaitingFirstReview)
             ),
             NotRequestedNoReview => (
-                Facts(),
+                TestFacts.Create(),
                 MembershipResult.Hidden(MembershipExclusion.Untracked)
             ),
             _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null),
         };
 
-    private static PullRequestFacts Facts(
-        bool isDraft = false,
-        bool isClosedOrMerged = false,
-        IReadOnlyList<string>? requested = null,
-        IReadOnlyList<ReviewFact>? reviews = null
-    ) =>
-        new(
-            new PullRequestIdentity(
-                id: "owner/repo#1",
-                owner: "owner",
-                repository: "repo",
-                number: 1,
-                title: "Add feature",
-                url: "https://github.com/owner/repo/pull/1"
-            ),
-            new PullRequestStatus(
-                isDraft: isDraft,
-                isClosedOrMerged: isClosedOrMerged,
-                lastUpdatedBy: "author",
-                lastUpdatedAt: At(1)
-            ),
-            new PullRequestActivity(requested ?? [], reviews ?? [], [], [])
-        );
-
     private static ReviewFact Review(string login, ReviewState state, DateTimeOffset at) =>
         new(login, state, at);
-
-    private static DateTimeOffset At(int hour) => new(2026, 1, 1, hour, 0, 0, TimeSpan.Zero);
 }
