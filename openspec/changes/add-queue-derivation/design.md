@@ -93,6 +93,23 @@ Reviewer-roster display, ordering, and grouping are added by #6, not here.
 Hidden PRs are not `QueueItem`s at all -- the membership deriver's non-shown
 results are a separate outcome the caller filters on.
 
+### D7: Facts are `record`s; equality is the generated default
+
+The fact types are `record`s, so they get compiler-generated value equality for
+free. For the leaf records (all primitive/string/enum/`DateTimeOffset` members)
+this is correct value equality. For the two collection-holders
+(`PullRequestActivity`, `PullRequestFacts`) the generated `Equals` compares the
+`IReadOnlyList<>` members by reference, not element-wise, so two instances with
+equal contents but distinct list instances compare unequal.
+
+This is fine as built: the facts are a per-poll transport snapshot and no code
+compares them for equality -- the derivers read fields, and markers key off
+`Identity.Id`, not the whole graph. So we take the default rather than hand-write
+`Equals`/`GetHashCode` (or a `sealed class`) for a capability nothing uses. If a
+consumer ever needs value equality over a facts graph (dedup, value cache,
+`Assert.Equal` on whole facts), give the collection-holders a `SequenceEqual`-based
+`Equals` with matching `GetHashCode` at that point.
+
 ## Risks / Trade-offs
 
 - **[Membership rule rests on an inferred GitHub semantic]** D2's top-right cell
