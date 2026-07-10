@@ -47,6 +47,13 @@ Do not violate these without updating the idea/state docs first:
   sub-records that reflect genuine domain concepts (e.g. `PullRequestFacts` groups its fields
   into `PullRequestIdentity` / `PullRequestStatus` / `PullRequestActivity`), each itself within
   the limit and null-guarded.
+- **Favor domain expressiveness during implementation, not just at review.** Code should read
+  as intent in the language of the domain. Prefer intention-revealing names over mechanical
+  ones (`GitHubLogin.IsMe` / `NotMe` over `AreSame` plus a `!`), extract buried mechanics into
+  named helpers so the caller reads as a sentence (`LatestReviewBy(facts, myLogin)` over inline
+  LINQ; `UpdateEvents(activity)` over three OR-ed `.Any(...)` chains), and name booleans and
+  states for the concept they represent (`AwaitingReReview`, not a flag combination). This is a
+  first-pass obligation while writing the code, not a cleanup deferred to PR review.
 
 ## Writing style (beyond baseline)
 
