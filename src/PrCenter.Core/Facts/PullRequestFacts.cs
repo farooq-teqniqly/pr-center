@@ -1,12 +1,13 @@
 namespace PrCenter.Core.Facts;
 
 /// <summary>
-/// The transport-neutral snapshot of a pull request's reviewable facts. This is
-/// the shape the GitHub adapter produces and the queue derivers consume; it
-/// carries exactly what the membership, update, and already-covered rules read,
-/// and nothing GitHub-, EF-, or ASP.NET-specific, grouped into its
-/// <see cref="Identity"/>, <see cref="Status"/>, and <see cref="Activity"/>.
-/// Immutable data carrier with no derivation behavior.
+/// The transport-neutral snapshot of a pull request's reviewable facts, and the
+/// intended return shape of the <c>IGitHubFacts</c> port: the GitHub adapter will
+/// map API responses onto it and the queue derivers consume it. It carries exactly
+/// what the membership, update, and already-covered rules read, and nothing
+/// GitHub-, EF-, or ASP.NET-specific, grouped into its <see cref="Identity"/>,
+/// <see cref="Status"/>, and <see cref="Activity"/>. Immutable data carrier with
+/// no derivation behavior.
 /// </summary>
 public sealed record PullRequestFacts
 {
