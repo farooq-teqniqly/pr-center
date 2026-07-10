@@ -63,7 +63,7 @@ It is strictly a read/triage surface. All review actions (approving, commenting,
 
 ## Open Questions
 
-*None outstanding — all resolved into Key Decisions.*
+- **Do bot/CI actors count as "another person" for coverage and updates?** (decide before the GitHub-adapter change #2.) Bots already appear in the reviewer roster (see Key Decisions above), but the "already covered" flag and the update signal currently treat any non-me actor the same, so a Copilot or qodo review would inflate coverage and a CI bot's comment would flag an update. Leaning: exclude bot reviews/comments from both coverage and the update badge, but keep bot *commits* counting (a new commit is a real diff to review). This changes the observable has-update/covered definitions, so it is a product decision to settle here and in [pr-center-state.md](./pr-center-state.md) first; #2 then supplies the author-type data and a small deriver amendment honors it. See the add-queue-derivation design, open question 4.
 
 ## Success Criteria
 
