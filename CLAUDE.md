@@ -34,7 +34,8 @@ Do not violate these without updating the idea/state docs first:
 
 - **All PR state is evaluated relative to the user only.** Another reviewer's activity never removes a PR from the list; the user's own commits/comments/reviews never flip the "has an update" indicator.
 - **Membership is derived each poll** as a pure function of current GitHub facts — no stored transition FSM.
-- **"Has an update"** = new commits/pushes, new comments/replies, or a new review by another reviewer since last looked. A bare `updatedAt` bump does not count.
+- **"Has an update"** = new commits/pushes, new comments/replies, or a new review by another reviewer since last looked. A bare `updatedAt` bump does not count. Bot/CI comments and reviews do not count either; bot commits do. Bot detection is by API actor type, never login text.
+- **"Already covered"** counts only other humans' non-dismissed reviews — bot reviews never make a PR covered.
 - **Draft PRs are excluded** entirely, even when the user is a requested reviewer.
 - **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
 - **Never mutate PR state** (no approve/comment/request-changes from the app).

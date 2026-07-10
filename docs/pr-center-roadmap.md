@@ -35,11 +35,16 @@ parallel with 2 and 3.
 
 ### 2. add-github-adapter
 
-`IGitHubFacts` implemented against the GitHub API (REST vs GraphQL mix decided
-in this change's design): review-requested search per owner, PR detail fetch
-(reviews, commits, comments, reviewer roster), one fine-grained PAT per owner,
-rate-limit handling, per-owner fetch status (ok / error / needs-SSO). Port
-member set finalized here.
+`IGitHubFacts` implemented against the GitHub API (transport settled by the
+[2026-07-10 spike](./spikes/2026-07-10-github-adapter-spike.md): GraphQL via
+hand-rolled HttpClient): two-query discovery per owner (`review-requested:` +
+`reviewed-by:`, unioned), nested PR detail in the same query (reviews, commits,
+comments, reviewer roster), one fine-grained PAT per owner (resource owner =
+that owner), rate-limit handling, per-owner fetch status (ok / error /
+misconfigured token -- the spike showed org-owned fine-grained PATs need no
+SSO-specific state). Port member set finalized here. Also carries the data
+side of the bot/CI decision (actor-type field on the fact records) plus the
+matching deriver amendment, and the commit author-identity fallback.
 
 ### 3. add-state-store
 
