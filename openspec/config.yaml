@@ -35,7 +35,14 @@ context: |
   Code conventions (baseline highlights): internal sealed by default; no primary
   constructors; null-guard public/internal entry points (except DI-injected
   deps); source-generated logging ([LoggerMessage]); Async suffix; XML docs on
-  public/internal members in non-test projects; cyclomatic complexity <= 15.
+  public/internal members in non-test projects; cyclomatic complexity <= 15;
+  constructor/method parameter count <= 7 (S107, SonarCloud flags 8+). When a
+  data carrier would exceed the limit, group its fields into cohesive sub-records
+  reflecting genuine concepts (e.g. identity/status/activity), not a flat list.
+  Favor domain expressiveness while implementing (not only at review): prefer
+  intention-revealing names (IsMe/NotMe over AreSame plus !), extract buried
+  mechanics into named helpers so callers read as intent, and name states/booleans
+  for the concept they represent.
 
   Writing style: U.S. English; no emojis in docs; prefer hyphens or -- over em
   dashes in new prose; never em dashes or smart quotes in PowerShell 5.1 string

@@ -2,8 +2,10 @@
 
 Project context and conventions for this repo. See [`docs/pr-center-idea.md`](docs/pr-center-idea.md)
 for the product concept, [`docs/pr-center-state.md`](docs/pr-center-state.md) for the derived
-state machines, and [`docs/pr-center-roadmap.md`](docs/pr-center-roadmap.md) for the planned
-sequence of OpenSpec changes.
+state machines, [`docs/pr-center-architecture.md`](docs/pr-center-architecture.md) for the
+project boundaries and dependency direction (prose mirror of the canonical Lucid diagram),
+and [`docs/pr-center-roadmap.md`](docs/pr-center-roadmap.md) for the planned sequence of
+OpenSpec changes.
 
 Shared .NET conventions are imported from the baseline below (source of truth:
 [farooq-teqniqly/claude-templates](https://github.com/farooq-teqniqly/claude-templates)).
@@ -36,6 +38,22 @@ Do not violate these without updating the idea/state docs first:
 - **Draft PRs are excluded** entirely, even when the user is a requested reviewer.
 - **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
 - **Never mutate PR state** (no approve/comment/request-changes from the app).
+
+## Code conventions (beyond baseline)
+
+- **Constructor and method parameter count stays at 7 or below** (S107; SonarCloud flags 8+),
+  reinforcing the baseline rule. This applies to data carriers too: when a record or DTO would
+  exceed the limit, do not pass a flat parameter list -- group the fields into cohesive
+  sub-records that reflect genuine domain concepts (e.g. `PullRequestFacts` groups its fields
+  into `PullRequestIdentity` / `PullRequestStatus` / `PullRequestActivity`), each itself within
+  the limit and null-guarded.
+- **Favor domain expressiveness during implementation, not just at review.** Code should read
+  as intent in the language of the domain. Prefer intention-revealing names over mechanical
+  ones (`GitHubLogin.IsMe` / `NotMe` over `AreSame` plus a `!`), extract buried mechanics into
+  named helpers so the caller reads as a sentence (`LatestReviewBy(facts, myLogin)` over inline
+  LINQ; `UpdateEvents(activity)` over three OR-ed `.Any(...)` chains), and name booleans and
+  states for the concept they represent (`AwaitingReReview`, not a flag combination). This is a
+  first-pass obligation while writing the code, not a cleanup deferred to PR review.
 
 ## Writing style (beyond baseline)
 
