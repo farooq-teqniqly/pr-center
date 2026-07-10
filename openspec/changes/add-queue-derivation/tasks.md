@@ -32,9 +32,9 @@ changes.
 
 ## 5. Queue item
 
-- [ ] 5.1 Define `QueueItem` (identity + membership state + has-update + already-covered)
-- [ ] 5.2 Tests: a shown PR yields a `QueueItem` with the three derived values; a hidden PR yields none; no sorting/grouping is applied
-- [ ] 5.3 Implement the assembly step that maps a shown membership result plus the two flags into a `QueueItem` (pure; no ordering)
+- [x] 5.1 Define `QueueItem` (identity + membership state + has-update + already-covered)
+- [x] 5.2 Tests: a shown PR yields a `QueueItem` with the three derived values; a hidden PR yields none; no sorting/grouping is applied
+- [x] 5.3 Implement the assembly step that maps a shown membership result plus the two flags into a `QueueItem` (pure; no ordering)
 
 ## 6. Wrap-up
 
