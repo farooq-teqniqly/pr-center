@@ -15,10 +15,10 @@ changes.
 
 ## 2. Membership deriver
 
-- [ ] 2.1 Define the membership outcome type: shown states (`AwaitingFirstReview`, `AwaitingReReview`) and hidden reasons (draft, closed/merged, approved, untracked)
-- [ ] 2.2 Tests first for each row of the D2 table plus both early-outs (draft-while-requested excluded; closed/merged dropped)
-- [ ] 2.3 Implement `MembershipDeriver` (pure; inputs `PullRequestFacts` + `myLogin`) to green; `myLatest` = user's review with greatest submitted timestamp
-- [ ] 2.4 Test the re-request-after-approval row explicitly (approved latest + amRequested -> AwaitingFirstReview), carrying the assumption noted in design Open Question 1
+- [x] 2.1 Define the membership outcome type: shown states (`AwaitingFirstReview`, `AwaitingReReview`) and hidden reasons (draft, closed/merged, approved, untracked)
+- [x] 2.2 Tests first for each row of the D2 table plus both early-outs (draft-while-requested excluded; closed/merged dropped)
+- [x] 2.3 Implement `MembershipDeriver` (pure; inputs `PullRequestFacts` + `myLogin`) to green; `myLatest` = user's review with greatest submitted timestamp
+- [x] 2.4 Test the re-request-after-approval row explicitly (approved latest + amRequested -> AwaitingFirstReview), carrying the assumption noted in design Open Question 1
 
 ## 3. Update detector
 
