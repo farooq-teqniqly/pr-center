@@ -39,6 +39,15 @@ Do not violate these without updating the idea/state docs first:
 - **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
 - **Never mutate PR state** (no approve/comment/request-changes from the app).
 
+## Code conventions (beyond baseline)
+
+- **Constructor and method parameter count stays at 7 or below** (S107; SonarCloud flags 8+),
+  reinforcing the baseline rule. This applies to data carriers too: when a record or DTO would
+  exceed the limit, do not pass a flat parameter list -- group the fields into cohesive
+  sub-records that reflect genuine domain concepts (e.g. `PullRequestFacts` groups its fields
+  into `PullRequestIdentity` / `PullRequestStatus` / `PullRequestActivity`), each itself within
+  the limit and null-guarded.
+
 ## Writing style (beyond baseline)
 
 - Do not silently rewrite existing British spellings in unrelated files; flag inconsistencies in files you are already editing.

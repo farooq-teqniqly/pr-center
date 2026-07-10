@@ -7,11 +7,11 @@ changes.
 
 ## 1. GitHub facts model
 
-- [ ] 1.1 Define review-state representation (approved / changes-requested / commented) and the review sub-record (reviewer login, state, submitted timestamp)
-- [ ] 1.2 Define the update-worthy event sub-records: commit (author login, land timestamp) and comment (author login, timestamp)
-- [ ] 1.3 Define `PullRequestFacts` (stable id, owner, repo, number, title, url, last-updated author + instant, `IsDraft`, closed-or-merged indicator, directly-requested reviewer logins, reviews, commits, comments) as an immutable, null-guarded data carrier
-- [ ] 1.4 Test: constructing a fact record/sub-record with a null required reference (or null-or-whitespace required string) throws
-- [ ] 1.5 Confirm the existing architecture test still passes: the new types keep `PrCenter.Core` free of GitHub/EF/ASP.NET references
+- [x] 1.1 Define review-state representation (approved / changes-requested / commented) and the review sub-record (reviewer login, state, submitted timestamp)
+- [x] 1.2 Define the update-worthy event sub-records: commit (author login, land timestamp) and comment (author login, timestamp)
+- [x] 1.3 Define `PullRequestFacts` grouped into cohesive sub-records to stay within the parameter limit: `PullRequestIdentity` (stable id, owner, repo, number, title, url), `PullRequestStatus` (`IsDraft`, closed-or-merged indicator, last-updated author + instant), and `PullRequestActivity` (directly-requested reviewer logins, reviews, commits, comments) -- all immutable, null-guarded data carriers
+- [x] 1.4 Test: constructing a fact record/sub-record with a null required reference (or null-or-whitespace required string) throws
+- [x] 1.5 Confirm the existing architecture test still passes: the new types keep `PrCenter.Core` free of GitHub/EF/ASP.NET references
 
 ## 2. Membership deriver
 
