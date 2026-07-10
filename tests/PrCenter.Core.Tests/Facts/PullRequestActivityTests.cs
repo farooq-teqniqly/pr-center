@@ -26,6 +26,15 @@ public sealed class PullRequestActivityTests
         Assert.Throws<ArgumentException>(() => ConstructWithNullElement(collectionWithNull));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Constructor_WithBlankLogin_Throws(string blankLogin)
+    {
+        // Act / Assert
+        Assert.Throws<ArgumentException>(() => new PullRequestActivity([blankLogin], [], [], []));
+    }
+
     [Fact]
     public void Constructor_DoesNotObserveLaterMutationOfSourceCollections()
     {
@@ -38,6 +47,19 @@ public sealed class PullRequestActivityTests
 
         // Assert
         Assert.Single(activity.RequestedReviewerLogins);
+    }
+
+    [Fact]
+    public void Constructor_ExposesCollectionsThatCannotBeCastToAMutableArray()
+    {
+        // Arrange
+        var activity = new PullRequestActivity(["octocat"], [], [], []);
+
+        // Act / Assert
+        Assert.Null(activity.RequestedReviewerLogins as string[]);
+        Assert.Null(activity.Reviews as ReviewFact[]);
+        Assert.Null(activity.Commits as CommitFact[]);
+        Assert.Null(activity.Comments as CommentFact[]);
     }
 
     private static PullRequestActivity ConstructWithNull(string nullArgument) =>

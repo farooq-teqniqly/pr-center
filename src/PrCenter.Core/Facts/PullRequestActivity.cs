@@ -21,7 +21,8 @@ public sealed record PullRequestActivity
     /// <paramref name="comments"/> is null.
     /// </exception>
     /// <exception cref="ArgumentException">
-    /// Thrown when any of the collections contains a null element.
+    /// Thrown when any collection contains a null element, or when
+    /// <paramref name="requestedReviewerLogins"/> contains a null or blank login.
     /// </exception>
     public PullRequestActivity(
         IReadOnlyList<string> requestedReviewerLogins,
@@ -35,29 +36,42 @@ public sealed record PullRequestActivity
         ArgumentNullException.ThrowIfNull(commits);
         ArgumentNullException.ThrowIfNull(comments);
 
-        // Copy each collection so the snapshot cannot be mutated through the
-        // caller's reference, and reject null elements up front so a deriver
-        // never dereferences one.
-        RequestedReviewerLogins = CopyWithoutNulls(
+        // Copy each collection into a read-only wrapper so the snapshot cannot be
+        // mutated -- neither through the caller's original reference nor by casting
+        // the property back to an array. Reject null elements (and blank logins) up
+        // front so a deriver never sees garbage.
+        RequestedReviewerLogins = SealLogins(
             requestedReviewerLogins,
             nameof(requestedReviewerLogins)
         );
-        Reviews = CopyWithoutNulls(reviews, nameof(reviews));
-        Commits = CopyWithoutNulls(commits, nameof(commits));
-        Comments = CopyWithoutNulls(comments, nameof(comments));
+        Reviews = SealWithoutNulls(reviews, nameof(reviews));
+        Commits = SealWithoutNulls(commits, nameof(commits));
+        Comments = SealWithoutNulls(comments, nameof(comments));
     }
 
-    private static IReadOnlyList<T> CopyWithoutNulls<T>(IReadOnlyList<T> items, string paramName)
+    private static IReadOnlyList<string> SealLogins(IReadOnlyList<string> logins, string paramName)
+    {
+        var copy = logins.ToArray();
+
+        if (Array.Exists(copy, static login => string.IsNullOrWhiteSpace(login)))
+        {
+            throw new ArgumentException("Collection contains a null or blank login.", paramName);
+        }
+
+        return Array.AsReadOnly(copy);
+    }
+
+    private static IReadOnlyList<T> SealWithoutNulls<T>(IReadOnlyList<T> items, string paramName)
         where T : class
     {
         var copy = items.ToArray();
 
-        if (Array.Exists(copy, item => item is null))
+        if (Array.Exists(copy, static item => item is null))
         {
             throw new ArgumentException("Collection contains a null element.", paramName);
         }
 
-        return copy;
+        return Array.AsReadOnly(copy);
     }
 
     /// <summary>Gets the logins of directly requested reviewers (team-routed requests excluded).</summary>

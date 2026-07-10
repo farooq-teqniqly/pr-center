@@ -38,7 +38,7 @@ public sealed class MembershipDeriverTests
     }
 
     [Fact]
-    public void Derive_WhenLatestReviewIsApprovalAfterAComment_AwaitsReReview()
+    public void Derive_WhenACommentFollowsAnEarlierApproval_AwaitsReReview()
     {
         // Arrange
         var reviews = new[]
