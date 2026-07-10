@@ -151,9 +151,26 @@ consumer ever needs value equality over a facts graph (dedup, value cache,
    The adapter may simply omit dismissed reviews from the facts, or the model
    carries the state and the derivers exclude it; decide when #2 fixes the
    review-state set.
-4. **Bot / CI reviewers.** Should a non-human reviewer (e.g. Copilot, a CI
-   bot) count toward "already covered"? Default: humans only -- confirm against
-   the idea doc's intent for the covered decoration before #6 renders it.
+4. **Bot / CI reviewers (raise in #2).** Should non-human actors (dependabot,
+   github-actions, Copilot, coderabbit, `*[bot]` logins) count toward the
+   queue? Scope is wider than "already covered" -- it touches two derivers:
+   - `CoveredFlag`: a bot review inflates covered. Default: exclude bots.
+   - `UpdateDetector`: a bot comment/review after the marker raises a spurious
+     `HasUpdate`. Default: exclude bot comments/reviews. But a bot *commit*
+     (dependabot bump, formatter) is a real diff to review -- default: keep bot
+     commits counting.
+   - `MembershipDeriver`: unaffected (membership is me-relative; a bot being a
+     requested reviewer does not touch the user).
+
+   Sequencing: (1) decide the policy in `docs/pr-center-idea.md` +
+   `docs/pr-center-state.md` (it changes the observable has-update/covered
+   definitions, so it belongs in the product/state docs, not hidden in adapter
+   code); (2) `#2` (add-github-adapter) supplies the data -- an additive
+   author-type / `IsBot` field on `ReviewFact` / `CommitFact` / `CommentFact`
+   (the "additive field #2 may request" already flagged in the fact-model
+   over/under-fit risk) and verifies against real payloads what bots look like;
+   (3) a small deriver amendment here honors it, keeping the facts neutral and
+   the policy in Core.
 
 ## Migration Plan
 

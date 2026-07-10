@@ -83,6 +83,8 @@ Notes:
 ### "Already covered" — a derived flag, not a state
 Independent of Seen/Updated: a PR is flagged **already covered** when ≥1 *other* reviewer has submitted any review (approved / changes-requested / commented). Pending (requested, no review) does not count. This is a display decoration that signals low marginal value; it never hides or moves the PR.
 
+> **Open question (decide before add-github-adapter #2):** how bot/CI actors (dependabot, github-actions, Copilot, `*[bot]`) factor into "another person" for both the update and covered definitions above — likely excluded from covered and from bot comment/review updates, but bot *commits* may still count. Resolve here first, then #2 supplies the author-type data. See the add-queue-derivation design, open question 4.
+
 ---
 
 ## 3. App lock
