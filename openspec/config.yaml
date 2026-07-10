@@ -28,6 +28,9 @@ context: |
     no stored transition FSM.
   - "Has an update" = new commits/pushes, comments/replies, or a review by
     another reviewer since last looked; a bare updatedAt bump does not count.
+    Bot/CI comments and reviews do not count either; bot commits do. Covered
+    counts only other humans' non-dismissed reviews. Bot detection is by API
+    actor type (user.type/__typename == Bot), never login text.
   - Draft PRs are excluded entirely.
   - Mark-as-seen happens on click-through via a fresh live fetch of that PR.
   - Never mutate PR state from the app.

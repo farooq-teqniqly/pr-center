@@ -76,14 +76,12 @@ stateDiagram-v2
 
 Notes:
 - A PR enters the list **Unseen** (I have not looked at it in-app yet).
-- "Update" = another person's new commit/push, new comment/reply, or new review — compared against the stored last-seen marker. **My own activity and bare `updatedAt` bumps do not count.**
+- "Update" = another person's new commit/push, new comment/reply, or new review — compared against the stored last-seen marker. **My own activity and bare `updatedAt` bumps do not count.** **Bot/CI comments and reviews do not count either** (a qodo or Copilot comment is noise, not a reason to re-look); **bot commits DO count** — a new commit is a real diff to review regardless of who authored it. Bot = the actor's type per the GitHub API (`user.type`/`__typename` == `Bot`), never login-text sniffing (see the 2026-07-10 GitHub adapter spike).
 - **Click-through does a fresh live fetch** before setting the marker, so I never clear an update that landed between the last poll and my click.
 - **The last-seen marker persists in the DB keyed by PR id and is never proactively deleted.** When a PR leaves the list (approved/closed/draft) the marker row stays; if the PR re-enters, its existing marker applies so it isn't falsely flagged as a fresh update. No cleanup/GC of old markers in v1 (simplest — the table just grows slowly; a single user's PR volume makes this a non-issue).
 
 ### "Already covered" — a derived flag, not a state
-Independent of Seen/Updated: a PR is flagged **already covered** when ≥1 *other* reviewer has submitted any review (approved / changes-requested / commented). Pending (requested, no review) does not count. This is a display decoration that signals low marginal value; it never hides or moves the PR.
-
-> **Open question (decide before add-github-adapter #2):** how bot/CI actors (dependabot, github-actions, Copilot, `*[bot]`) factor into "another person" for both the update and covered definitions above — likely excluded from covered and from bot comment/review updates, but bot *commits* may still count. Resolve here first, then #2 supplies the author-type data. See the add-queue-derivation design, open question 4.
+Independent of Seen/Updated: a PR is flagged **already covered** when ≥1 *other* **human** reviewer has submitted any non-dismissed review (approved / changes-requested / commented). Pending (requested, no review) does not count, **and bot/CI reviews (qodo, Copilot, etc.) do not count** — a bot review is not human coverage. This is a display decoration that signals low marginal value; it never hides or moves the PR. (Decided 2026-07-10, resolving the former open question here; verified against real payloads in the GitHub adapter spike — e.g. a PR whose only human review was dismissed correctly derives as not covered.)
 
 ---
 
