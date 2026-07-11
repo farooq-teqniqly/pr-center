@@ -9,7 +9,7 @@ public sealed class GitHubFactsClientTests
     {
         // Arrange
         // The stub throws before touching its dependencies, so they are unused.
-        var client = new GitHubFactsClient(null!, null!);
+        var client = new GitHubFactsClient(null!, null!, null!);
 
         // Act / Assert
         await Assert.ThrowsAsync<NotImplementedException>(() =>

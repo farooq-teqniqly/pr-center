@@ -38,11 +38,11 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 5. Adapter: auth and status
 
-- [ ] 5.1 Tests first: token flows from a faked `ITokenVault` for exactly the requested owner into the `Authorization` header; `User-Agent` present; token never appears in any `OwnerFactsResult` detail or log output
-- [ ] 5.2 Implement vault-sourced auth (no adapter-side token caching) to green
-- [ ] 5.3 Tests first: status mapping -- 401/FORBIDDEN -> `MisconfiguredToken`; rate-limit exhaustion -> `Error` with detail; network failure/5xx/malformed payload -> `Error`; 200 with zero results -> `Ok` with empty list; no exception escapes `GetReviewQueueFactsAsync` for any fetch failure
-- [ ] 5.4 Implement the error-to-status mapping (D9) to green
-- [ ] 5.5 Null/whitespace guard tests for every new public/internal member (issue #6 GitHub half), guards documented with `<exception>` tags
+- [x] 5.1 Tests first: token flows from a faked `ITokenVault` for exactly the requested owner into the `Authorization` header; `User-Agent` present; token never appears in any `OwnerFactsResult` detail or log output
+- [x] 5.2 Implement vault-sourced auth (no adapter-side token caching) to green
+- [x] 5.3 Tests first: status mapping -- 401/FORBIDDEN -> `MisconfiguredToken`; rate-limit exhaustion -> `Error` with detail; network failure/5xx/malformed payload -> `Error`; 200 with zero results -> `Ok` with empty list; no exception escapes `GetReviewQueueFactsAsync` for any fetch failure
+- [x] 5.4 Implement the error-to-status mapping (D9) to green
+- [x] 5.5 Null/whitespace guard tests for every new public/internal member (issue #6 GitHub half), guards documented with `<exception>` tags
 
 ## 6. Adapter: remaining members
 

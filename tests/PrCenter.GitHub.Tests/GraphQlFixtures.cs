@@ -12,6 +12,21 @@ internal static class GraphQlFixtures
     /// <summary>The owner login the review-queue fixture belongs to.</summary>
     public const string Owner = "acme";
 
+    /// <summary>A successful response with both searches empty (no PRs for the user).</summary>
+    public const string EmptyResultsResponse = """
+        { "data": { "requested": { "nodes": [] }, "reviewed": { "nodes": [] } } }
+        """;
+
+    /// <summary>A 200 GraphQL payload carrying a FORBIDDEN error (token lacks permission).</summary>
+    public const string ForbiddenErrorsResponse = """
+        { "errors": [ { "type": "FORBIDDEN", "message": "Resource not accessible by personal access token" } ] }
+        """;
+
+    /// <summary>A 200 GraphQL payload carrying a RATE_LIMITED error (primary rate limit exhausted).</summary>
+    public const string RateLimitedErrorsResponse = """
+        { "errors": [ { "type": "RATE_LIMITED", "message": "API rate limit exceeded" } ] }
+        """;
+
     /// <summary>
     /// A response with a single PR exercising the mapping edge branches: an
     /// approved review, commits whose author user is null with the email then

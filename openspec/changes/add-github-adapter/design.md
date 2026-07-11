@@ -121,10 +121,12 @@ for the owner's token per call. No token caching in the adapter; the vault
 owns token lifetime. Until #4, the vault stub throws -- adapter tests fake
 `ITokenVault` with NSubstitute.
 
-Auth header `Bearer {token}` plus a required `User-Agent`. One `HttpClient`
-via `IHttpClientFactory` (named client registered in Web's composition root);
-per-owner variation is only the auth header, set per request, so a single
-named client suffices.
+The adapter sets both the `Bearer {token}` auth header and the GitHub-required
+`User-Agent` **per request** (not as client defaults): the token varies per
+owner, and setting the `User-Agent` in the adapter makes it a self-contained,
+unit-testable correctness guarantee rather than a DI-config dependency. One
+`HttpClient` via `IHttpClientFactory` (typed client) therefore suffices; the
+composition root only configures the base address and the resilience handler.
 
 ### D4a: Standard resilience handler on the named client
 
