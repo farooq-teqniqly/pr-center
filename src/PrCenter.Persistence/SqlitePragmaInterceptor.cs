@@ -19,8 +19,11 @@ internal sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
     /// </summary>
     private const int BusyTimeoutMilliseconds = 3000;
 
+    // busy_timeout is armed first so the journal_mode=WAL change -- itself a write
+    // that can hit SQLITE_BUSY under contention -- is covered by the busy handler
+    // rather than failing immediately.
     private static readonly string PragmaSql =
-        $"PRAGMA journal_mode=WAL; PRAGMA busy_timeout={BusyTimeoutMilliseconds};";
+        $"PRAGMA busy_timeout={BusyTimeoutMilliseconds}; PRAGMA journal_mode=WAL;";
 
     /// <summary>A shared, stateless instance for use in context configuration.</summary>
     public static SqlitePragmaInterceptor Instance { get; } = new();

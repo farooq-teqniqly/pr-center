@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace PrCenter.Persistence.Tests;
 
@@ -22,12 +23,12 @@ public sealed class StateStoreTests : IDisposable
         // Arrange
         await using (var write = _database.CreateContext())
         {
-            await new StateStore(write).SetLastSeenAsync("pr-1", First, CancellationToken.None);
+            await CreateStore(write).SetLastSeenAsync("pr-1", First, CancellationToken.None);
         }
 
         // Act
         await using var read = _database.CreateContext();
-        var seenAt = await new StateStore(read).GetLastSeenAsync("pr-1", CancellationToken.None);
+        var seenAt = await CreateStore(read).GetLastSeenAsync("pr-1", CancellationToken.None);
 
         // Assert
         Assert.Equal(First, seenAt);
@@ -40,10 +41,8 @@ public sealed class StateStoreTests : IDisposable
         await using var context = _database.CreateContext();
 
         // Act
-        var seenAt = await new StateStore(context).GetLastSeenAsync(
-            "never-seen",
-            CancellationToken.None
-        );
+        var seenAt = await CreateStore(context)
+            .GetLastSeenAsync("never-seen", CancellationToken.None);
 
         // Assert
         Assert.Null(seenAt);
@@ -53,20 +52,50 @@ public sealed class StateStoreTests : IDisposable
     public async Task SetLastSeenAsync_WhenCalledTwice_UpdatesTheSameMarker()
     {
         // Arrange
-        await using (var write = _database.CreateContext())
+        await using (var firstWrite = _database.CreateContext())
         {
-            var store = new StateStore(write);
-            await store.SetLastSeenAsync("pr-1", First, CancellationToken.None);
-            await store.SetLastSeenAsync("pr-1", Second, CancellationToken.None);
+            await CreateStore(firstWrite).SetLastSeenAsync("pr-1", First, CancellationToken.None);
+        }
+        await using (var secondWrite = _database.CreateContext())
+        {
+            await CreateStore(secondWrite).SetLastSeenAsync("pr-1", Second, CancellationToken.None);
         }
 
         // Act
         await using var read = _database.CreateContext();
-        var seenAt = await new StateStore(read).GetLastSeenAsync("pr-1", CancellationToken.None);
+        var seenAt = await CreateStore(read).GetLastSeenAsync("pr-1", CancellationToken.None);
         var rowCount = await read.LastSeenMarkers.CountAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(Second, seenAt);
+        Assert.Equal(1, rowCount);
+    }
+
+    [Fact]
+    public async Task SetLastSeenAsync_ConcurrentWritersForTheSameId_LeaveOneRowWithoutThrowing()
+    {
+        // Arrange
+        const string id = "pr-contended";
+        var writers = Enumerable
+            .Range(0, 8)
+            .Select(offset =>
+                Task.Run(async () =>
+                {
+                    await using var context = _database.CreateContext();
+                    await CreateStore(context)
+                        .SetLastSeenAsync(id, First.AddMinutes(offset), CancellationToken.None);
+                })
+            );
+
+        // Act
+        await Task.WhenAll(writers);
+
+        // Assert
+        await using var read = _database.CreateContext();
+        var rowCount = await read.LastSeenMarkers.CountAsync(
+            marker => marker.PullRequestId == id,
+            CancellationToken.None
+        );
         Assert.Equal(1, rowCount);
     }
 
@@ -81,7 +110,7 @@ public sealed class StateStoreTests : IDisposable
 
         // Act / Assert
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
-            new StateStore(context).GetLastSeenAsync(pullRequestId!, CancellationToken.None)
+            CreateStore(context).GetLastSeenAsync(pullRequestId!, CancellationToken.None)
         );
     }
 
@@ -96,9 +125,12 @@ public sealed class StateStoreTests : IDisposable
 
         // Act / Assert
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
-            new StateStore(context).SetLastSeenAsync(pullRequestId!, First, CancellationToken.None)
+            CreateStore(context).SetLastSeenAsync(pullRequestId!, First, CancellationToken.None)
         );
     }
+
+    private static StateStore CreateStore(PrCenterDbContext context) =>
+        new(context, NullLogger<StateStore>.Instance);
 
     public void Dispose() => _database.Dispose();
 }

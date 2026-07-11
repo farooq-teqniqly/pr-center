@@ -16,6 +16,7 @@ public sealed class PersistenceMigrationExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddPersistenceAdapter($"Data Source={_path}", isDevelopment: false);
         await using var provider = services.BuildServiceProvider();
         var seenAt = DateTimeOffset.Parse(
