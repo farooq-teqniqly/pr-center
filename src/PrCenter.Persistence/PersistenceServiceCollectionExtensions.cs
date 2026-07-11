@@ -12,14 +12,6 @@ namespace PrCenter.Persistence;
 public static class PersistenceServiceCollectionExtensions
 {
     /// <summary>
-    /// The fail-fast ceiling for a SQLite command: a write that cannot acquire
-    /// its lock within this window errors rather than hanging the caller. SQLite
-    /// has no server-side execution killer, so this bounds the lock-acquisition
-    /// wait.
-    /// </summary>
-    private const int CommandTimeoutSeconds = 5;
-
-    /// <summary>
     /// Registers the SQLite context and the persistence adapter's
     /// implementations of <see cref="IStateStore"/> and <see cref="ITokenVault"/>.
     /// </summary>
@@ -45,9 +37,7 @@ public static class PersistenceServiceCollectionExtensions
 
         services.AddDbContext<PrCenterDbContext>(options =>
         {
-            options
-                .UseSqlite(connectionString, sqlite => sqlite.CommandTimeout(CommandTimeoutSeconds))
-                .AddInterceptors(SqlitePragmaInterceptor.Instance);
+            SqliteContextConfiguration.Configure(options, connectionString);
 
             if (isDevelopment)
             {

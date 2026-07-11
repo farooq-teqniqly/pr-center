@@ -73,28 +73,36 @@ internal sealed partial class StateStore : IStateStore
         {
             await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateException exception)
+        catch (DbUpdateException)
         {
-            await RecoverFromInsertRaceAsync(inserted, seenAt, exception, cancellationToken)
+            var recovered = await TryRecoverFromInsertRaceAsync(inserted, seenAt, cancellationToken)
                 .ConfigureAwait(false);
+            if (!recovered)
+            {
+                // Not a lost insert race -- a genuine write failure. Bare re-throw
+                // preserves the original stack trace.
+                throw;
+            }
         }
     }
 
     /// <summary>
-    /// Recovers from losing the insert race: a concurrent writer committed a
-    /// marker for the same id between this call's lookup and its save, so the
-    /// insert failed on the primary key. Detaches the failed insert and updates
-    /// the winner's row instead, preserving the upsert contract.
+    /// Attempts to recover from losing the insert race: a concurrent writer
+    /// committed a marker for the same id between this call's lookup and its save,
+    /// so the insert failed on the primary key. Detaches the failed insert and
+    /// updates the winner's row instead, preserving the upsert contract.
     /// </summary>
     /// <param name="inserted">The marker whose insert lost the race.</param>
     /// <param name="seenAt">The instant to store on the winning row.</param>
-    /// <param name="exception">The failure to re-throw if it was not a duplicate.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the winning row has been updated.</returns>
-    private async Task RecoverFromInsertRaceAsync(
+    /// <returns>
+    /// <see langword="true"/> when a winning row was found and updated;
+    /// <see langword="false"/> when no such row exists, meaning the failure was
+    /// not an insert race and the caller should re-throw.
+    /// </returns>
+    private async Task<bool> TryRecoverFromInsertRaceAsync(
         LastSeenMarker inserted,
         DateTimeOffset seenAt,
-        DbUpdateException exception,
         CancellationToken cancellationToken
     )
     {
@@ -105,12 +113,12 @@ internal sealed partial class StateStore : IStateStore
             .ConfigureAwait(false);
         if (winner is null)
         {
-            // Not a lost insert race -- a genuine write failure. Surface it.
-            throw exception;
+            return false;
         }
 
         LogRecoveredFromInsertRace(inserted.PullRequestId);
         winner.SeenAt = seenAt;
         await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return true;
     }
 }

@@ -20,13 +20,15 @@ internal sealed class SqliteTestDatabase : IDisposable
     {
         _path = Path.Combine(Path.GetTempPath(), $"prcenter-test-{Guid.NewGuid():N}.db");
 
-        // Pooling=False so disposing a context fully closes its connection and
-        // frees the file handle for delete, without the process-wide
-        // SqliteConnection.ClearAllPools() -- which would close pooled
-        // connections that a parallel test class is still using.
-        _options = new DbContextOptionsBuilder<PrCenterDbContext>()
-            .UseSqlite($"Data Source={_path};Pooling=False")
-            .Options;
+        // Same SQLite configuration as production (WAL + busy timeout + command
+        // timeout) so the concurrent-writer test is representative. Pooling=False
+        // so disposing a context fully closes its connection and frees the file
+        // handle for delete, without the process-wide
+        // SqliteConnection.ClearAllPools() -- which would close pooled connections
+        // that a parallel test class is still using.
+        var builder = new DbContextOptionsBuilder<PrCenterDbContext>();
+        SqliteContextConfiguration.Configure(builder, $"Data Source={_path};Pooling=False");
+        _options = builder.Options;
 
         using var context = CreateContext();
         context.Database.Migrate();
