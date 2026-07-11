@@ -41,7 +41,7 @@ migration and the Development gate wire through `PrCenter.Web`.
 
 ## 7. Wrap-up
 
-- [ ] 7.1 `dotnet build` clean (warnings-as-errors) and `dotnet test` green across all projects
-- [ ] 7.2 `dotnet csharpier check .` clean
-- [ ] 7.3 Coverage: `PrCenter.Persistence` marker/store paths covered; note that startup wiring in `PrCenter.Web` is exercised by the DI/host tests
-- [ ] 7.4 Comment on issue #6: state-store half done (stub tests deleted, guards + guard tests landed); token half remains for #4 -- do not close
+- [x] 7.1 `dotnet build` clean (warnings-as-errors) and `dotnet test` green across all projects
+- [x] 7.2 `dotnet csharpier check .` clean
+- [x] 7.3 Coverage: `PrCenter.Persistence` marker/store paths covered; note that startup wiring in `PrCenter.Web` is exercised by the DI/host tests
+- [x] 7.4 Comment on issue #6: state-store half done (stub tests deleted, guards + guard tests landed); token half remains for #4 -- do not close
