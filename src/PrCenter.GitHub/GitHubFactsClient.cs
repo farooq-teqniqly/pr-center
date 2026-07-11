@@ -165,14 +165,8 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
                 return null;
             }
 
-            await using var stream = await response
-                .Content.ReadAsStreamAsync(cancellationToken)
+            return await ReadSinglePullRequestAsync(response, cancellationToken)
                 .ConfigureAwait(false);
-            using var document = await JsonDocument
-                .ParseAsync(stream, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-
-            return MapSinglePullRequest(document.RootElement);
         }
         catch (HttpRequestException exception)
         {
@@ -184,6 +178,21 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             LogFetchFailed(owner, exception.Message);
             return null;
         }
+    }
+
+    private static async Task<PullRequestFacts?> ReadSinglePullRequestAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var stream = await response
+            .Content.ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
+        using var document = await JsonDocument
+            .ParseAsync(stream, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        return MapSinglePullRequest(document.RootElement);
     }
 
     private static PullRequestFacts? MapSinglePullRequest(JsonElement root)

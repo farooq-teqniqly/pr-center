@@ -44,6 +44,28 @@ internal sealed class GitHubClientHarness : IDisposable
         return new GitHubFactsClient(httpClient, vault, new CapturingLogger<GitHubFactsClient>());
     }
 
+    /// <summary>Builds a client whose HTTP call faults with <paramref name="exception"/>.</summary>
+    /// <param name="exception">The exception the faked handler throws.</param>
+    /// <returns>The configured client.</returns>
+    public GitHubFactsClient BuildThrowing(Exception exception)
+    {
+        var handler = Substitute.For<FakeHttpMessageHandler>();
+        handler
+            .MockSendAsync(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException<HttpResponseMessage>(exception));
+
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://api.github.com/"),
+        };
+        _disposables.Add(httpClient);
+
+        var vault = Substitute.For<ITokenVault>();
+        vault.GetTokenAsync(GraphQlFixtures.Owner, Arg.Any<CancellationToken>()).Returns("token");
+
+        return new GitHubFactsClient(httpClient, vault, new CapturingLogger<GitHubFactsClient>());
+    }
+
     /// <summary>Creates a 200 response with the given JSON body.</summary>
     /// <param name="body">The response body.</param>
     /// <returns>The response.</returns>

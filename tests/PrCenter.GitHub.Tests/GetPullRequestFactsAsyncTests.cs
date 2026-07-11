@@ -89,6 +89,42 @@ public sealed class GetPullRequestFactsAsyncTests : IDisposable
         Assert.Null(facts);
     }
 
+    [Fact]
+    public async Task GetPullRequestFactsAsync_WhenNetworkFails_ReturnsNull()
+    {
+        // Arrange
+        var client = _harness.BuildThrowing(new HttpRequestException("boom"));
+
+        // Act
+        var facts = await client.GetPullRequestFactsAsync(
+            GraphQlFixtures.Owner,
+            "repo",
+            9,
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.Null(facts);
+    }
+
+    [Fact]
+    public async Task GetPullRequestFactsAsync_WhenPayloadMalformed_ReturnsNull()
+    {
+        // Arrange
+        var client = _harness.Build(GitHubClientHarness.Ok("this is not json"));
+
+        // Act
+        var facts = await client.GetPullRequestFactsAsync(
+            GraphQlFixtures.Owner,
+            "repo",
+            9,
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.Null(facts);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
