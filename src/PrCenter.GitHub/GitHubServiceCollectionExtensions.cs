@@ -10,19 +10,20 @@ namespace PrCenter.GitHub;
 public static class GitHubServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the GitHub adapter's implementation of <see cref="IGitHubFacts"/>.
+    /// Registers the GitHub adapter's typed <see cref="IGitHubFacts"/> client and
+    /// returns its builder so the composition root can configure the base address
+    /// and a resilience handler.
     /// </summary>
     /// <param name="services">The service collection to add the adapter to.</param>
-    /// <returns>The same service collection, for chaining.</returns>
+    /// <returns>The HTTP client builder for the typed client.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> is <see langword="null"/>.</exception>
-    public static IServiceCollection AddGitHubAdapter(this IServiceCollection services)
+    public static IHttpClientBuilder AddGitHubAdapter(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Typed client: the HttpClient is injected into GitHubFactsClient. Base
-        // address, User-Agent, and the resilience handler are configured in the
-        // composition root.
-        services.AddHttpClient<IGitHubFacts, GitHubFactsClient>();
-        return services;
+        // Typed client: the HttpClient is injected into GitHubFactsClient. The
+        // base address and resilience handler are configured by the caller so the
+        // resilience dependency stays in the composition root.
+        return services.AddHttpClient<IGitHubFacts, GitHubFactsClient>();
     }
 }

@@ -53,9 +53,9 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 7. DI wiring
 
-- [ ] 7.1 Add `Microsoft.Extensions.Http.Resilience` to `Directory.Packages.props` (CPM) with the package reference in `PrCenter.Web`
-- [ ] 7.2 Register the named `HttpClient` (`IHttpClientFactory`) with `AddStandardResilienceHandler()` (defaults per D4a) and the real `GitHubFactsClient` in `PrCenter.Web`'s composition root; DI resolution test updated/extended
-- [ ] 7.3 Architecture tests still green (GitHub adapter references Core only; no Persistence reference crept in; resilience package referenced by Web only)
+- [x] 7.1 Add `Microsoft.Extensions.Http.Resilience` to `Directory.Packages.props` (CPM) with the package reference in `PrCenter.Web`
+- [x] 7.2 Register the named `HttpClient` (`IHttpClientFactory`) with `AddStandardResilienceHandler()` (defaults per D4a) and the real `GitHubFactsClient` in `PrCenter.Web`'s composition root; DI resolution test updated/extended
+- [x] 7.3 Architecture tests still green (GitHub adapter references Core only; no Persistence reference crept in; resilience package referenced by Web only)
 
 ## 8. Wrap-up
 
