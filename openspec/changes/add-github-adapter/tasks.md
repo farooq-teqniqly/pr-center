@@ -9,10 +9,10 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 1. Facts model: actor type
 
-- [ ] 1.1 Tests first: `ReviewFact` and `CommentFact` expose an `IsBot` flag that round-trips from the constructor
-- [ ] 1.2 Add `IsBot` to both records (additive constructor parameter; existing guards unchanged); update XML docs
-- [ ] 1.3 Update `CommitFact.AuthorLogin` XML doc to the author-identity semantics (login when linked, else email or name -- always present, not guaranteed to be a login); no shape change
-- [ ] 1.4 Update `TestFacts`/`TestLogins` helpers as needed; all existing Core tests stay green
+- [x] 1.1 Tests first: `ReviewFact` and `CommentFact` expose an `IsBot` flag that round-trips from the constructor
+- [x] 1.2 Add `IsBot` to both records (additive constructor parameter; existing guards unchanged); update XML docs
+- [x] 1.3 Update `CommitFact.AuthorLogin` XML doc to the author-identity semantics (login when linked, else email or name -- always present, not guaranteed to be a login); no shape change
+- [x] 1.4 Update `TestFacts`/`TestLogins` helpers as needed; all existing Core tests stay green
 
 ## 2. Deriver amendments: bot policy
 

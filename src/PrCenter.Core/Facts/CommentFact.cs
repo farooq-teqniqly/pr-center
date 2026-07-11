@@ -11,15 +11,17 @@ public sealed record CommentFact
     /// </summary>
     /// <param name="authorLogin">The login of the comment author.</param>
     /// <param name="createdAt">The instant the comment was created.</param>
+    /// <param name="isBot">Whether the author is a bot or app rather than a human.</param>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="authorLogin"/> is null, empty, or whitespace.
     /// </exception>
-    public CommentFact(string authorLogin, DateTimeOffset createdAt)
+    public CommentFact(string authorLogin, DateTimeOffset createdAt, bool isBot = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(authorLogin);
 
         AuthorLogin = authorLogin;
         CreatedAt = createdAt;
+        IsBot = isBot;
     }
 
     /// <summary>Gets the login of the comment author.</summary>
@@ -27,4 +29,10 @@ public sealed record CommentFact
 
     /// <summary>Gets the instant the comment was created.</summary>
     public DateTimeOffset CreatedAt { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the author is a bot or app rather than a
+    /// human. Set from the GitHub actor type, never from login text.
+    /// </summary>
+    public bool IsBot { get; }
 }

@@ -28,5 +28,16 @@ public sealed class CommentFactTests
         // Assert
         Assert.Equal(TestLogins.Me, comment.AuthorLogin);
         Assert.Equal(createdAt, comment.CreatedAt);
+        Assert.False(comment.IsBot);
+    }
+
+    [Fact]
+    public void Constructor_WithBotAuthor_SetsIsBot()
+    {
+        // Act
+        var comment = new CommentFact("Copilot", DateTimeOffset.UtcNow, isBot: true);
+
+        // Assert
+        Assert.True(comment.IsBot);
     }
 }
