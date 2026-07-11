@@ -27,6 +27,33 @@ internal static class GraphQlFixtures
         { "errors": [ { "type": "RATE_LIMITED", "message": "API rate limit exceeded" } ] }
         """;
 
+    /// <summary>A single-pull-request response for a merged PR.</summary>
+    public const string MergedPullRequestResponse = """
+        {
+          "data": { "repository": { "pullRequest": {
+            "id": "M", "number": 9, "title": "Merged PR", "url": "https://github.com/acme/repo/pull/9",
+            "isDraft": false, "state": "MERGED", "updatedAt": "2026-07-05T10:00:00Z",
+            "author": { "login": "author-m" },
+            "repository": { "name": "repo", "owner": { "login": "acme" } },
+            "reviewRequests": { "nodes": [] },
+            "reviews": { "nodes": [] },
+            "commits": { "nodes": [] },
+            "comments": { "nodes": [] },
+            "reviewThreads": { "nodes": [] }
+          } } }
+        }
+        """;
+
+    /// <summary>A single-pull-request response where the PR does not exist.</summary>
+    public const string MissingPullRequestResponse = """
+        { "data": { "repository": { "pullRequest": null } } }
+        """;
+
+    /// <summary>A viewer response resolving the authenticated login.</summary>
+    public const string ViewerResponse = """
+        { "data": { "viewer": { "login": "octocat" } } }
+        """;
+
     /// <summary>
     /// A response with a single PR exercising the mapping edge branches: an
     /// approved review, commits whose author user is null with the email then

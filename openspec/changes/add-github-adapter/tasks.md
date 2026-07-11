@@ -46,10 +46,10 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 6. Adapter: remaining members
 
-- [ ] 6.1 Tests first: `GetPullRequestFactsAsync` -- merged PR returns facts with `IsClosedOrMerged` true; missing/inaccessible PR returns null
-- [ ] 6.2 Implement the single-PR query and mapping to green
-- [ ] 6.3 Tests first (replacing the stub test): `GetAuthenticatedUserLoginAsync` returns the viewer login via GraphQL; delete `GetAuthenticatedUserLoginAsync_WhenCalled_ThrowsNotImplemented` in the same commit (issue #6: never port stub tests forward)
-- [ ] 6.4 Implement the viewer query to green
+- [x] 6.1 Tests first: `GetPullRequestFactsAsync` -- merged PR returns facts with `IsClosedOrMerged` true; missing/inaccessible PR returns null
+- [x] 6.2 Implement the single-PR query and mapping to green
+- [x] 6.3 Tests first (replacing the stub test): `GetAuthenticatedUserLoginAsync` returns the viewer login via GraphQL; delete `GetAuthenticatedUserLoginAsync_WhenCalled_ThrowsNotImplemented` in the same commit (issue #6: never port stub tests forward)
+- [x] 6.4 Implement the viewer query to green
 
 ## 7. DI wiring
 

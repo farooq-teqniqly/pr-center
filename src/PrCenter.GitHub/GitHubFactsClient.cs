@@ -42,10 +42,39 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
     }
 
     /// <inheritdoc />
-    public Task<string> GetAuthenticatedUserLoginAsync(
+    public async Task<string> GetAuthenticatedUserLoginAsync(
         string owner,
         CancellationToken cancellationToken = default
-    ) => throw new NotImplementedException();
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
+
+        var token = await _tokenVault.GetTokenAsync(owner, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException($"No token is configured for owner '{owner}'.");
+        }
+
+        using var request = BuildRequest(new { query = GitHubGraphQlQueries.Viewer }, token);
+        using var response = await _httpClient
+            .SendAsync(request, cancellationToken)
+            .ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response
+            .Content.ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
+        using var document = await JsonDocument
+            .ParseAsync(stream, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        return document
+                .RootElement.GetProperty("data")
+                .GetProperty("viewer")
+                .GetProperty("login")
+                .GetString()
+            ?? throw new InvalidOperationException("GitHub did not return a viewer login.");
+    }
 
     /// <inheritdoc />
     public async Task<OwnerFactsResult> GetReviewQueueFactsAsync(
@@ -91,12 +120,87 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
     }
 
     /// <inheritdoc />
-    public Task<PullRequestFacts?> GetPullRequestFactsAsync(
+    public async Task<PullRequestFacts?> GetPullRequestFactsAsync(
         string owner,
         string repository,
         int number,
         CancellationToken cancellationToken = default
-    ) => throw new NotImplementedException();
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
+        ArgumentException.ThrowIfNullOrWhiteSpace(repository);
+
+        try
+        {
+            var token = await _tokenVault
+                .GetTokenAsync(owner, cancellationToken)
+                .ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                LogTokenMissing(owner);
+                return null;
+            }
+
+            var payload = new
+            {
+                query = GitHubGraphQlQueries.SinglePullRequest,
+                variables = new
+                {
+                    owner,
+                    repo = repository,
+                    number,
+                },
+            };
+            using var request = BuildRequest(payload, token);
+            using var response = await _httpClient
+                .SendAsync(request, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogFetchFailed(
+                    owner,
+                    $"single pull-request fetch returned {(int)response.StatusCode}"
+                );
+                return null;
+            }
+
+            await using var stream = await response
+                .Content.ReadAsStreamAsync(cancellationToken)
+                .ConfigureAwait(false);
+            using var document = await JsonDocument
+                .ParseAsync(stream, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            return MapSinglePullRequest(document.RootElement);
+        }
+        catch (HttpRequestException exception)
+        {
+            LogFetchFailed(owner, exception.Message);
+            return null;
+        }
+        catch (JsonException exception)
+        {
+            LogFetchFailed(owner, exception.Message);
+            return null;
+        }
+    }
+
+    private static PullRequestFacts? MapSinglePullRequest(JsonElement root)
+    {
+        if (
+            root.TryGetProperty("data", out var data)
+            && data.TryGetProperty("repository", out var repository)
+            && repository.ValueKind == JsonValueKind.Object
+            && repository.TryGetProperty("pullRequest", out var pullRequest)
+            && pullRequest.ValueKind == JsonValueKind.Object
+        )
+        {
+            return PullRequestFactsMapper.MapPullRequest(pullRequest);
+        }
+
+        return null;
+    }
 
     private async Task<OwnerFactsResult> ClassifyAsync(
         string owner,
@@ -188,8 +292,11 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             requested = $"is:pr is:open review-requested:{myLogin}",
             reviewed = $"is:pr is:open reviewed-by:{myLogin}",
         };
-        var payload = new { query = GitHubGraphQlQueries.ReviewQueue, variables };
+        return BuildRequest(new { query = GitHubGraphQlQueries.ReviewQueue, variables }, token);
+    }
 
+    private static HttpRequestMessage BuildRequest(object payload, string token)
+    {
         var request = new HttpRequestMessage(HttpMethod.Post, "graphql")
         {
             Content = JsonContent.Create(payload),
