@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using PrCenter.Persistence;
 
@@ -13,7 +15,7 @@ public sealed class PersistenceServiceCollectionExtensionsTests
 
         // Act / Assert
         Assert.Throws<ArgumentNullException>(() =>
-            services.AddPersistenceAdapter("Data Source=test.db")
+            services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false)
         );
     }
 
@@ -30,7 +32,46 @@ public sealed class PersistenceServiceCollectionExtensionsTests
 
         // Act / Assert
         Assert.ThrowsAny<ArgumentException>(() =>
-            services.AddPersistenceAdapter(connectionString!)
+            services.AddPersistenceAdapter(connectionString!, isDevelopment: false)
         );
+    }
+
+    [Fact]
+    public void AddPersistenceAdapter_Development_EnablesSensitiveDataLoggingAndDetailedErrors()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: true);
+
+        // Act
+        var coreOptions = ResolveCoreOptions(services);
+
+        // Assert
+        Assert.True(coreOptions.IsSensitiveDataLoggingEnabled);
+        Assert.True(coreOptions.DetailedErrorsEnabled);
+    }
+
+    [Fact]
+    public void AddPersistenceAdapter_NonDevelopment_DisablesSensitiveDataLoggingAndDetailedErrors()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
+
+        // Act
+        var coreOptions = ResolveCoreOptions(services);
+
+        // Assert
+        Assert.False(coreOptions.IsSensitiveDataLoggingEnabled);
+        Assert.False(coreOptions.DetailedErrorsEnabled);
+    }
+
+    private static CoreOptionsExtension ResolveCoreOptions(IServiceCollection services)
+    {
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<DbContextOptions<PrCenterDbContext>>();
+        var coreExtension = options.FindExtension<CoreOptionsExtension>();
+        Assert.NotNull(coreExtension);
+        return coreExtension;
     }
 }

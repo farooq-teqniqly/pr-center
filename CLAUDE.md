@@ -55,6 +55,37 @@ Do not violate these without updating the idea/state docs first:
   LINQ; `UpdateEvents(activity)` over three OR-ed `.Any(...)` chains), and name booleans and
   states for the concept they represent (`AwaitingReReview`, not a flag combination). This is a
   first-pass obligation while writing the code, not a cleanup deferred to PR review.
+- **Default EF Core reads to `AsNoTracking`.** A query whose result is only read (not mutated
+  and saved back) uses `AsNoTracking()`, and preferably a `Select` projection of just the
+  columns needed, so no entity is materialized into the change tracker. Use tracking only when
+  the loaded entity will be modified and persisted. Note `FindAsync` always tracks and cannot be
+  made no-tracking, so a read-only lookup is a `Where(...).Select(...).FirstOrDefaultAsync()`
+  no-tracking query, not `FindAsync` (e.g. `StateStore.GetLastSeenAsync` reads, `SetLastSeenAsync`
+  tracks to upsert).
+
+## Testing (beyond baseline)
+
+- **Code coverage** uses the built-in coverlet collector (ships with the .NET test SDK), then
+  a grep over the Cobertura XML -- no ReportGenerator step. Collect per test project:
+
+  ```
+  dotnet test tests/<Project>.Tests/<Project>.Tests.csproj --no-build \
+    --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+  ```
+
+  `coverlet.runsettings` (repo root) excludes source-generated `*.g.cs` (e.g. `[LoggerMessage]`
+  output) so generator boilerplate does not dilute the authored-code number; it excludes by file,
+  not by attribute, since async state machines are `[CompilerGenerated]` and would otherwise be
+  dropped. This writes `tests/<Project>.Tests/TestResults/<guid>/coverage.cobertura.xml`. Read per-class
+  line coverage (`line-rate`, 0-1; the assembly-level node is the overall):
+
+  ```
+  grep -oE 'name="PrCenter[^"]*"[^>]*line-rate="[0-9.]*"' tests/<Project>.Tests/TestResults/*/coverage.cobertura.xml
+  ```
+
+  `TestResults/` is a throwaway artifact -- `rm -rf` it afterward, do not commit it. This reads
+  `line-rate` only, not `branch-rate`. Design-time-only types (e.g. `PrCenterDbContextFactory`)
+  read 0% because they are never exercised at runtime; exclude them from "uncovered" alarm.
 
 ## Writing style (beyond baseline)
 

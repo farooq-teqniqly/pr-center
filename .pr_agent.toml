@@ -13,11 +13,20 @@ Respect these deliberate PR-Center decisions and do not flag them as defects:
   element types are non-nullable and the only producer never inserts null.
   This was decided in issue #10 (Option A). Do not recommend restoring
   element-null guards on these.
-- DI-injected constructor dependencies (HttpClient, ITokenVault, ILogger<T>)
-  are trusted and intentionally not null-guarded; only non-DI public/internal
+- Any DI-injected constructor dependency (HttpClient, ITokenVault, ILogger<T>,
+  and PrCenterDbContext) is trusted and intentionally not null-guarded, e.g.
+  StateStore(PrCenterDbContext, ILogger<StateStore>); only non-DI public/internal
   entry points guard their reference-type parameters.
+- EF Core-generated migration classes under Migrations/ (e.g. *_InitialCreate.cs,
+  the model snapshot) are public partial by generator design; their accessibility
+  is the tooling's and regeneration reverts hand-edits, so do not flag their
+  public surface or suggest making them internal/sealed.
 - *.Logging.cs partial void Log... methods are [LoggerMessage] source-generated;
   the generator supplies the bodies, so they are not unimplemented.
+- EF Core read-only queries use AsNoTracking by convention, but write/upsert
+  paths that load an entity to modify and save it (e.g. StateStore.SetLastSeenAsync
+  using FindAsync) require change tracking; do not flag those as missing
+  AsNoTracking.
 
 Contracts (flag genuine violations, not the pattern): IGitHubFacts fetch
 failures are returned as OwnerFetchStatus / null and never thrown, except a
