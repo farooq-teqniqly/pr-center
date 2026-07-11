@@ -13,9 +13,9 @@ migration and the Development gate wire through `PrCenter.Web`.
 
 ## 2. Integration-test harness (real SQLite file)
 
-- [ ] 2.1 Add a disposable test harness/fixture that creates a unique temp `.db` file, builds `DbContextOptions<PrCenterDbContext>` for it, applies migrations, and deletes the file (and `-wal`/`-shm`) on dispose
-- [ ] 2.2 Write a failing round-trip test using the harness (set then get) to prove the harness + provider before the store exists
-- [ ] 2.3 Keep the harness reusable (documented) for #4 and #7
+- [x] 2.1 Add a disposable test harness/fixture that creates a unique temp `.db` file, builds `DbContextOptions<PrCenterDbContext>` for it, applies migrations, and deletes the file (and `-wal`/`-shm`) on dispose
+- [x] 2.2 Write a failing round-trip test using the harness (set then get) to prove the harness + provider before the store exists
+- [x] 2.3 Keep the harness reusable (documented) for #4 and #7
 
 ## 3. StateStore behavior (TDD)
 
@@ -25,7 +25,7 @@ migration and the Development gate wire through `PrCenter.Web`.
 
 ## 4. Migration
 
-- [ ] 4.1 Add the initial EF migration (`InitialCreate`) for the marker table; ensure `dotnet ef` tooling is available (design-time factory if the host cannot be constructed at design time)
+- [x] 4.1 Add the initial EF migration (`InitialCreate`) for the marker table; ensure `dotnet ef` tooling is available (design-time factory if the host cannot be constructed at design time) -- pulled forward: the harness (task 2) applies it. Added `Microsoft.EntityFrameworkCore.Design` (PrivateAssets=all) and `PrCenterDbContextFactory`
 - [ ] 4.2 Verify the migration applies cleanly to a fresh temp file in an integration test (table exists, round-trip works)
 
 ## 5. Connection configuration and Development gate
