@@ -146,9 +146,13 @@ internal static class PullRequestFactsMapper
 
         // Blank email/name are treated as missing so the fallback continues,
         // rather than yielding a value that CommitFact would reject as blank.
+        // The final sentinel deliberately contains parentheses, which a GitHub
+        // login cannot, so an unattributed commit never collides with a real
+        // login (e.g. a user actually named "unknown") and is always treated as
+        // someone else's activity.
         return NonBlank(GetString(author, "email"))
             ?? NonBlank(GetString(author, "name"))
-            ?? "unknown";
+            ?? "(unknown)";
     }
 
     private static string? NonBlank(string? value) =>

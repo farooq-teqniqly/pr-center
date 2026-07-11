@@ -126,7 +126,7 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
             .Facts.Single()
             .Activity.Commits.Select(c => c.AuthorLogin)
             .Order(StringComparer.Ordinal);
-        Assert.Equal(["Empty Email", "Only Name", "linked-dev", "unknown"], commitAuthors);
+        Assert.Equal(["(unknown)", "Empty Email", "Only Name", "linked-dev"], commitAuthors);
     }
 
     [Fact]
