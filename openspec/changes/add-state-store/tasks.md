@@ -19,9 +19,9 @@ migration and the Development gate wire through `PrCenter.Web`.
 
 ## 3. StateStore behavior (TDD)
 
-- [ ] 3.1 Tests first (against the real-file harness): set-then-get returns the instant; get with no marker returns null; set-again updates the same row (one row remains); guard tests for null/whitespace id
-- [ ] 3.2 Implement `StateStore.GetLastSeenAsync` (FindAsync -> instant or null) and `SetLastSeenAsync` (upsert via find-or-add + SaveChanges) to green, with `ThrowIfNullOrWhiteSpace(pullRequestId)` guards and `<exception>` docs
-- [ ] 3.3 Delete the stub `NotImplementedException` tests in `StateStoreTests` (issue #6: never port stub tests forward); `TokenVaultTests` stub stays for #4
+- [x] 3.1 Tests first (against the real-file harness): set-then-get returns the instant; get with no marker returns null; set-again updates the same row (one row remains); guard tests for null/whitespace id
+- [x] 3.2 Implement `StateStore.GetLastSeenAsync` (FindAsync -> instant or null) and `SetLastSeenAsync` (upsert via find-or-add + SaveChanges) to green, with `ThrowIfNullOrWhiteSpace(pullRequestId)` guards and `<exception>` docs
+- [x] 3.3 Delete the stub `NotImplementedException` tests in `StateStoreTests` (issue #6: never port stub tests forward); `TokenVaultTests` stub stays for #4
 
 ## 4. Migration
 
