@@ -17,7 +17,7 @@ builder
     .Services.AddGitHubAdapter()
     .ConfigureHttpClient(client => client.BaseAddress = new Uri(gitHubBaseAddress))
     .AddStandardResilienceHandler();
-builder.Services.AddPersistenceAdapter(connectionString);
+builder.Services.AddPersistenceAdapter(connectionString, builder.Environment.IsDevelopment());
 
 var app = builder.Build();
 

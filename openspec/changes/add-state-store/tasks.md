@@ -26,13 +26,13 @@ migration and the Development gate wire through `PrCenter.Web`.
 ## 4. Migration
 
 - [x] 4.1 Add the initial EF migration (`InitialCreate`) for the marker table; ensure `dotnet ef` tooling is available (design-time factory if the host cannot be constructed at design time) -- pulled forward: the harness (task 2) applies it. Added `Microsoft.EntityFrameworkCore.Design` (PrivateAssets=all) and `PrCenterDbContextFactory`
-- [ ] 4.2 Verify the migration applies cleanly to a fresh temp file in an integration test (table exists, round-trip works)
+- [x] 4.2 Verify the migration applies cleanly to a fresh temp file in an integration test (table exists, round-trip works) -- covered by the task-2 harness round-trip test (`SqliteTestDatabase` runs `Database.Migrate()` on a fresh temp file; `MigratedDatabase_PersistsAndReadsBackAMarker` proves the table via insert+read)
 
 ## 5. Connection configuration and Development gate
 
-- [ ] 5.1 Configure WAL journal mode, a busy timeout, and a 5-second command timeout on the SQLite connection/context (no retrying execution strategy)
-- [ ] 5.2 Add an `isDevelopment` parameter to `AddPersistenceAdapter`; enable `EnableSensitiveDataLogging` + detailed errors only when set; update `PrCenter.Web` to pass `builder.Environment.IsDevelopment()`
-- [ ] 5.3 Tests: the Development flag toggles sensitive data logging on/off (assert via context options); update the existing `PersistenceServiceCollectionExtensionsTests` for the new parameter and the Web DI resolution test
+- [x] 5.1 Configure WAL journal mode, a busy timeout, and a 5-second command timeout on the SQLite connection/context (no retrying execution strategy)
+- [x] 5.2 Add an `isDevelopment` parameter to `AddPersistenceAdapter`; enable `EnableSensitiveDataLogging` + detailed errors only when set; update `PrCenter.Web` to pass `builder.Environment.IsDevelopment()`
+- [x] 5.3 Tests: the Development flag toggles sensitive data logging on/off (assert via context options); update the existing `PersistenceServiceCollectionExtensionsTests` for the new parameter and the Web DI resolution test
 
 ## 6. Startup migration
 
