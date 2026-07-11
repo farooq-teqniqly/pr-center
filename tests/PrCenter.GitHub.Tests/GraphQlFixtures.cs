@@ -87,7 +87,8 @@ internal static class GraphQlFixtures
                   { "commit": { "committedDate": "2026-07-04T08:00:00Z", "author": { "user": { "login": "linked-dev" }, "email": "linked@example.com", "name": "Linked Dev" } } },
                   { "commit": { "committedDate": "2026-07-04T07:30:00Z", "author": { "user": null, "email": "", "name": "Empty Email" } } },
                   { "commit": { "committedDate": "2026-07-04T07:00:00Z", "author": { "user": null, "email": null, "name": "Only Name" } } },
-                  { "commit": { "committedDate": "2026-07-04T06:00:00Z", "author": { "user": null, "email": null, "name": null } } }
+                  { "commit": { "committedDate": "2026-07-04T06:00:00Z", "author": { "user": null, "email": null, "name": null } } },
+                  { "commit": { "committedDate": "2026-07-04T05:00:00Z", "author": null } }
                 ] },
                 "comments": { "nodes": [
                   { "author": null, "createdAt": "2026-07-04T08:00:00Z" }

@@ -137,7 +137,12 @@ internal static class PullRequestFactsMapper
 
     private static string CommitAuthorIdentity(JsonElement commit)
     {
-        var author = commit.GetProperty("author");
+        // `Commit.author` (a GitActor) can be null or omitted for an
+        // unattributed commit; that is not a mapping failure, just the sentinel.
+        if (OptProp(commit, "author") is not { } author)
+        {
+            return "(unknown)";
+        }
 
         if (OptProp(author, "user") is { } user && NonBlank(GetString(user, "login")) is { } login)
         {
