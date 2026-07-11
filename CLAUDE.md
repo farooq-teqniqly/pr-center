@@ -63,6 +63,26 @@ Do not violate these without updating the idea/state docs first:
   no-tracking query, not `FindAsync` (e.g. `StateStore.GetLastSeenAsync` reads, `SetLastSeenAsync`
   tracks to upsert).
 
+## Testing (beyond baseline)
+
+- **Code coverage** uses the built-in coverlet collector (ships with the .NET test SDK), then
+  a grep over the Cobertura XML -- no ReportGenerator step. Collect per test project:
+
+  ```
+  dotnet test tests/<Project>.Tests/<Project>.Tests.csproj --no-build --collect:"XPlat Code Coverage"
+  ```
+
+  This writes `tests/<Project>.Tests/TestResults/<guid>/coverage.cobertura.xml`. Read per-class
+  line coverage (`line-rate`, 0-1; the assembly-level node is the overall):
+
+  ```
+  grep -oE 'name="PrCenter[^"]*"[^>]*line-rate="[0-9.]*"' tests/<Project>.Tests/TestResults/*/coverage.cobertura.xml
+  ```
+
+  `TestResults/` is a throwaway artifact -- `rm -rf` it afterward, do not commit it. This reads
+  `line-rate` only, not `branch-rate`. Design-time-only types (e.g. `PrCenterDbContextFactory`)
+  read 0% because they are never exercised at runtime; exclude them from "uncovered" alarm.
+
 ## Writing style (beyond baseline)
 
 - Do not silently rewrite existing British spellings in unrelated files; flag inconsistencies in files you are already editing.
