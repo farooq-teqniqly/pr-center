@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coverlet configuration for the "XPlat Code Coverage" collector.
+  Excludes source-generated files (e.g. the [LoggerMessage] output under
+  obj/.../Generators/) so generator boilerplate does not dilute the authored-code
+  coverage number. Exclusion is by file only: async state machines are marked
+  [CompilerGenerated], so an attribute-based exclusion would wrongly drop real
+  async methods from coverage.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <ExcludeByFile>**/*.g.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

@@ -69,10 +69,14 @@ Do not violate these without updating the idea/state docs first:
   a grep over the Cobertura XML -- no ReportGenerator step. Collect per test project:
 
   ```
-  dotnet test tests/<Project>.Tests/<Project>.Tests.csproj --no-build --collect:"XPlat Code Coverage"
+  dotnet test tests/<Project>.Tests/<Project>.Tests.csproj --no-build \
+    --collect:"XPlat Code Coverage" --settings coverlet.runsettings
   ```
 
-  This writes `tests/<Project>.Tests/TestResults/<guid>/coverage.cobertura.xml`. Read per-class
+  `coverlet.runsettings` (repo root) excludes source-generated `*.g.cs` (e.g. `[LoggerMessage]`
+  output) so generator boilerplate does not dilute the authored-code number; it excludes by file,
+  not by attribute, since async state machines are `[CompilerGenerated]` and would otherwise be
+  dropped. This writes `tests/<Project>.Tests/TestResults/<guid>/coverage.cobertura.xml`. Read per-class
   line coverage (`line-rate`, 0-1; the assembly-level node is the overall):
 
   ```
