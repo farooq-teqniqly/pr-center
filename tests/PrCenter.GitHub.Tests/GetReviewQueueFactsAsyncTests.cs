@@ -303,6 +303,16 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
         Assert.Equal(OwnerFetchStatus.Error, run.Result.Status);
     }
 
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenResponseShapeIsUnexpected_ReturnsError()
+    {
+        // Act
+        var run = await RunAsync(Ok(GraphQlFixtures.WrongShapeReviewQueueResponse));
+
+        // Assert
+        Assert.Equal(OwnerFetchStatus.Error, run.Result.Status);
+    }
+
     private GitHubFactsClient GuardTestClient()
     {
         var httpClient = new HttpClient();

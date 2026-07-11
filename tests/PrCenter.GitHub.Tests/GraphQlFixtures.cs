@@ -54,6 +54,16 @@ internal static class GraphQlFixtures
         { "data": { "viewer": { "login": "octocat" } } }
         """;
 
+    /// <summary>Well-formed JSON whose review-queue shape is wrong (a null search alias).</summary>
+    public const string WrongShapeReviewQueueResponse = """
+        { "data": { "requested": null, "reviewed": { "nodes": [] } } }
+        """;
+
+    /// <summary>Well-formed JSON whose single-PR node is missing required fields.</summary>
+    public const string WrongShapeSinglePullRequestResponse = """
+        { "data": { "repository": { "pullRequest": { "id": "X" } } } }
+        """;
+
     /// <summary>
     /// A response with a single PR exercising the mapping edge branches: an
     /// approved review, commits whose author user is null with the email then
@@ -137,11 +147,26 @@ internal static class GraphQlFixtures
                 "isDraft": false, "state": "OPEN", "updatedAt": "2026-07-01T10:00:00Z",
                 "author": { "login": "author-a" },
                 "repository": { "name": "repo-a", "owner": { "login": "acme" } },
-                "reviewRequests": { "nodes": [] },
-                "reviews": { "nodes": [] },
-                "commits": { "nodes": [] },
-                "comments": { "nodes": [] },
-                "reviewThreads": { "nodes": [] }
+                "reviewRequests": { "nodes": [
+                  { "requestedReviewer": { "__typename": "User", "login": "octocat" } },
+                  { "requestedReviewer": { "__typename": "Team", "name": "team-x" } }
+                ] },
+                "reviews": { "nodes": [
+                  { "author": { "__typename": "User", "login": "human-rev" }, "state": "COMMENTED", "submittedAt": "2026-07-01T09:00:00Z" },
+                  { "author": { "__typename": "Bot", "login": "qodo" }, "state": "COMMENTED", "submittedAt": "2026-07-01T09:30:00Z" },
+                  { "author": { "__typename": "User", "login": "dismissed-rev" }, "state": "DISMISSED", "submittedAt": "2026-07-01T08:00:00Z" }
+                ] },
+                "commits": { "nodes": [
+                  { "commit": { "committedDate": "2026-07-01T07:00:00Z", "author": { "user": null, "email": "unlinked@example.com", "name": "Unlinked Dev" } } }
+                ] },
+                "comments": { "nodes": [
+                  { "author": { "__typename": "User", "login": "human-commenter" }, "createdAt": "2026-07-01T09:15:00Z" }
+                ] },
+                "reviewThreads": { "nodes": [
+                  { "comments": { "nodes": [
+                    { "author": { "__typename": "Bot", "login": "Copilot" }, "createdAt": "2026-07-01T09:45:00Z" }
+                  ] } }
+                ] }
               },
               {
                 "id": "C", "number": 3, "title": "PR C", "url": "https://github.com/acme/repo-c/pull/3",

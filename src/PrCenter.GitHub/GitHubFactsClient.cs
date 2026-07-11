@@ -112,10 +112,14 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             LogFetchFailed(owner, exception.Message);
             return Failure(OwnerFetchStatus.Error, "A network error occurred contacting GitHub.");
         }
-        catch (JsonException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            // A malformed payload or an unexpected response shape (missing or
+            // wrong-typed fields) becomes an Error status, never an escaping
+            // exception -- one owner must not abort a poll over the others.
+            // Cancellation is not a fetch failure and propagates.
             LogFetchFailed(owner, exception.Message);
-            return Failure(OwnerFetchStatus.Error, "GitHub returned a malformed response.");
+            return Failure(OwnerFetchStatus.Error, "GitHub returned an unexpected response.");
         }
     }
 
@@ -168,13 +172,10 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             return await ReadSinglePullRequestAsync(response, cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (HttpRequestException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            LogFetchFailed(owner, exception.Message);
-            return null;
-        }
-        catch (JsonException exception)
-        {
+            // Any network, parse, or shape failure yields null (the PR is
+            // unfetchable); cancellation propagates.
             LogFetchFailed(owner, exception.Message);
             return null;
         }
