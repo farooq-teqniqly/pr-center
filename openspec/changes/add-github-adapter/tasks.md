@@ -59,7 +59,7 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 8. Wrap-up
 
-- [ ] 8.1 `dotnet build` clean (warnings-as-errors) and `dotnet test` green across all projects
-- [ ] 8.2 `dotnet csharpier check .` clean
-- [ ] 8.3 Core statement coverage stays at 100%; adapter coverage reviewed (fixtures should exercise every mapping branch)
-- [ ] 8.4 Comment on issue #6: GitHub half done (stub test deleted, guards + guard tests landed); Persistence half remains for #3/#4 -- do not close the issue
+- [x] 8.1 `dotnet build` clean (warnings-as-errors) and `dotnet test` green across all projects
+- [x] 8.2 `dotnet csharpier check .` clean
+- [x] 8.3 Core statement coverage stays at 100%; adapter coverage reviewed (fixtures should exercise every mapping branch)
+- [x] 8.4 Comment on issue #6: GitHub half done (stub test deleted, guards + guard tests landed); Persistence half remains for #3/#4 -- do not close the issue
