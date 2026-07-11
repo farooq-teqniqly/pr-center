@@ -26,6 +26,10 @@ flag them as defects**:
   files hold `partial void Log...` methods annotated with `[LoggerMessage]`;
   the source generator supplies the bodies. They are not unimplemented partial
   methods.
+- **EF Core write/upsert paths track deliberately.** Read-only queries use
+  `AsNoTracking()` by convention, but methods that load an entity to modify and
+  save it (e.g. `StateStore.SetLastSeenAsync` using `FindAsync`) require change
+  tracking. Do not flag those as missing `AsNoTracking`.
 
 Contracts worth knowing (flag genuine violations, not the pattern itself):
 

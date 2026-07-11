@@ -55,6 +55,13 @@ Do not violate these without updating the idea/state docs first:
   LINQ; `UpdateEvents(activity)` over three OR-ed `.Any(...)` chains), and name booleans and
   states for the concept they represent (`AwaitingReReview`, not a flag combination). This is a
   first-pass obligation while writing the code, not a cleanup deferred to PR review.
+- **Default EF Core reads to `AsNoTracking`.** A query whose result is only read (not mutated
+  and saved back) uses `AsNoTracking()`, and preferably a `Select` projection of just the
+  columns needed, so no entity is materialized into the change tracker. Use tracking only when
+  the loaded entity will be modified and persisted. Note `FindAsync` always tracks and cannot be
+  made no-tracking, so a read-only lookup is a `Where(...).Select(...).FirstOrDefaultAsync()`
+  no-tracking query, not `FindAsync` (e.g. `StateStore.GetLastSeenAsync` reads, `SetLastSeenAsync`
+  tracks to upsert).
 
 ## Writing style (beyond baseline)
 
