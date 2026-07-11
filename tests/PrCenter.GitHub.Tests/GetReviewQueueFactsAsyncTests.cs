@@ -126,7 +126,7 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
             .Facts.Single()
             .Activity.Commits.Select(c => c.AuthorLogin)
             .Order(StringComparer.Ordinal);
-        Assert.Equal(["Only Name", "linked-dev", "unknown"], commitAuthors);
+        Assert.Equal(["Empty Email", "Only Name", "linked-dev", "unknown"], commitAuthors);
     }
 
     [Fact]
@@ -313,6 +313,30 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
         Assert.Equal(OwnerFetchStatus.Error, run.Result.Status);
     }
 
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenTimedOut_ReturnsError()
+    {
+        // Act -- a timeout surfaces as cancellation with the caller's token not cancelled
+        var run = await RunThrowingAsync(new TaskCanceledException());
+
+        // Assert
+        Assert.Equal(OwnerFetchStatus.Error, run.Result.Status);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenCallerCancels_Propagates()
+    {
+        // Arrange
+        var client = ThrowingClient(new OperationCanceledException());
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        // Act / Assert
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.GetReviewQueueFactsAsync(GraphQlFixtures.Owner, "octocat", cts.Token)
+        );
+    }
+
     private GitHubFactsClient GuardTestClient()
     {
         var httpClient = new HttpClient();
@@ -325,6 +349,22 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
     }
 
     private async Task<Run> RunThrowingAsync(Exception exception)
+    {
+        var logger = new CapturingLogger<GitHubFactsClient>();
+        var client = ThrowingClient(exception, logger);
+        var result = await client.GetReviewQueueFactsAsync(
+            GraphQlFixtures.Owner,
+            "octocat",
+            CancellationToken.None
+        );
+
+        return new Run(result, null, logger.Messages);
+    }
+
+    private GitHubFactsClient ThrowingClient(
+        Exception exception,
+        CapturingLogger<GitHubFactsClient>? logger = null
+    )
     {
         var handler = Substitute.For<FakeHttpMessageHandler>();
         handler
@@ -340,15 +380,11 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
         var vault = Substitute.For<ITokenVault>();
         vault.GetTokenAsync(GraphQlFixtures.Owner, Arg.Any<CancellationToken>()).Returns("token");
 
-        var logger = new CapturingLogger<GitHubFactsClient>();
-        var client = new GitHubFactsClient(httpClient, vault, logger);
-        var result = await client.GetReviewQueueFactsAsync(
-            GraphQlFixtures.Owner,
-            "octocat",
-            CancellationToken.None
+        return new GitHubFactsClient(
+            httpClient,
+            vault,
+            logger ?? new CapturingLogger<GitHubFactsClient>()
         );
-
-        return new Run(result, null, logger.Messages);
     }
 
     private async Task<PullRequestFacts> FactsForAsync(string id)

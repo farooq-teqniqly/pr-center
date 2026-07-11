@@ -126,6 +126,38 @@ public sealed class GetPullRequestFactsAsyncTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPullRequestFactsAsync_WhenTimedOut_ReturnsNull()
+    {
+        // Arrange -- a timeout surfaces as cancellation with the token not cancelled
+        var client = _harness.BuildThrowing(new TaskCanceledException());
+
+        // Act
+        var facts = await client.GetPullRequestFactsAsync(
+            GraphQlFixtures.Owner,
+            "repo",
+            9,
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.Null(facts);
+    }
+
+    [Fact]
+    public async Task GetPullRequestFactsAsync_WhenCallerCancels_Propagates()
+    {
+        // Arrange
+        var client = _harness.BuildThrowing(new OperationCanceledException());
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        // Act / Assert
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.GetPullRequestFactsAsync(GraphQlFixtures.Owner, "repo", 9, cts.Token)
+        );
+    }
+
+    [Fact]
     public async Task GetPullRequestFactsAsync_WhenResponseShapeIsUnexpected_ReturnsNull()
     {
         // Arrange

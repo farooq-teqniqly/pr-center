@@ -107,6 +107,15 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
 
             return await ClassifyAsync(owner, response, cancellationToken).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // A timeout (from the resilience pipeline or HttpClient) surfaces as
+            // cancellation even though the caller did not cancel -- it is a fetch
+            // failure, not a caller cancellation, so report it. A real caller
+            // cancellation (token requested) is not caught and propagates.
+            LogFetchFailed(owner, "timed out");
+            return Failure(OwnerFetchStatus.Error, "The GitHub request timed out.");
+        }
         catch (HttpRequestException exception)
         {
             LogFetchFailed(owner, exception.Message);
@@ -117,7 +126,6 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             // A malformed payload or an unexpected response shape (missing or
             // wrong-typed fields) becomes an Error status, never an escaping
             // exception -- one owner must not abort a poll over the others.
-            // Cancellation is not a fetch failure and propagates.
             LogFetchFailed(owner, exception.Message);
             return Failure(OwnerFetchStatus.Error, "GitHub returned an unexpected response.");
         }
@@ -172,10 +180,17 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             return await ReadSinglePullRequestAsync(response, cancellationToken)
                 .ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // A timeout (not a caller cancellation) yields null, like any other
+            // fetch failure; a real caller cancellation propagates.
+            LogFetchFailed(owner, "timed out");
+            return null;
+        }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             // Any network, parse, or shape failure yields null (the PR is
-            // unfetchable); cancellation propagates.
+            // unfetchable).
             LogFetchFailed(owner, exception.Message);
             return null;
         }

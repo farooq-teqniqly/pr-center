@@ -139,13 +139,20 @@ internal static class PullRequestFactsMapper
     {
         var author = commit.GetProperty("author");
 
-        if (OptProp(author, "user") is { } user && GetString(user, "login") is { } login)
+        if (OptProp(author, "user") is { } user && NonBlank(GetString(user, "login")) is { } login)
         {
             return login;
         }
 
-        return GetString(author, "email") ?? GetString(author, "name") ?? "unknown";
+        // Blank email/name are treated as missing so the fallback continues,
+        // rather than yielding a value that CommitFact would reject as blank.
+        return NonBlank(GetString(author, "email"))
+            ?? NonBlank(GetString(author, "name"))
+            ?? "unknown";
     }
+
+    private static string? NonBlank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 
     private static (string By, DateTimeOffset At) LatestUpdate(
         JsonElement pr,
