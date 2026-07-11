@@ -21,6 +21,11 @@ builder.Services.AddPersistenceAdapter(connectionString, builder.Environment.IsD
 
 var app = builder.Build();
 
+// Create/evolve the SQLite schema before serving. The schema is not secret, so
+// this runs while the app is still locked -- only decrypted data access waits
+// for the unlock (#4).
+await app.Services.MigratePersistenceAsync();
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

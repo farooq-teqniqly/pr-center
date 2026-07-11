@@ -36,8 +36,8 @@ migration and the Development gate wire through `PrCenter.Web`.
 
 ## 6. Startup migration
 
-- [ ] 6.1 Apply pending migrations on host startup (`Database.MigrateAsync()`), ordered before the app-lock/unlock gate so the schema is created while locked
-- [ ] 6.2 Test/verify: startup against a schema-less temp file produces the marker table before requests are served, without needing a decrypted key
+- [x] 6.1 Apply pending migrations on host startup (`Database.MigrateAsync()`), ordered before the app-lock/unlock gate so the schema is created while locked
+- [x] 6.2 Test/verify: startup against a schema-less temp file produces the marker table before requests are served, without needing a decrypted key
 
 ## 7. Wrap-up
 
