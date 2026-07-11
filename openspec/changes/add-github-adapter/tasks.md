@@ -24,9 +24,9 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 3. Core port surface
 
-- [ ] 3.1 Define `OwnerFetchStatus` (`Ok | MisconfiguredToken | Error`) and `OwnerFactsResult` (status + facts list + optional detail), null-guarded, with guard tests
-- [ ] 3.2 Extend `IGitHubFacts` with `GetReviewQueueFactsAsync(owner, myLogin, ct)` and `GetPullRequestFactsAsync(owner, repository, number, ct)`; XML docs per D1 (single-PR returns null only when inaccessible/gone; closed/merged still returns facts)
-- [ ] 3.3 Architecture tests stay green (new types in Core only)
+- [x] 3.1 Define `OwnerFetchStatus` (`Ok | MisconfiguredToken | Error`) and `OwnerFactsResult` (status + facts list + optional detail), null-guarded, with guard tests
+- [x] 3.2 Extend `IGitHubFacts` with `GetReviewQueueFactsAsync(owner, myLogin, ct)` and `GetPullRequestFactsAsync(owner, repository, number, ct)`; XML docs per D1 (single-PR returns null only when inaccessible/gone; closed/merged still returns facts)
+- [x] 3.3 Architecture tests stay green (new types in Core only)
 
 ## 4. Adapter: infrastructure and mapping
 

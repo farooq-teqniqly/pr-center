@@ -1,3 +1,4 @@
+using PrCenter.Core.Facts;
 using PrCenter.Core.Ports;
 
 namespace PrCenter.GitHub;
@@ -12,6 +13,21 @@ internal sealed class GitHubFactsClient : IGitHubFacts
     /// <inheritdoc />
     public Task<string> GetAuthenticatedUserLoginAsync(
         string owner,
+        CancellationToken cancellationToken = default
+    ) => throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public Task<OwnerFactsResult> GetReviewQueueFactsAsync(
+        string owner,
+        string myLogin,
+        CancellationToken cancellationToken = default
+    ) => throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public Task<PullRequestFacts?> GetPullRequestFactsAsync(
+        string owner,
+        string repository,
+        int number,
         CancellationToken cancellationToken = default
     ) => throw new NotImplementedException();
 }
