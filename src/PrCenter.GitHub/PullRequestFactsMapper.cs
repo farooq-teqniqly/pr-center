@@ -195,8 +195,10 @@ internal static class PullRequestFactsMapper
             _ => null,
         };
 
+    // `state` is a required field, so a missing one is a shape error (surfaced
+    // as Error/null) rather than a silent "not OPEN" that would drop the PR.
     private static bool IsOpen(JsonElement pr) =>
-        string.Equals(GetString(pr, "state"), "OPEN", StringComparison.Ordinal);
+        string.Equals(RequireString(pr, "state"), "OPEN", StringComparison.Ordinal);
 
     private static bool IsBot(JsonElement author) => IsTypename(author, "Bot");
 

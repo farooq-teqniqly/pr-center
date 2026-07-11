@@ -96,10 +96,14 @@ public sealed class UpdateDetectorTests
     }
 
     [Fact]
-    public void HasUpdate_WhenBotCommitAfterMarker_ReturnsTrue()
+    public void HasUpdate_WhenBotCommitAccompaniesIgnoredBotActivity_ReturnsTrue()
     {
-        // Arrange
-        var facts = TestFacts.Create(commits: [new CommitFact(Other, TestTime.At(3))]);
+        // Arrange -- the bot comment and review are ignored, but the commit counts
+        var facts = TestFacts.Create(
+            commits: [new CommitFact(Other, TestTime.At(3))],
+            comments: [new CommentFact(Other, TestTime.At(3), isBot: true)],
+            reviews: [new ReviewFact(Other, ReviewState.Commented, TestTime.At(3), isBot: true)]
+        );
 
         // Act
         var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);

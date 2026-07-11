@@ -317,6 +317,16 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
     }
 
     [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenRequiredStateFieldIsMissing_ReturnsError()
+    {
+        // Act
+        var run = await RunAsync(Ok(GraphQlFixtures.PullRequestMissingStateResponse));
+
+        // Assert
+        Assert.Equal(OwnerFetchStatus.Error, run.Result.Status);
+    }
+
+    [Fact]
     public async Task GetReviewQueueFactsAsync_WhenTimedOut_ReturnsError()
     {
         // Act -- a timeout surfaces as cancellation with the caller's token not cancelled

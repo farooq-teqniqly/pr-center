@@ -64,6 +64,28 @@ internal static class GraphQlFixtures
         { "data": { "repository": { "pullRequest": { "id": "X" } } } }
         """;
 
+    /// <summary>A review-queue PR node missing the required `state` field.</summary>
+    public const string PullRequestMissingStateResponse = """
+        {
+          "data": {
+            "requested": { "nodes": [
+              {
+                "id": "X", "number": 1, "title": "PR X", "url": "https://github.com/acme/repo/pull/1",
+                "isDraft": false, "updatedAt": "2026-07-01T10:00:00Z",
+                "author": { "login": "author-x" },
+                "repository": { "name": "repo", "owner": { "login": "acme" } },
+                "reviewRequests": { "nodes": [] },
+                "reviews": { "nodes": [] },
+                "commits": { "nodes": [] },
+                "comments": { "nodes": [] },
+                "reviewThreads": { "nodes": [] }
+              }
+            ] },
+            "reviewed": { "nodes": [] }
+          }
+        }
+        """;
+
     /// <summary>
     /// A response with a single PR exercising the mapping edge branches: an
     /// approved review, commits whose author user is null with the email then
