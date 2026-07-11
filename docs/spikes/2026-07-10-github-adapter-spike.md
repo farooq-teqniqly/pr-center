@@ -100,6 +100,12 @@ commits (`fmahmud@perfectserve.com`, unlinked). Consequences:
   Mitigation options for #2's design: a configured "my emails" list, or accept
   the rarity. Others' unlinked commits resolve to "someone else," which is the
   correct outcome anyway.
+- **Resolved same day:** the work email was linked to the GitHub account
+  (Settings -> Emails) and a re-probe of the same Voice#140 commits showed
+  `author.user` now resolving to `farooq-teqniqly` retroactively. The
+  attribution is computed dynamically, so linking closes the me-only hole with
+  zero code; the adapter fallback is still required for other authors'
+  unlinked emails.
 
 ## Noisy reviews list (context)
 

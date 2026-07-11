@@ -16,23 +16,13 @@ public sealed class PullRequestActivityTests
     }
 
     [Theory]
-    [InlineData("requestedReviewerLogins")]
-    [InlineData("reviews")]
-    [InlineData("commits")]
-    [InlineData("comments")]
-    public void Constructor_WithNullElement_Throws(string collectionWithNull)
-    {
-        // Act / Assert
-        Assert.Throws<ArgumentException>(() => ConstructWithNullElement(collectionWithNull));
-    }
-
-    [Theory]
+    [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void Constructor_WithBlankLogin_Throws(string blankLogin)
+    public void Constructor_WithNullOrBlankLogin_Throws(string? login)
     {
         // Act / Assert
-        Assert.Throws<ArgumentException>(() => new PullRequestActivity([blankLogin], [], [], []));
+        Assert.ThrowsAny<ArgumentException>(() => new PullRequestActivity([login!], [], [], []));
     }
 
     [Fact]
@@ -68,13 +58,5 @@ public sealed class PullRequestActivityTests
             reviews: nullArgument == "reviews" ? null! : [],
             commits: nullArgument == "commits" ? null! : [],
             comments: nullArgument == "comments" ? null! : []
-        );
-
-    private static PullRequestActivity ConstructWithNullElement(string collectionWithNull) =>
-        new(
-            requestedReviewerLogins: collectionWithNull == "requestedReviewerLogins" ? [null!] : [],
-            reviews: collectionWithNull == "reviews" ? [null!] : [],
-            commits: collectionWithNull == "commits" ? [null!] : [],
-            comments: collectionWithNull == "comments" ? [null!] : []
         );
 }

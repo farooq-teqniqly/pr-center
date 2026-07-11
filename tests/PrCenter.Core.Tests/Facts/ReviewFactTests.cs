@@ -29,5 +29,21 @@ public sealed class ReviewFactTests
         Assert.Equal(TestLogins.Me, review.ReviewerLogin);
         Assert.Equal(ReviewState.ChangesRequested, review.State);
         Assert.Equal(submittedAt, review.SubmittedAt);
+        Assert.False(review.IsBot);
+    }
+
+    [Fact]
+    public void Constructor_WithBotAuthor_SetsIsBot()
+    {
+        // Act
+        var review = new ReviewFact(
+            "qodo-code-review",
+            ReviewState.Commented,
+            DateTimeOffset.UtcNow,
+            isBot: true
+        );
+
+        // Assert
+        Assert.True(review.IsBot);
     }
 }

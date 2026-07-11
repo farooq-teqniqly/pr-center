@@ -3,9 +3,10 @@ namespace PrCenter.Core.Derivation;
 using PrCenter.Core.Facts;
 
 /// <summary>
-/// Derives the "already covered" decoration: whether another reviewer has
-/// weighed in, signaling the user's review has lower marginal value. Pure
-/// function of current facts; never hides or moves the pull request.
+/// Derives the "already covered" decoration: whether another human reviewer has
+/// weighed in, signaling the user's review has lower marginal value. Bot/CI
+/// reviews are not human coverage and never count. Pure function of current
+/// facts; never hides or moves the pull request.
 /// </summary>
 internal static class CoveredFlag
 {
@@ -15,8 +16,8 @@ internal static class CoveredFlag
     /// <param name="facts">The pull request's current facts.</param>
     /// <param name="myLogin">The login of the user the queue is evaluated for.</param>
     /// <returns>
-    /// <see langword="true"/> when at least one submitted review is by someone
-    /// other than the user; pending review requests do not count.
+    /// <see langword="true"/> when at least one submitted review is by another
+    /// human; pending review requests and bot reviews do not count.
     /// </returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="facts"/> is null.</exception>
     /// <exception cref="ArgumentException">
@@ -28,7 +29,7 @@ internal static class CoveredFlag
         ArgumentException.ThrowIfNullOrWhiteSpace(myLogin);
 
         return facts.Activity.Reviews.Any(review =>
-            GitHubLogin.NotMe(review.ReviewerLogin, myLogin)
+            !review.IsBot && GitHubLogin.NotMe(review.ReviewerLogin, myLogin)
         );
     }
 }

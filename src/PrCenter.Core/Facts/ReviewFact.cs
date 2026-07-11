@@ -12,16 +12,23 @@ public sealed record ReviewFact
     /// <param name="reviewerLogin">The login of the reviewer who submitted the review.</param>
     /// <param name="state">The verdict the reviewer submitted.</param>
     /// <param name="submittedAt">The instant the review was submitted.</param>
+    /// <param name="isBot">Whether the reviewer is a bot or app rather than a human.</param>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="reviewerLogin"/> is null, empty, or whitespace.
     /// </exception>
-    public ReviewFact(string reviewerLogin, ReviewState state, DateTimeOffset submittedAt)
+    public ReviewFact(
+        string reviewerLogin,
+        ReviewState state,
+        DateTimeOffset submittedAt,
+        bool isBot = false
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reviewerLogin);
 
         ReviewerLogin = reviewerLogin;
         State = state;
         SubmittedAt = submittedAt;
+        IsBot = isBot;
     }
 
     /// <summary>Gets the login of the reviewer who submitted the review.</summary>
@@ -32,4 +39,10 @@ public sealed record ReviewFact
 
     /// <summary>Gets the instant the review was submitted.</summary>
     public DateTimeOffset SubmittedAt { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the reviewer is a bot or app rather than a
+    /// human. Set from the GitHub actor type, never from login text.
+    /// </summary>
+    public bool IsBot { get; }
 }

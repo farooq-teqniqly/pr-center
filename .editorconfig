@@ -40,3 +40,12 @@ csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_var_for_built_in_types = true
 csharp_style_var_when_type_is_apparent = true
 csharp_style_var_elsewhere = true
+
+# Source-generated logging lives in dedicated *.Logging.cs partials that hold
+# only [LoggerMessage] declarations. SonarLint (IDE) does not run the source
+# generator, so it reports S3251 ("implement this partial method") as a false
+# positive; the generator supplies the bodies and the build is clean. Disable
+# S3251 for these files only -- they contain nothing but generated-logging
+# partials, so the rule cannot hide a real unimplemented partial here.
+[*.Logging.cs]
+dotnet_diagnostic.S3251.severity = none

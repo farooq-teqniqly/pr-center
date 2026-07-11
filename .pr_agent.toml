@@ -1,0 +1,28 @@
+# Qodo Merge / PR-Agent repository configuration.
+# Repository-level custom instructions for the reviewer. See
+# https://qodo-merge-docs.qodo.ai for the full option set.
+
+[pr_reviewer]
+extra_instructions = """
+Respect these deliberate PR-Center decisions and do not flag them as defects:
+
+- Facts records (PrCenter.Core.Facts, e.g. PullRequestActivity) and
+  OwnerFactsResult intentionally omit runtime null-ELEMENT guards on their
+  non-nullable record collections. They copy the collections into read-only
+  wrappers and guard the list references plus blank login strings, but the
+  element types are non-nullable and the only producer never inserts null.
+  This was decided in issue #10 (Option A). Do not recommend restoring
+  element-null guards on these.
+- DI-injected constructor dependencies (HttpClient, ITokenVault, ILogger<T>)
+  are trusted and intentionally not null-guarded; only non-DI public/internal
+  entry points guard their reference-type parameters.
+- *.Logging.cs partial void Log... methods are [LoggerMessage] source-generated;
+  the generator supplies the bodies, so they are not unimplemented.
+
+Contracts (flag genuine violations, not the pattern): IGitHubFacts fetch
+failures are returned as OwnerFetchStatus / null and never thrown, except a
+genuine caller cancellation (token requested) which propagates; a timeout is
+an OperationCanceledException with the token not cancelled and must be reported,
+not thrown. Access tokens must never appear in logs or an OwnerFactsResult
+detail.
+"""

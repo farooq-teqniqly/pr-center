@@ -21,8 +21,8 @@ public sealed record PullRequestActivity
     /// <paramref name="comments"/> is null.
     /// </exception>
     /// <exception cref="ArgumentException">
-    /// Thrown when any collection contains a null element, or when
-    /// <paramref name="requestedReviewerLogins"/> contains a null or blank login.
+    /// Thrown when <paramref name="requestedReviewerLogins"/> contains a null or
+    /// blank login.
     /// </exception>
     public PullRequestActivity(
         IReadOnlyList<string> requestedReviewerLogins,
@@ -38,15 +38,16 @@ public sealed record PullRequestActivity
 
         // Copy each collection into a read-only wrapper so the snapshot cannot be
         // mutated -- neither through the caller's original reference nor by casting
-        // the property back to an array. Reject null elements (and blank logins) up
-        // front so a deriver never sees garbage.
+        // the property back to an array. The record element types are non-nullable,
+        // so no element-null guard is needed; logins are strings, so blank ones are
+        // reachable and rejected.
         RequestedReviewerLogins = SealLogins(
             requestedReviewerLogins,
             nameof(requestedReviewerLogins)
         );
-        Reviews = SealWithoutNulls(reviews, nameof(reviews));
-        Commits = SealWithoutNulls(commits, nameof(commits));
-        Comments = SealWithoutNulls(comments, nameof(comments));
+        Reviews = Seal(reviews);
+        Commits = Seal(commits);
+        Comments = Seal(comments);
     }
 
     private static IReadOnlyList<string> SealLogins(IReadOnlyList<string> logins, string paramName)
@@ -61,18 +62,8 @@ public sealed record PullRequestActivity
         return Array.AsReadOnly(copy);
     }
 
-    private static IReadOnlyList<T> SealWithoutNulls<T>(IReadOnlyList<T> items, string paramName)
-        where T : class
-    {
-        var copy = items.ToArray();
-
-        if (Array.Exists(copy, static item => item is null))
-        {
-            throw new ArgumentException("Collection contains a null element.", paramName);
-        }
-
-        return Array.AsReadOnly(copy);
-    }
+    private static IReadOnlyList<T> Seal<T>(IReadOnlyList<T> items) =>
+        Array.AsReadOnly(items.ToArray());
 
     /// <summary>Gets the logins of directly requested reviewers (team-routed requests excluded).</summary>
     public IReadOnlyList<string> RequestedReviewerLogins { get; }

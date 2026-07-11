@@ -10,7 +10,13 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 // Adapters bound to Core ports (composition root).
 var connectionString =
     builder.Configuration.GetConnectionString("PrCenter") ?? "Data Source=prcenter.db";
-builder.Services.AddGitHubAdapter();
+var gitHubBaseAddress =
+    builder.Configuration["GitHub:BaseAddress"]
+    ?? throw new InvalidOperationException("GitHub:BaseAddress is not configured.");
+builder
+    .Services.AddGitHubAdapter()
+    .ConfigureHttpClient(client => client.BaseAddress = new Uri(gitHubBaseAddress))
+    .AddStandardResilienceHandler();
 builder.Services.AddPersistenceAdapter(connectionString);
 
 var app = builder.Build();

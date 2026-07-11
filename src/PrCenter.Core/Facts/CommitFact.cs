@@ -11,7 +11,11 @@ public sealed record CommitFact
     /// <summary>
     /// Initializes a new instance of the <see cref="CommitFact"/> class.
     /// </summary>
-    /// <param name="authorLogin">The login of the commit author.</param>
+    /// <param name="authorLogin">
+    /// The commit author's identity: the linked GitHub login when the commit
+    /// email maps to an account, otherwise the commit author email or name. Always
+    /// present, but not guaranteed to be a login.
+    /// </param>
     /// <param name="landedAt">The instant the commit landed on the branch.</param>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="authorLogin"/> is null, empty, or whitespace.
@@ -24,7 +28,12 @@ public sealed record CommitFact
         LandedAt = landedAt;
     }
 
-    /// <summary>Gets the login of the commit author.</summary>
+    /// <summary>
+    /// Gets the commit author's identity: the linked GitHub login when the commit
+    /// email maps to an account, otherwise the commit author email or name. Not
+    /// guaranteed to be a login, so an unlinked author resolves to "someone else"
+    /// under case-insensitive login comparison, which is the correct outcome.
+    /// </summary>
     public string AuthorLogin { get; }
 
     /// <summary>Gets the instant the commit landed on the branch.</summary>
