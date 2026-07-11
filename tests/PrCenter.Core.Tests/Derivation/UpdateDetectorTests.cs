@@ -80,6 +80,35 @@ public sealed class UpdateDetectorTests
     }
 
     [Fact]
+    public void HasUpdate_WhenOnlyBotCommentsAndReviewsAfterMarker_ReturnsFalse()
+    {
+        // Arrange
+        var facts = TestFacts.Create(
+            comments: [new CommentFact(Other, TestTime.At(3), isBot: true)],
+            reviews: [new ReviewFact(Other, ReviewState.Commented, TestTime.At(3), isBot: true)]
+        );
+
+        // Act
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+
+        // Assert
+        Assert.False(hasUpdate);
+    }
+
+    [Fact]
+    public void HasUpdate_WhenBotCommitAfterMarker_ReturnsTrue()
+    {
+        // Arrange
+        var facts = TestFacts.Create(commits: [new CommitFact(Other, TestTime.At(3))]);
+
+        // Act
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+
+        // Assert
+        Assert.True(hasUpdate);
+    }
+
+    [Fact]
     public void HasUpdate_WhenNoActivitySinceMarker_ReturnsFalse()
     {
         // Arrange

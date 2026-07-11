@@ -53,6 +53,24 @@ public sealed class CoveredFlagTests
     }
 
     [Fact]
+    public void IsCovered_WhenOnlyBotReviewsByOthers_ReturnsFalse()
+    {
+        // Arrange
+        var facts = TestFacts.Create(
+            reviews:
+            [
+                new ReviewFact(Other, ReviewState.ChangesRequested, TestTime.At(1), isBot: true),
+            ]
+        );
+
+        // Act
+        var covered = CoveredFlag.IsCovered(facts, MyLogin);
+
+        // Assert
+        Assert.False(covered);
+    }
+
+    [Fact]
     public void IsCovered_WithNullFacts_Throws()
     {
         // Act / Assert

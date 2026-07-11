@@ -16,11 +16,11 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 2. Deriver amendments: bot policy
 
-- [ ] 2.1 Tests first for `UpdateDetector`: bot comment/review after marker -> no update; bot commit after marker -> update; human comment/review after marker -> update (unchanged)
-- [ ] 2.2 Implement the bot filter in `UpdateDetector` (comments and reviews only; commits never filtered) to green
-- [ ] 2.3 Tests first for `CoveredFlag`: only bot reviews by others -> not covered; human review by another -> covered (unchanged)
-- [ ] 2.4 Implement the human-only filter in `CoveredFlag` to green
-- [ ] 2.5 Confirm `MembershipDeriver` needs no change (its tests stay green untouched)
+- [x] 2.1 Tests first for `UpdateDetector`: bot comment/review after marker -> no update; bot commit after marker -> update; human comment/review after marker -> update (unchanged)
+- [x] 2.2 Implement the bot filter in `UpdateDetector` (comments and reviews only; commits never filtered) to green
+- [x] 2.3 Tests first for `CoveredFlag`: only bot reviews by others -> not covered; human review by another -> covered (unchanged)
+- [x] 2.4 Implement the human-only filter in `CoveredFlag` to green
+- [x] 2.5 Confirm `MembershipDeriver` needs no change (its tests stay green untouched)
 
 ## 3. Core port surface
 
