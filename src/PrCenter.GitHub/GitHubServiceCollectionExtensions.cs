@@ -19,7 +19,10 @@ public static class GitHubServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddScoped<IGitHubFacts, GitHubFactsClient>();
+        // Typed client: the HttpClient is injected into GitHubFactsClient. Base
+        // address, User-Agent, and the resilience handler are configured in the
+        // composition root.
+        services.AddHttpClient<IGitHubFacts, GitHubFactsClient>();
         return services;
     }
 }

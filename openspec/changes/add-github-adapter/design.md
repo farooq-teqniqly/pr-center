@@ -85,6 +85,34 @@ issue + inline comments. Union client-side by PR id.
 - *Alternative: octokit.net / octokit.graphql.net.* Rejected: REST-only /
   maintenance risk for a single query document (spike transport analysis).
 
+### D3b: Mapping specifics settled during implementation
+
+- **No `org:`/`user:` search qualifier.** A fine-grained PAT scoped to one
+  resource owner can only see that owner's repositories, so
+  `is:pr is:open review-requested:{me}` returns only that owner's PRs without
+  an owner qualifier -- the token scoping does the per-owner filtering. This
+  avoids needing to know whether an owner is an org or a user at query time.
+  *Assumption to verify at first real integration* (the spike used a broad
+  OAuth token with an explicit `org:`); if wrong, results would cross owners
+  and the per-owner status would need an explicit qualifier plus owner-type
+  configuration.
+- **Comments** feed `CommentFact` from two sources: issue comments
+  (`PullRequest.comments`) and inline review-thread comments
+  (`PullRequest.reviewThreads[].comments`). The spike showed inline comments
+  are the majority (40 vs 26 on one PR), so omitting them would miss real
+  updates. Review *bodies* arrive as `ReviewFact`, not comments.
+- **Requested reviewer logins** map from `reviewRequests` where the requested
+  reviewer `__typename` is `User`; team and bot review requests are skipped
+  (membership only asks whether the user's own login appears).
+- **`Status.LastUpdated`** (display only -- no deriver reads it) is the latest
+  update event by timestamp (its actor and instant, bots included, since it is
+  "who last touched it"); when there are no events, it falls back to the PR
+  author and `updatedAt`.
+- **Transport reading uses `JsonElement` navigation**, not a typed DTO graph:
+  the mapper is the single shape-aware component, matching the "integration
+  surface is one query string" framing and keeping schema-drift changes in one
+  file. Fixtures shaped from real spike payloads pin the expected shape.
+
 ### D4: Adapter obtains PATs through the Core `ITokenVault` port
 
 `GitHubFactsClient` depends on `ITokenVault` (a Core interface -- allowed by

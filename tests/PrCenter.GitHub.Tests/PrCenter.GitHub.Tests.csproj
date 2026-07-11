@@ -6,4 +6,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PrCenter.GitHub\PrCenter.GitHub.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
 </Project>

@@ -30,11 +30,11 @@ spike's real payloads -- no live API calls); DI wiring in `PrCenter.Web` +
 
 ## 4. Adapter: infrastructure and mapping
 
-- [ ] 4.1 Add the fake-`HttpClient` test handler (baseline pattern: public abstract `MockSendAsync`, sealed `SendAsync`) and fixture files shaped from the spike payloads (include: null commit `author.user`, `__typename: "Bot"` review/comment authors, a `DISMISSED` review, an `isDraft: true` PR)
-- [ ] 4.2 Tests first: GraphQL response mapping onto `PullRequestFacts` -- bot flags set from `__typename` only, dismissed reviews omitted, `committedDate` -> `LandedAt`, author fallback login -> email -> name, draft PRs mapped with `IsDraft` true
-- [ ] 4.3 Implement the query document (two aliased searches per D3, nested selection, page sizes/caps) and the response mapping to green
-- [ ] 4.4 Tests first: discovery union -- PR present in both searches maps to exactly one facts instance; re-review-only PR (reviewed-by hit) is included
-- [ ] 4.5 Implement union/dedupe by PR id to green
+- [x] 4.1 Add the fake-`HttpClient` test handler (baseline pattern: public abstract `MockSendAsync`, sealed `SendAsync`) and fixture files shaped from the spike payloads (include: null commit `author.user`, `__typename: "Bot"` review/comment authors, a `DISMISSED` review, an `isDraft: true` PR)
+- [x] 4.2 Tests first: GraphQL response mapping onto `PullRequestFacts` -- bot flags set from `__typename` only, dismissed reviews omitted, `committedDate` -> `LandedAt`, author fallback login -> email -> name, draft PRs mapped with `IsDraft` true
+- [x] 4.3 Implement the query document (two aliased searches per D3, nested selection, page sizes/caps) and the response mapping to green
+- [x] 4.4 Tests first: discovery union -- PR present in both searches maps to exactly one facts instance; re-review-only PR (reviewed-by hit) is included
+- [x] 4.5 Implement union/dedupe by PR id to green
 
 ## 5. Adapter: auth and status
 

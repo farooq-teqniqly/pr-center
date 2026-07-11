@@ -8,7 +8,8 @@ public sealed class GitHubFactsClientTests
     public async Task GetAuthenticatedUserLoginAsync_WhenCalled_ThrowsNotImplemented()
     {
         // Arrange
-        var client = new GitHubFactsClient();
+        // The stub throws before touching its dependencies, so they are unused.
+        var client = new GitHubFactsClient(null!, null!);
 
         // Act / Assert
         await Assert.ThrowsAsync<NotImplementedException>(() =>
