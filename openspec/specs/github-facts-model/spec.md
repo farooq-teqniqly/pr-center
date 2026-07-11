@@ -3,7 +3,6 @@
 ## Purpose
 TBD - created by archiving change add-queue-derivation. Update Purpose after archive.
 ## Requirements
-
 ### Requirement: Pull-request facts are a transport-neutral Core type
 
 `PrCenter.Core` SHALL define a `PullRequestFacts` type (and its sub-records)
@@ -21,9 +20,19 @@ type SHALL carry:
 - **Activity**: the set of *directly* requested reviewer logins (team-routed
   requests are out of scope); the list of submitted reviews, each with a
   reviewer login, a review state (approved / changes-requested / commented),
-  and a submitted timestamp; and the lists of update-worthy events -- commits
-  and comments -- each with an author login and a timestamp, where the commit
-  timestamp is the instant the commit landed on the branch, not the author date.
+  a submitted timestamp, and an **actor-type flag (`IsBot`)**; and the lists
+  of update-worthy events -- commits and comments -- each with an author
+  identity and a timestamp, where comments also carry an actor-type flag
+  (`IsBot`) and the commit timestamp is the instant the commit landed on the
+  branch, not the author date.
+
+Actor-type flags are set from the API's actor type (`__typename`/`user.type`
+equals `Bot`), never from login text -- the same bot's login varies by API
+surface. Commits carry no actor-type flag: the decided bot policy counts bot
+commits, so no deriver reads one. A commit's author identity is the linked
+GitHub login when the commit email maps to an account, otherwise the commit
+author email or name -- it is always present, but is not guaranteed to be a
+login.
 
 #### Scenario: Facts model has no infrastructure dependency
 
@@ -35,9 +44,15 @@ type SHALL carry:
 #### Scenario: Every update-worthy event carries an author and a timestamp
 
 - **WHEN** a `PullRequestFacts` value is constructed
-- **THEN** each commit, comment, and review it holds exposes an author login
-  and a timestamp, so update detection can filter by author and instant without
-  any further lookup
+- **THEN** each commit, comment, and review it holds exposes an author
+  identity and a timestamp, so update detection can filter by author and
+  instant without any further lookup
+
+#### Scenario: Reviews and comments expose their actor type
+
+- **WHEN** a `ReviewFact` or `CommentFact` is constructed
+- **THEN** it exposes an `IsBot` flag the derivers can read without any
+  further lookup
 
 ### Requirement: Facts are pure data with guarded construction
 
@@ -51,3 +66,4 @@ per the baseline; required strings SHALL reject null-or-whitespace.
   reference-type argument that the contract requires
 - **THEN** construction throws `ArgumentNullException` (or
   `ArgumentException` for a null-or-whitespace required string)
+
