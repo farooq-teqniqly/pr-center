@@ -17,11 +17,16 @@ flag them as defects**:
   (`IReadOnlyList<ReviewFact>` etc.). The element types are non-nullable, the
   only producer never inserts null, and this was decided in issue #10 (Option
   A) after review. Do not recommend restoring element-null guards on these.
-- **DI-injected dependencies are not null-guarded.** Constructor parameters
-  supplied by the DI container (e.g. `HttpClient`, `ITokenVault`,
-  `ILogger<T>`) are trusted and deliberately have no `ArgumentNullException`
-  checks. Only non-DI public/internal entry points guard their reference-type
-  parameters.
+- **DI-injected dependencies are not null-guarded.** Any constructor parameter
+  supplied by the DI container -- including `HttpClient`, `ITokenVault`,
+  `ILogger<T>`, and `PrCenterDbContext` -- is trusted and deliberately has no
+  `ArgumentNullException` check (e.g. `StateStore(PrCenterDbContext, ILogger<StateStore>)`).
+  Only non-DI public/internal entry points guard their reference-type parameters.
+- **EF Core-generated migration classes are `public partial` by design.** Files
+  under `Migrations/` (e.g. `*_InitialCreate.cs`, the model snapshot) are emitted
+  by the EF tooling; their `public` accessibility is the generator's, and
+  regenerating reverts any hand-narrowing. Do not flag their visibility or
+  suggest making them `internal`/`sealed`.
 - **Source-generated logging is implemented by the generator.** `*.Logging.cs`
   files hold `partial void Log...` methods annotated with `[LoggerMessage]`;
   the source generator supplies the bodies. They are not unimplemented partial

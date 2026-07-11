@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using PrCenter.Core.Ports;
 
@@ -17,7 +16,7 @@ public sealed class PersistenceMigrationExtensionsTests : IDisposable
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddPersistenceAdapter($"Data Source={_path}", isDevelopment: false);
+        services.AddPersistenceAdapter($"Data Source={_path};Pooling=False", isDevelopment: false);
         await using var provider = services.BuildServiceProvider();
         var seenAt = DateTimeOffset.Parse(
             "2026-07-01T09:30:00Z",
@@ -37,7 +36,6 @@ public sealed class PersistenceMigrationExtensionsTests : IDisposable
 
     public void Dispose()
     {
-        SqliteConnection.ClearAllPools();
         foreach (var suffix in (ReadOnlySpan<string>)["", "-wal", "-shm"])
         {
             var file = _path + suffix;

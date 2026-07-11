@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace PrCenter.Persistence.Tests;
@@ -20,8 +19,13 @@ internal sealed class SqliteTestDatabase : IDisposable
     public SqliteTestDatabase()
     {
         _path = Path.Combine(Path.GetTempPath(), $"prcenter-test-{Guid.NewGuid():N}.db");
+
+        // Pooling=False so disposing a context fully closes its connection and
+        // frees the file handle for delete, without the process-wide
+        // SqliteConnection.ClearAllPools() -- which would close pooled
+        // connections that a parallel test class is still using.
         _options = new DbContextOptionsBuilder<PrCenterDbContext>()
-            .UseSqlite($"Data Source={_path}")
+            .UseSqlite($"Data Source={_path};Pooling=False")
             .Options;
 
         using var context = CreateContext();
@@ -35,9 +39,6 @@ internal sealed class SqliteTestDatabase : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        // Release pooled connections so the file handle is freed before delete.
-        SqliteConnection.ClearAllPools();
-
         foreach (var suffix in (ReadOnlySpan<string>)["", "-wal", "-shm"])
         {
             var file = _path + suffix;

@@ -37,39 +37,41 @@ public sealed class PersistenceServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddPersistenceAdapter_Development_EnablesSensitiveDataLogging()
+    public void AddPersistenceAdapter_Development_EnablesSensitiveDataLoggingAndDetailedErrors()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: true);
 
         // Act
-        var enabled = ResolveSensitiveDataLogging(services);
+        var coreOptions = ResolveCoreOptions(services);
 
         // Assert
-        Assert.True(enabled);
+        Assert.True(coreOptions.IsSensitiveDataLoggingEnabled);
+        Assert.True(coreOptions.DetailedErrorsEnabled);
     }
 
     [Fact]
-    public void AddPersistenceAdapter_NonDevelopment_DisablesSensitiveDataLogging()
+    public void AddPersistenceAdapter_NonDevelopment_DisablesSensitiveDataLoggingAndDetailedErrors()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
 
         // Act
-        var enabled = ResolveSensitiveDataLogging(services);
+        var coreOptions = ResolveCoreOptions(services);
 
         // Assert
-        Assert.False(enabled);
+        Assert.False(coreOptions.IsSensitiveDataLoggingEnabled);
+        Assert.False(coreOptions.DetailedErrorsEnabled);
     }
 
-    private static bool ResolveSensitiveDataLogging(IServiceCollection services)
+    private static CoreOptionsExtension ResolveCoreOptions(IServiceCollection services)
     {
         using var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<DbContextOptions<PrCenterDbContext>>();
         var coreExtension = options.FindExtension<CoreOptionsExtension>();
         Assert.NotNull(coreExtension);
-        return coreExtension.IsSensitiveDataLoggingEnabled;
+        return coreExtension;
     }
 }
