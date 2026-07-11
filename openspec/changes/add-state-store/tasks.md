@@ -7,9 +7,9 @@ migration and the Development gate wire through `PrCenter.Web`.
 
 ## 1. Marker entity and context
 
-- [ ] 1.1 Add the `LastSeenMarker` entity (`PullRequestId` string key, `SeenAt` DateTimeOffset) in `PrCenter.Persistence`
-- [ ] 1.2 Configure it on `PrCenterDbContext` via `OnModelCreating` (Fluent API; key on `PullRequestId`) and expose its `DbSet`
-- [ ] 1.3 Confirm architecture tests stay green (entity + context remain in Persistence; Core stays EF-free)
+- [x] 1.1 Add the `LastSeenMarker` entity (`PullRequestId` string key, `SeenAt` DateTimeOffset) in `PrCenter.Persistence`
+- [x] 1.2 Configure it on `PrCenterDbContext` via `OnModelCreating` (Fluent API; key on `PullRequestId`) and expose its `DbSet`
+- [x] 1.3 Confirm architecture tests stay green (entity + context remain in Persistence; Core stays EF-free)
 
 ## 2. Integration-test harness (real SQLite file)
 
