@@ -13,7 +13,7 @@ remains [pr-center-idea.md](./pr-center-idea.md) and
 |---|--------|------------|----------|
 | 1 | `add-queue-derivation` | skeleton | Core derivation logic (pure, no I/O) |
 | 2 | `add-github-adapter` | skeleton | Real `IGitHubFacts` against the GitHub API |
-| 3 | `add-state-store` | skeleton | SQLite schema + real `IStateStore` |
+| 3 | `add-state-store` | skeleton | Marker store + persistence foundation (migrations, test harness) |
 | 4 | `add-token-vault-and-lock` | 3 | Encryption at rest, unlock flow, app lock gating |
 | 5 | `add-polling-and-refresh` | 1, 2, 3, 4 | Poll loop, RefreshQueue, MarkSeen live fetch |
 | 6 | `add-review-queue-ui` | 5 | The review inbox list itself |
@@ -48,9 +48,17 @@ matching deriver amendment, and the commit author-identity fallback.
 
 ### 3. add-state-store
 
-EF Core entity model and migrations for last-seen markers (keyed by PR id,
-never deleted), owner/settings rows, and encrypted token storage; real
-`IStateStore` implementation. Integration tests hit a real SQLite file.
+The last-seen marker store and the reusable persistence foundation the later
+data changes build on. Delivers: the `LastSeenMarker` EF entity (keyed by PR
+id, upsert on set, never deleted) and the real `IStateStore` implementation;
+migrations enabled with the first migration; startup migration application
+(the schema is not secret, so it runs while the app is still locked); and the
+real-SQLite-file integration-test harness (temp file per test, no
+Testcontainers) that #4 and #7 reuse. Token/security and settings schema are
+*not* here -- they ride with the changes that design their columns (see #4,
+#7), so no table shape is guessed before its behavior is understood. Closes
+the state-store part of issue #6 (delete the stub throw tests, add guards +
+guard tests).
 
 ### 4. add-token-vault-and-lock
 
@@ -58,7 +66,10 @@ App password: KDF choice (Argon2 vs PBKDF2, open question from the skeleton
 design), salt + verifier storage, AES encryption of PATs at rest, decrypted
 key held in memory, `ITokenVault` implementation, app lock state machine
 behavior (Locked on start, Unlock use case, ResetVault wipe path). Polling and
-GitHub access gated on unlocked state.
+GitHub access gated on unlocked state. Owns its own schema: the token-record
+and app-security (salt/verifier + KDF-parameter) tables and their migration,
+designed here where the crypto format is decided, on the persistence
+foundation from #3.
 
 ### 5. add-polling-and-refresh
 
@@ -80,7 +91,9 @@ indicators, global error banner, "all caught up" empty state.
 
 Settings page: app password setup, PAT entry per owner, owner list management,
 poll interval, reset/wipe path with its no-recovery warning. First-run
-experience (locked, no tokens yet).
+experience (locked, no tokens yet). Owns the settings schema -- the
+owner-list and poll-interval rows and their migration -- on the persistence
+foundation from #3, designed here where the settings shape is understood.
 
 ### 8. add-containerization
 
