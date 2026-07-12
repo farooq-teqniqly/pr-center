@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using NSubstitute;
+using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
 
 namespace PrCenter.GitHub.Tests;
@@ -62,6 +63,25 @@ internal sealed class GitHubClientHarness : IDisposable
 
         var vault = Substitute.For<ITokenVault>();
         vault.GetTokenAsync(GraphQlFixtures.Owner, Arg.Any<CancellationToken>()).Returns("token");
+
+        return new GitHubFactsClient(httpClient, vault, new CapturingLogger<GitHubFactsClient>());
+    }
+
+    /// <summary>Builds a client whose token vault is locked (throws on token access).</summary>
+    /// <returns>The configured client.</returns>
+    public GitHubFactsClient BuildWithLockedVault()
+    {
+        var handler = Substitute.For<FakeHttpMessageHandler>();
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://api.github.com/"),
+        };
+        _disposables.Add(httpClient);
+
+        var vault = Substitute.For<ITokenVault>();
+        vault
+            .GetTokenAsync(GraphQlFixtures.Owner, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<string?>(new VaultLockedException()));
 
         return new GitHubFactsClient(httpClient, vault, new CapturingLogger<GitHubFactsClient>());
     }
