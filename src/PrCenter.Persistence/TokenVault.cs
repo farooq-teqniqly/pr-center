@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
 using PrCenter.Persistence.Crypto;
@@ -9,10 +10,10 @@ namespace PrCenter.Persistence;
 
 /// <summary>
 /// Adapter implementing <see cref="ITokenVault"/> with SQLite-backed storage and
-/// Argon2id + AES-GCM crypto. Token store/retrieve arrive with a later task;
-/// this task establishes the vault via <see cref="SetPasswordAsync"/>.
+/// Argon2id + AES-GCM crypto: establishes the vault, stores and retrieves owner
+/// tokens under the in-memory key, and wipes everything on reset.
 /// </summary>
-internal sealed class TokenVault : ITokenVault
+internal sealed partial class TokenVault : ITokenVault
 {
     private const int SaltSizeBytes = 16;
     private const int KdfMemoryKib = 19456;
@@ -28,16 +29,23 @@ internal sealed class TokenVault : ITokenVault
 
     private readonly PrCenterDbContext _context;
     private readonly VaultKeyHolder _keyHolder;
+    private readonly ILogger<TokenVault> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TokenVault"/> class.
     /// </summary>
     /// <param name="context">The SQLite context.</param>
     /// <param name="keyHolder">The process-wide decrypted-key holder.</param>
-    public TokenVault(PrCenterDbContext context, VaultKeyHolder keyHolder)
+    /// <param name="logger">The logger for the destructive reset path.</param>
+    public TokenVault(
+        PrCenterDbContext context,
+        VaultKeyHolder keyHolder,
+        ILogger<TokenVault> logger
+    )
     {
         _context = context;
         _keyHolder = keyHolder;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -168,5 +176,6 @@ internal sealed class TokenVault : ITokenVault
         await _context.OwnerTokens.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await _context.AppSecurity.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         _keyHolder.Clear();
+        LogVaultReset();
     }
 }

@@ -37,9 +37,9 @@
 
 ## 6. Wiring and docs
 
-- [ ] 6.1 Split DI in `AddPersistenceAdapter`: `AddSingleton` for the key holder / `IAppLock`, `AddScoped` for `TokenVault`; update `PrCenter.Web` composition root and its DI composition-root test
-- [ ] 6.2 Add source-generated `[LoggerMessage]` logging for the unlock-failed and reset paths (`Foo.Logging.cs` split)
-- [ ] 6.3 Sweep docs: update `docs/pr-center-state.md` section 3 and `docs/pr-center-architecture.md` app-lock notes from two states to the three-state FSM (diagram + prose); add `IAppLock` to the ports list in the architecture prose
-- [ ] 6.4 Sweep the canonical Lucid architecture diagram (`bc093d17-51ce-4975-a398-caebcb69d817`, "PR-Center Architecture (revised)"): add `IAppLock` to the ports box alongside `IGitHubFacts | IStateStore | ITokenVault`, per the "update both in the same pass" rule in pr-center-architecture.md
-- [ ] 6.5 Run the full test + coverage pass on the changed projects per CLAUDE.md; confirm coverage and quality gate before archiving
-- [ ] 6.6 Close GH issue #6: this change lands the final (`TokenVault`) part -- stub throw-tests deleted (5.1) and null guards + guard tests added (5.8). The `StateStore` part closed with #3 and the `GitHubFactsClient` part with #2, so with #4 merged all three files are done. Comment the completion on the issue and close it
+- [x] 6.1 Split DI in `AddPersistenceAdapter`: `AddSingleton` for the `VaultKeyHolder`, `AddScoped` for `IAppLock` and `TokenVault` (the lock and vault both need the scoped `DbContext`, so only the key holder is a singleton); add a DI composition-root test that `IAppLock` resolves to the Persistence adapter
+- [x] 6.2 Add source-generated `[LoggerMessage]` logging for the unlock-failed (`AppLock.Logging.cs`) and reset (`TokenVault.Logging.cs`) paths
+- [x] 6.3 Sweep docs: update `docs/pr-center-state.md` section 3 and `docs/pr-center-architecture.md` app-lock notes from two states to the three-state FSM (diagram + prose); add `IAppLock` to the ports list in the architecture prose
+- [x] 6.4 Sweep the canonical Lucid architecture diagram (`bc093d17-51ce-4975-a398-caebcb69d817`, "PR-Center Architecture (revised)"): added `IAppLock` to the ports box (now `IGitHubFacts | IStateStore | ITokenVault | IAppLock`) and to the Persistence "implements" edge label, per the "update both in the same pass" rule in pr-center-architecture.md
+- [x] 6.5 Run the full test + coverage pass on the changed projects per CLAUDE.md; confirm coverage and quality gate before archiving
+- [ ] 6.6 Close GH issue #6 (deferred to PR merge): this change lands the final (`TokenVault`) part -- stub throw-tests deleted (5.1) and null guards + guard tests added (5.8). The `StateStore` part closed with #3 and the `GitHubFactsClient` part with #2, so with #4 merged all three files are done. Put "Closes #6" in the PR body so merge auto-closes it (not closed pre-merge, so a revert would not leave a wrongly-closed issue)

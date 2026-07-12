@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PrCenter.Core.Locking;
 using PrCenter.Persistence;
 
@@ -15,7 +16,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, new VaultKeyHolder());
+        var vault = CreateVault(context, new VaultKeyHolder());
 
         // Act
         await vault.SetPasswordAsync("correct horse", CancellationToken.None);
@@ -33,7 +34,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, new VaultKeyHolder());
+        var vault = CreateVault(context, new VaultKeyHolder());
         await vault.SetPasswordAsync("first", CancellationToken.None);
 
         // Act / Assert
@@ -50,7 +51,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, new VaultKeyHolder());
+        var vault = CreateVault(context, new VaultKeyHolder());
 
         // Act / Assert
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
@@ -63,7 +64,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
 
         // Act
         await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
@@ -78,7 +79,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
         await vault.StoreTokenAsync("PerfectServe", "first_token", CancellationToken.None);
 
         // Act
@@ -100,7 +101,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
         const string plaintext = "github_pat_supersecret";
 
         // Act
@@ -116,7 +117,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
 
         // Act
         var token = await vault.GetTokenAsync("PerfectServe", CancellationToken.None);
@@ -130,7 +131,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, new VaultKeyHolder());
+        var vault = CreateVault(context, new VaultKeyHolder());
 
         // Act / Assert
         await Assert.ThrowsAsync<VaultLockedException>(() =>
@@ -143,7 +144,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, new VaultKeyHolder());
+        var vault = CreateVault(context, new VaultKeyHolder());
 
         // Act / Assert
         await Assert.ThrowsAsync<VaultLockedException>(() =>
@@ -159,7 +160,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
 
         // Act / Assert
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
@@ -175,7 +176,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
 
         // Act / Assert
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
@@ -191,7 +192,7 @@ public sealed class TokenVaultTests : IDisposable
     {
         // Arrange
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, Unlocked());
+        var vault = CreateVault(context, Unlocked());
 
         // Act / Assert
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
@@ -206,7 +207,7 @@ public sealed class TokenVaultTests : IDisposable
         await using var context = _database.CreateContext();
         SeedSecurityAndToken(context);
         var keyHolder = Unlocked();
-        var vault = new TokenVault(context, keyHolder);
+        var vault = CreateVault(context, keyHolder);
 
         // Act
         await vault.ResetVaultAsync(CancellationToken.None);
@@ -223,7 +224,7 @@ public sealed class TokenVaultTests : IDisposable
         // Arrange
         await using var context = _database.CreateContext();
         SeedSecurityAndToken(context);
-        var vault = new TokenVault(context, new VaultKeyHolder());
+        var vault = CreateVault(context, new VaultKeyHolder());
 
         // Act
         await vault.ResetVaultAsync(CancellationToken.None);
@@ -232,6 +233,9 @@ public sealed class TokenVaultTests : IDisposable
         Assert.False(await context.AppSecurity.AsNoTracking().AnyAsync(CancellationToken.None));
         Assert.False(await context.OwnerTokens.AsNoTracking().AnyAsync(CancellationToken.None));
     }
+
+    private static TokenVault CreateVault(PrCenterDbContext context, VaultKeyHolder keyHolder) =>
+        new(context, keyHolder, NullLogger<TokenVault>.Instance);
 
     private static VaultKeyHolder Unlocked()
     {
