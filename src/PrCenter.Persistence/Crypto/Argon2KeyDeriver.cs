@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using Konscious.Security.Cryptography;
 
@@ -26,13 +27,22 @@ internal static class Argon2KeyDeriver
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
+        var passwordBytes = Encoding.UTF8.GetBytes(password);
+        try
         {
-            Salt = parameters.Salt,
-            MemorySize = parameters.MemoryKib,
-            Iterations = parameters.Iterations,
-            DegreeOfParallelism = parameters.Parallelism,
-        };
-        return argon2.GetBytes(KeyLengthBytes);
+            using var argon2 = new Argon2id(passwordBytes)
+            {
+                Salt = parameters.Salt,
+                MemorySize = parameters.MemoryKib,
+                Iterations = parameters.Iterations,
+                DegreeOfParallelism = parameters.Parallelism,
+            };
+            return argon2.GetBytes(KeyLengthBytes);
+        }
+        finally
+        {
+            // Best effort: clear the transient password bytes once the key is derived.
+            CryptographicOperations.ZeroMemory(passwordBytes);
+        }
     }
 }
