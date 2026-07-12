@@ -1,8 +1,8 @@
 ## 1. Dependencies and schema
 
-- [ ] 1.1 Add `Konscious.Security.Cryptography.Argon2` to `Directory.Packages.props` and reference it in `PrCenter.Persistence`
-- [ ] 1.2 Add the `OwnerToken` EF entity (`Owner` PK, `Nonce`, `Ciphertext`, `Tag`) and `AppSecurity` entity (single-row PK, `Salt`, `MemoryKib`, `Iterations`, `Parallelism`, `KdfVersion`, sentinel `Nonce`/`Ciphertext`/`Tag`) configured via Fluent API in `OnModelCreating`
-- [ ] 1.3 Add one EF migration creating both tables; confirm startup migration (from #3) applies it while Locked
+- [x] 1.1 Add `Konscious.Security.Cryptography.Argon2` to `Directory.Packages.props` and reference it in `PrCenter.Persistence`
+- [x] 1.2 Add the `OwnerToken` EF entity (`Owner` PK, `Nonce`, `Ciphertext`, `Tag`) and `AppSecurity` entity (single-row PK, `Salt`, `MemoryKib`, `Iterations`, `Parallelism`, `KdfVersion`, sentinel `Nonce`/`Ciphertext`/`Tag`) configured via Fluent API in `OnModelCreating`
+- [x] 1.3 Add one EF migration creating both tables; confirm startup migration (from #3) applies it while Locked
 
 ## 2. Crypto primitives (Persistence, TDD)
 
