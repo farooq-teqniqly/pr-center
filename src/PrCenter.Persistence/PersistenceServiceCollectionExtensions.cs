@@ -13,7 +13,8 @@ public static class PersistenceServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the SQLite context and the persistence adapter's
-    /// implementations of <see cref="IStateStore"/> and <see cref="ITokenVault"/>.
+    /// implementations of <see cref="IStateStore"/>, <see cref="ITokenVault"/>,
+    /// and <see cref="IAppLock"/> (with its singleton key holder).
     /// </summary>
     /// <param name="services">The service collection to add the adapter to.</param>
     /// <param name="connectionString">The SQLite connection string.</param>
@@ -47,6 +48,12 @@ public static class PersistenceServiceCollectionExtensions
         });
         services.AddScoped<IStateStore, StateStore>();
         services.AddScoped<ITokenVault, TokenVault>();
+
+        // The decrypted key is shared across circuits for the life of the
+        // process, so the holder is a singleton; the lock reads it plus the
+        // scoped context, so it is scoped.
+        services.AddSingleton<VaultKeyHolder>();
+        services.AddScoped<IAppLock, AppLock>();
         return services;
     }
 }

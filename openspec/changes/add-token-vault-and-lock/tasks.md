@@ -13,15 +13,15 @@
 
 ## 3. App-lock port and key holder (Core + Persistence, TDD)
 
-- [ ] 3.1 Add `IAppLock` port to `PrCenter.Core` (`UnlockAsync`, `CurrentState`) and the three-state `AppLockState` type (`Uninitialized`/`Locked`/`Unlocked`); add `VaultLockedException`
-- [ ] 3.2 Failing tests: state derives as Uninitialized (no security row), Locked (row, no key), Unlocked (key held); shared singleton holder returns the same key across resolutions
-- [ ] 3.3 Implement the singleton key holder / `IAppLock` implementation (holds `byte[]` key + derived state; zeroes key on clear)
+- [x] 3.1 Add `IAppLock` port to `PrCenter.Core` (`GetStateAsync`) and the three-state `AppLockState` type (`Uninitialized`/`Locked`/`Unlocked`); add `VaultLockedException`. (`UnlockAsync` deferred to task 4, where it is implemented and tested together -- adding it here would ship a stub, which issue #6 forbids.)
+- [x] 3.2 Failing tests: state derives as Uninitialized (no security row), Locked (row, no key), Unlocked (key held); shared singleton holder returns the same key across resolutions
+- [x] 3.3 Implement the singleton key holder / `IAppLock` implementation (holds `byte[]` key + derived state; zeroes key on clear)
 
 ## 4. Vault: set password and verification (Persistence, TDD)
 
 - [ ] 4.1 Failing tests: `SetPasswordAsync` first-run writes salt/params/encrypted sentinel; rejects when a security row already exists
 - [ ] 4.2 Implement `SetPasswordAsync` on `TokenVault` (generate salt, derive key, encrypt sentinel, persist security row)
-- [ ] 4.3 Failing tests: `UnlockAsync` accepts the correct password, rejects a wrong one (state stays Locked, no key), rejects when Uninitialized, and verifies correctly with zero tokens stored
+- [ ] 4.3 Add `UnlockAsync` to the `IAppLock` port; failing tests: it accepts the correct password, rejects a wrong one (state stays Locked, no key), rejects when Uninitialized, and verifies correctly with zero tokens stored
 - [ ] 4.4 Implement unlock/verify (re-derive key, decrypt sentinel, hold key in the singleton on success)
 
 ## 5. Vault: token store, retrieve, gating, reset (Persistence, TDD)

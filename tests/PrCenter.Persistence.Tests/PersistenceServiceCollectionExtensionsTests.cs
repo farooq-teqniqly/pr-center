@@ -66,6 +66,24 @@ public sealed class PersistenceServiceCollectionExtensionsTests
         Assert.False(coreOptions.DetailedErrorsEnabled);
     }
 
+    [Fact]
+    public void AddPersistenceAdapter_KeyHolder_IsSharedAcrossResolutions()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var first = provider.GetRequiredService<VaultKeyHolder>();
+        first.SetKey([5, 6, 7]);
+        using var scope = provider.CreateScope();
+        var second = scope.ServiceProvider.GetRequiredService<VaultKeyHolder>();
+
+        // Assert
+        Assert.Equal(new byte[] { 5, 6, 7 }, second.GetKeyOrThrow());
+    }
+
     private static CoreOptionsExtension ResolveCoreOptions(IServiceCollection services)
     {
         using var provider = services.BuildServiceProvider();
