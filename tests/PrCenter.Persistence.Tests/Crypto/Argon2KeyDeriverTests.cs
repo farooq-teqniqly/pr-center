@@ -66,4 +66,40 @@ public sealed class Argon2KeyDeriverTests
         // Act / Assert
         Assert.Throws<ArgumentNullException>(() => Argon2KeyDeriver.DeriveKey("password", null!));
     }
+
+    [Fact]
+    public void DeriveKey_EmptySalt_Throws()
+    {
+        // Arrange
+        var parameters = new KdfParameters(
+            Salt: [],
+            MemoryKib: 1024,
+            Iterations: 1,
+            Parallelism: 1
+        );
+
+        // Act / Assert
+        Assert.ThrowsAny<ArgumentException>(() =>
+            Argon2KeyDeriver.DeriveKey("password", parameters)
+        );
+    }
+
+    [Theory]
+    [InlineData(0, 1, 1)]
+    [InlineData(1024, 0, 1)]
+    [InlineData(1024, 1, 0)]
+    public void DeriveKey_NonPositiveNumericParameter_Throws(
+        int memoryKib,
+        int iterations,
+        int parallelism
+    )
+    {
+        // Arrange
+        var parameters = new KdfParameters(new byte[16], memoryKib, iterations, parallelism);
+
+        // Act / Assert
+        Assert.ThrowsAny<ArgumentException>(() =>
+            Argon2KeyDeriver.DeriveKey("password", parameters)
+        );
+    }
 }

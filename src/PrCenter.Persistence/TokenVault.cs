@@ -195,10 +195,25 @@ internal sealed partial class TokenVault : ITokenVault
                 return null;
             }
 
-            var plaintext = AesGcmCipher.Decrypt(
-                key,
-                new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
-            );
+            byte[] plaintext;
+            try
+            {
+                plaintext = AesGcmCipher.Decrypt(
+                    key,
+                    new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
+                );
+            }
+            // A corrupt stored row or a key that does not match: keep the "token
+            // or null" contract intact by not leaking a raw crypto exception.
+            catch (Exception ex)
+                when (ex is AuthenticationTagMismatchException or ArgumentException)
+            {
+                throw new InvalidOperationException(
+                    $"The stored token for owner '{owner}' could not be decrypted; reset the vault and re-enter tokens.",
+                    ex
+                );
+            }
+
             try
             {
                 return Encoding.UTF8.GetString(plaintext);

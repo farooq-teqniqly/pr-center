@@ -84,29 +84,51 @@ internal sealed partial class AppLock : IAppLock
             security.Iterations,
             security.Parallelism
         );
-        var key = Argon2KeyDeriver.DeriveKey(password, parameters);
         var sentinel = new EncryptedPayload(
             security.SentinelNonce,
             security.SentinelCiphertext,
             security.SentinelTag
         );
+
+        byte[]? key = null;
+        var unlocked = false;
         try
         {
+            // Derivation is inside the protected region so a corrupt/tampered row
+            // (bad KDF params or sentinel length) cannot escape as an unhandled
+            // exception with a live key left in memory.
+            key = Argon2KeyDeriver.DeriveKey(password, parameters);
+
             // The plaintext is the known sentinel, but zero it anyway to keep the
             // "decrypted buffers are cleared by the caller" pattern consistent.
             var sentinelPlaintext = AesGcmCipher.Decrypt(key, sentinel);
             CryptographicOperations.ZeroMemory(sentinelPlaintext);
+
+            _keyHolder.SetKey(key);
+            unlocked = true;
+            return true;
         }
-        // Tag mismatch = wrong password; ArgumentException = a corrupt-length
-        // nonce/tag on the stored row. Both mean "cannot verify" -> stay Locked.
-        catch (Exception ex) when (ex is AuthenticationTagMismatchException or ArgumentException)
+        catch (AuthenticationTagMismatchException)
         {
-            CryptographicOperations.ZeroMemory(key);
+            // The tag is the password check: a mismatch is a wrong password.
             LogUnlockFailed();
             return false;
         }
-
-        _keyHolder.SetKey(key);
-        return true;
+        catch (Exception ex) when (ex is ArgumentException or CryptographicException)
+        {
+            // Bad KDF params or a corrupt-length sentinel: the stored row is
+            // unusable. Surface a clear domain error instead of a raw crypto or
+            // argument exception (and not a wrong-password false).
+            throw new InvalidOperationException("The stored vault data is invalid or corrupt.", ex);
+        }
+        finally
+        {
+            // Zero the ephemeral derived key on every path that did not hand it to
+            // the holder (wrong password, or a corrupt-row exception propagating).
+            if (!unlocked && key is not null)
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+        }
     }
 }

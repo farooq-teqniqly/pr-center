@@ -256,6 +256,29 @@ public sealed class TokenVaultTests : IDisposable
     }
 
     [Fact]
+    public async Task GetTokenAsync_WhenStoredRowCannotBeDecrypted_ThrowsInvalidOperation()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        context.OwnerTokens.Add(
+            new OwnerToken
+            {
+                Owner = "PerfectServe",
+                Nonce = new byte[12],
+                Ciphertext = [1, 2, 3],
+                Tag = new byte[16],
+            }
+        );
+        await context.SaveChangesAsync(CancellationToken.None);
+        var vault = CreateVault(context, Unlocked());
+
+        // Act / Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            vault.GetTokenAsync("PerfectServe", CancellationToken.None)
+        );
+    }
+
+    [Fact]
     public async Task ResetVaultAsync_DoesNotDropUnrelatedTrackedChanges()
     {
         // Arrange

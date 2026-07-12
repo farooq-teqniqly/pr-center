@@ -140,6 +140,34 @@ public sealed class AppLockTests : IDisposable
     }
 
     [Fact]
+    public async Task UnlockAsync_WhenStoredParametersAreCorrupt_ThrowsInvalidOperation()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        context.AppSecurity.Add(
+            new AppSecurity
+            {
+                Id = 1,
+                Salt = [],
+                MemoryKib = 1024,
+                Iterations = 1,
+                Parallelism = 1,
+                KdfVersion = AppSecurity.SupportedKdfVersion,
+                SentinelNonce = new byte[12],
+                SentinelCiphertext = [1],
+                SentinelTag = new byte[16],
+            }
+        );
+        await context.SaveChangesAsync(CancellationToken.None);
+        var appLock = CreateAppLock(context, new VaultKeyHolder());
+
+        // Act / Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            appLock.UnlockAsync("correct horse", CancellationToken.None)
+        );
+    }
+
+    [Fact]
     public async Task UnlockAsync_WhenUninitialized_Throws()
     {
         // Arrange
