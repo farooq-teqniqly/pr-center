@@ -8,6 +8,19 @@ namespace PrCenter.Core.Ports;
 public interface ITokenVault
 {
     /// <summary>
+    /// Sets the app password for the first time, establishing the vault: derives
+    /// the encryption key, stores the salt and KDF parameters, and stores an
+    /// encrypted sentinel used to verify the password on unlock. Does not unlock
+    /// the vault; the user unlocks separately.
+    /// </summary>
+    /// <param name="password">The app password to establish.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the vault is initialized.</returns>
+    /// <exception cref="ArgumentException"><paramref name="password"/> is null or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">The vault is already initialized.</exception>
+    Task SetPasswordAsync(string password, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Stores the personal access token for an owner, encrypted at rest.
     /// </summary>
     /// <param name="owner">The GitHub owner (org or account) the token belongs to.</param>

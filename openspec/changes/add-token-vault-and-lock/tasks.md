@@ -19,10 +19,10 @@
 
 ## 4. Vault: set password and verification (Persistence, TDD)
 
-- [ ] 4.1 Failing tests: `SetPasswordAsync` first-run writes salt/params/encrypted sentinel; rejects when a security row already exists
-- [ ] 4.2 Implement `SetPasswordAsync` on `TokenVault` (generate salt, derive key, encrypt sentinel, persist security row)
-- [ ] 4.3 Add `UnlockAsync` to the `IAppLock` port; failing tests: it accepts the correct password, rejects a wrong one (state stays Locked, no key), rejects when Uninitialized, and verifies correctly with zero tokens stored
-- [ ] 4.4 Implement unlock/verify (re-derive key, decrypt sentinel, hold key in the singleton on success)
+- [x] 4.1 Failing tests: `SetPasswordAsync` first-run writes salt/params/encrypted sentinel; rejects when a security row already exists
+- [x] 4.2 Implement `SetPasswordAsync` on `TokenVault` (generate salt, derive key, encrypt sentinel, persist security row)
+- [x] 4.3 Add `UnlockAsync` to the `IAppLock` port; failing tests: it accepts the correct password, rejects a wrong one (state stays Locked, no key), rejects when Uninitialized, and verifies correctly with zero tokens stored
+- [x] 4.4 Implement unlock/verify (re-derive key, decrypt sentinel, hold key in the singleton on success)
 
 ## 5. Vault: token store, retrieve, gating, reset (Persistence, TDD)
 
