@@ -26,14 +26,14 @@
 
 ## 5. Vault: token store, retrieve, gating, reset (Persistence, TDD)
 
-- [ ] 5.1 Delete the `TokenVaultTests` `NotImplementedException` throw-tests
-- [ ] 5.2 Failing tests: `StoreTokenAsync` encrypts and persists per owner; storing again for the same owner replaces it; plaintext never in a persisted column
-- [ ] 5.3 Failing tests: `GetTokenAsync` decrypts a stored token; returns null when none stored
-- [ ] 5.4 Failing tests: store/get throw `VaultLockedException` while Locked or Uninitialized
-- [ ] 5.5 Implement `StoreTokenAsync`/`GetTokenAsync` (AES-GCM under the held key; guard on unlocked state; owner upsert)
-- [ ] 5.6 Failing tests: `ResetVaultAsync` deletes all token rows and the security row without requiring unlock; discards the in-memory key; state returns to Uninitialized
-- [ ] 5.7 Implement `ResetVaultAsync`
-- [ ] 5.8 Add null/whitespace guard tests for every public/internal entry point (owner, token, password) and implement the guards
+- [x] 5.1 Delete the `TokenVaultTests` `NotImplementedException` throw-tests
+- [x] 5.2 Failing tests: `StoreTokenAsync` encrypts and persists per owner; storing again for the same owner replaces it; plaintext never in a persisted column
+- [x] 5.3 Failing tests: `GetTokenAsync` decrypts a stored token; returns null when none stored
+- [x] 5.4 Failing tests: store/get throw `VaultLockedException` while Locked or Uninitialized
+- [x] 5.5 Implement `StoreTokenAsync`/`GetTokenAsync` (AES-GCM under the held key; guard on unlocked state; owner upsert)
+- [x] 5.6 Failing tests: `ResetVaultAsync` deletes all token rows and the security row without requiring unlock; discards the in-memory key; state returns to Uninitialized
+- [x] 5.7 Implement `ResetVaultAsync`
+- [x] 5.8 Add null/whitespace guard tests for every public/internal entry point (owner, token, password) and implement the guards
 
 ## 6. Wiring and docs
 

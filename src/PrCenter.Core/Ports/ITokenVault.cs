@@ -37,4 +37,14 @@ public interface ITokenVault
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The decrypted token, or <see langword="null"/> if none stored.</returns>
     Task<string?> GetTokenAsync(string owner, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Wipes the vault: deletes every stored owner token and the app-security
+    /// row, and discards the in-memory key. Does not require the vault to be
+    /// unlocked. There is no recovery -- the user must set a new password and
+    /// re-enter tokens.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the vault is wiped.</returns>
+    Task ResetVaultAsync(CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
 using PrCenter.Persistence.Crypto;
 
@@ -26,14 +27,17 @@ internal sealed class TokenVault : ITokenVault
     private static readonly byte[] Sentinel = Encoding.UTF8.GetBytes("pr-center-vault-sentinel-v1");
 
     private readonly PrCenterDbContext _context;
+    private readonly VaultKeyHolder _keyHolder;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TokenVault"/> class.
     /// </summary>
     /// <param name="context">The SQLite context.</param>
-    public TokenVault(PrCenterDbContext context)
+    /// <param name="keyHolder">The process-wide decrypted-key holder.</param>
+    public TokenVault(PrCenterDbContext context, VaultKeyHolder keyHolder)
     {
         _context = context;
+        _keyHolder = keyHolder;
     }
 
     /// <inheritdoc />
@@ -82,15 +86,87 @@ internal sealed class TokenVault : ITokenVault
     }
 
     /// <inheritdoc />
-    public Task StoreTokenAsync(
+    /// <exception cref="ArgumentException"><paramref name="owner"/> or <paramref name="token"/> is null or whitespace.</exception>
+    /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
+    public async Task StoreTokenAsync(
         string owner,
         string token,
         CancellationToken cancellationToken = default
-    ) => throw new NotImplementedException();
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+
+        var payload = AesGcmCipher.Encrypt(
+            _keyHolder.GetKeyOrThrow(),
+            Encoding.UTF8.GetBytes(token)
+        );
+
+        var existing = await _context
+            .OwnerTokens.FindAsync([owner], cancellationToken)
+            .ConfigureAwait(false);
+        if (existing is not null)
+        {
+            existing.Nonce = payload.Nonce;
+            existing.Ciphertext = payload.Ciphertext;
+            existing.Tag = payload.Tag;
+        }
+        else
+        {
+            _context.OwnerTokens.Add(
+                new OwnerToken
+                {
+                    Owner = owner,
+                    Nonce = payload.Nonce,
+                    Ciphertext = payload.Ciphertext,
+                    Tag = payload.Tag,
+                }
+            );
+        }
+
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
-    public Task<string?> GetTokenAsync(
+    /// <exception cref="ArgumentException"><paramref name="owner"/> is null or whitespace.</exception>
+    /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
+    public async Task<string?> GetTokenAsync(
         string owner,
         CancellationToken cancellationToken = default
-    ) => throw new NotImplementedException();
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
+
+        var key = _keyHolder.GetKeyOrThrow();
+
+        var row = await _context
+            .OwnerTokens.AsNoTracking()
+            .Where(entity => entity.Owner == owner)
+            .Select(entity => new
+            {
+                entity.Nonce,
+                entity.Ciphertext,
+                entity.Tag,
+            })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (row is null)
+        {
+            return null;
+        }
+
+        var plaintext = AesGcmCipher.Decrypt(
+            key,
+            new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
+        );
+        return Encoding.UTF8.GetString(plaintext);
+    }
+
+    /// <inheritdoc />
+    public async Task ResetVaultAsync(CancellationToken cancellationToken = default)
+    {
+        await _context.OwnerTokens.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await _context.AppSecurity.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        _keyHolder.Clear();
+    }
 }
