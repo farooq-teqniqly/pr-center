@@ -78,3 +78,6 @@ roadmap change #4, built on the persistence foundation from #3.
 - **Tests:** delete `TokenVaultTests` throw-tests; new crypto round-trip,
   wrong-password, zero-token-unlock, locked-access, and reset tests on the #3
   real-SQLite harness.
+- **Issues:** closes GH issue #6 -- this change lands the last (`TokenVault`)
+  part (stub throw-tests deleted, null guards + guard tests added); the
+  `StateStore` part closed with #3 and the `GitHubFactsClient` part with #2.
