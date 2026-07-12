@@ -112,6 +112,34 @@ public sealed class AppLockTests : IDisposable
     }
 
     [Fact]
+    public async Task UnlockAsync_WhenKdfVersionUnsupported_Throws()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        context.AppSecurity.Add(
+            new AppSecurity
+            {
+                Id = 1,
+                Salt = [1],
+                MemoryKib = 1024,
+                Iterations = 1,
+                Parallelism = 1,
+                KdfVersion = AppSecurity.SupportedKdfVersion + 1,
+                SentinelNonce = [2],
+                SentinelCiphertext = [3],
+                SentinelTag = [4],
+            }
+        );
+        await context.SaveChangesAsync(CancellationToken.None);
+        var appLock = CreateAppLock(context, new VaultKeyHolder());
+
+        // Act / Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            appLock.UnlockAsync("correct horse", CancellationToken.None)
+        );
+    }
+
+    [Fact]
     public async Task UnlockAsync_WhenUninitialized_Throws()
     {
         // Arrange

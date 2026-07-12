@@ -71,6 +71,13 @@ internal sealed partial class AppLock : IAppLock
                 .ConfigureAwait(false)
             ?? throw new InvalidOperationException("No app password has been set.");
 
+        if (security.KdfVersion != AppSecurity.SupportedKdfVersion)
+        {
+            throw new InvalidOperationException(
+                $"The stored KDF version {security.KdfVersion} is not supported by this build."
+            );
+        }
+
         var parameters = new KdfParameters(
             security.Salt,
             security.MemoryKib,

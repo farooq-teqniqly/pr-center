@@ -19,7 +19,6 @@ internal sealed partial class TokenVault : ITokenVault
     private const int KdfMemoryKib = 19456;
     private const int KdfIterations = 2;
     private const int KdfParallelism = 1;
-    private const int CurrentKdfVersion = 1;
 
     // A fixed known plaintext encrypted under the derived key at SetPassword and
     // decrypted on unlock: a successful AES-GCM tag proves the right password,
@@ -79,7 +78,7 @@ internal sealed partial class TokenVault : ITokenVault
                     MemoryKib = KdfMemoryKib,
                     Iterations = KdfIterations,
                     Parallelism = KdfParallelism,
-                    KdfVersion = CurrentKdfVersion,
+                    KdfVersion = AppSecurity.SupportedKdfVersion,
                     SentinelNonce = sentinel.Nonce,
                     SentinelCiphertext = sentinel.Ciphertext,
                     SentinelTag = sentinel.Tag,
@@ -93,6 +92,10 @@ internal sealed partial class TokenVault : ITokenVault
         // must surface as itself rather than be mislabeled.
         catch (DbUpdateException ex)
         {
+            // The failed insert is still tracked as Added; detach it so a later
+            // SaveChanges on this scoped context does not retry the stale insert.
+            DetachAll<AppSecurity>();
+
             var nowInitialized = await _context
                 .AppSecurity.AsNoTracking()
                 .Where(security => security.Id == AppSecurity.SingletonId)
@@ -216,8 +219,19 @@ internal sealed partial class TokenVault : ITokenVault
     /// <inheritdoc />
     public async Task ResetVaultAsync(CancellationToken cancellationToken = default)
     {
-        await _context.OwnerTokens.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
-        await _context.AppSecurity.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        // Both deletes run in one transaction so a failure of the second cannot
+        // leave a partially-wiped vault (security row gone but tokens present, or
+        // vice versa).
+        await using (
+            var transaction = await _context
+                .Database.BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false)
+        )
+        {
+            await _context.OwnerTokens.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            await _context.AppSecurity.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         // ExecuteDelete bypasses the change tracker, so any vault entity tracked
         // from a prior store in this scope is now stale (row gone in the DB).
