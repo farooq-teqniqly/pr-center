@@ -6,10 +6,10 @@
 
 ## 2. Crypto primitives (Persistence, TDD)
 
-- [ ] 2.1 Failing tests: Argon2id key derivation is deterministic for the same password+salt+params and differs for a different password
-- [ ] 2.2 Implement the Argon2id key-derivation helper (32-byte output, params from a security row)
-- [ ] 2.3 Failing tests: AES-GCM encrypt/decrypt round-trips; wrong key fails the auth tag; each encrypt uses a fresh nonce
-- [ ] 2.4 Implement the AES-GCM encrypt/decrypt helper producing/consuming `{ nonce, ciphertext, tag }`
+- [x] 2.1 Failing tests: Argon2id key derivation is deterministic for the same password+salt+params and differs for a different password
+- [x] 2.2 Implement the Argon2id key-derivation helper (32-byte output, params from a security row)
+- [x] 2.3 Failing tests: AES-GCM encrypt/decrypt round-trips; wrong key fails the auth tag; each encrypt uses a fresh nonce
+- [x] 2.4 Implement the AES-GCM encrypt/decrypt helper producing/consuming `{ nonce, ciphertext, tag }`
 
 ## 3. App-lock port and key holder (Core + Persistence, TDD)
 
