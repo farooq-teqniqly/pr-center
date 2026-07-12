@@ -234,6 +234,27 @@ public sealed class TokenVaultTests : IDisposable
         Assert.False(await context.OwnerTokens.AsNoTracking().AnyAsync(CancellationToken.None));
     }
 
+    [Fact]
+    public async Task StoreTokenAsync_AfterResetInSameScope_WritesCleanly()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var keyHolder = Unlocked();
+        var vault = CreateVault(context, keyHolder);
+        await vault.StoreTokenAsync("PerfectServe", "first_token", CancellationToken.None);
+        await vault.ResetVaultAsync(CancellationToken.None);
+        keyHolder.SetKey(RandomNumberGenerator.GetBytes(32));
+
+        // Act
+        await vault.StoreTokenAsync("PerfectServe", "second_token", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(
+            "second_token",
+            await vault.GetTokenAsync("PerfectServe", CancellationToken.None)
+        );
+    }
+
     private static TokenVault CreateVault(PrCenterDbContext context, VaultKeyHolder keyHolder) =>
         new(context, keyHolder, NullLogger<TokenVault>.Instance);
 

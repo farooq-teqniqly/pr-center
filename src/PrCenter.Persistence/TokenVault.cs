@@ -20,7 +20,6 @@ internal sealed partial class TokenVault : ITokenVault
     private const int KdfIterations = 2;
     private const int KdfParallelism = 1;
     private const int CurrentKdfVersion = 1;
-    private const int SecurityRowId = 1;
 
     // A fixed known plaintext encrypted under the derived key at SetPassword and
     // decrypted on unlock: a successful AES-GCM tag proves the right password,
@@ -58,6 +57,7 @@ internal sealed partial class TokenVault : ITokenVault
 
         var alreadyInitialized = await _context
             .AppSecurity.AsNoTracking()
+            .Where(security => security.Id == AppSecurity.SingletonId)
             .AnyAsync(cancellationToken)
             .ConfigureAwait(false);
         if (alreadyInitialized)
@@ -74,7 +74,7 @@ internal sealed partial class TokenVault : ITokenVault
             _context.AppSecurity.Add(
                 new AppSecurity
                 {
-                    Id = SecurityRowId,
+                    Id = AppSecurity.SingletonId,
                     Salt = salt,
                     MemoryKib = KdfMemoryKib,
                     Iterations = KdfIterations,
@@ -86,6 +86,12 @@ internal sealed partial class TokenVault : ITokenVault
                 }
             );
             await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        // Closes the check-then-add race: if a concurrent first-run won the
+        // fixed-PK insert, this one fails and is reported as already initialized.
+        catch (DbUpdateException ex)
+        {
+            throw new InvalidOperationException("The vault is already initialized.", ex);
         }
         finally
         {
@@ -105,10 +111,17 @@ internal sealed partial class TokenVault : ITokenVault
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        var payload = AesGcmCipher.Encrypt(
-            _keyHolder.GetKeyOrThrow(),
-            Encoding.UTF8.GetBytes(token)
-        );
+        var key = _keyHolder.GetKeyOrThrow();
+        var plaintextBytes = Encoding.UTF8.GetBytes(token);
+        EncryptedPayload payload;
+        try
+        {
+            payload = AesGcmCipher.Encrypt(key, plaintextBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintextBytes);
+        }
 
         var existing = await _context
             .OwnerTokens.FindAsync([owner], cancellationToken)
@@ -167,7 +180,14 @@ internal sealed partial class TokenVault : ITokenVault
             key,
             new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
         );
-        return Encoding.UTF8.GetString(plaintext);
+        try
+        {
+            return Encoding.UTF8.GetString(plaintext);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+        }
     }
 
     /// <inheritdoc />
@@ -175,6 +195,12 @@ internal sealed partial class TokenVault : ITokenVault
     {
         await _context.OwnerTokens.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await _context.AppSecurity.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+
+        // ExecuteDelete bypasses the change tracker, so any entity tracked from a
+        // prior store in this scope is now stale (row gone in the DB). Detach
+        // everything so a re-store in the same scope inserts cleanly instead of
+        // updating a phantom row.
+        _context.ChangeTracker.Clear();
         _keyHolder.Clear();
         LogVaultReset();
     }

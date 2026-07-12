@@ -86,9 +86,13 @@ requests, so an `IVaultKeyHolder` (or the `IAppLock` implementation) is register
 **singleton** and carries the 32-byte key plus the derived lock state. `TokenVault`
 stays **scoped** (it depends on the scoped `PrCenterDbContext`) and reads the key
 from the singleton holder at call time. `AddPersistenceAdapter` registration
-splits accordingly: `AddSingleton` for the holder/lock, `AddScoped` for the vault.
-On process stop the singleton is disposed and the key is gone (D-lock: Locked on
-next start). The key is stored in a plain `byte[]`; clearing on reset zeroes it.
+splits accordingly: `AddSingleton` for the `VaultKeyHolder`, `AddScoped` for both
+`IAppLock` and the vault (both need the scoped `DbContext`). The holder is
+`IDisposable`, so on process stop the container disposes it and its `Dispose`
+zeroes the key (D-lock: Locked on next start). The key is stored in a plain
+`byte[]`; clearing on reset, on re-key, and on dispose zeroes it, and
+`GetKeyOrThrow` hands callers an ephemeral copy so an in-place clear cannot
+corrupt crypto already in flight.
 
 - *Alternative: scoped key holder.* Rejected -- a scoped holder cannot share the
   key across circuits or persist it between requests, defeating "unlock once."
@@ -124,7 +128,8 @@ unchanged (they never claimed two states; they describe unlock, reset, no-recove
 ## Risks / Trade-offs
 
 - [Argon2 memory cost on a workstation container] -> parameters are stored per
-  row and tuned modestly (e.g. 64 MiB); #8 sizes the container with headroom.
+  row and tuned to the OWASP Argon2id minimum (19456 KiB / t=2 / p=1); #8 sizes
+  the container with headroom.
 - [`byte[]` key is not pinned/`SecureString`] -> accepted for a single-user
   localhost app; the threat model is at-rest volume theft, not a live memory
   scrape. Zeroed on reset/dispose as best effort.

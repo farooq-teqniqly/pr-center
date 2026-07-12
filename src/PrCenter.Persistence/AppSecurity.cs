@@ -9,6 +9,9 @@ namespace PrCenter.Persistence;
 /// </summary>
 internal sealed class AppSecurity
 {
+    /// <summary>The fixed primary key of the single app-security row.</summary>
+    public const int SingletonId = 1;
+
     /// <summary>Gets or sets the fixed single-row primary key.</summary>
     public int Id { get; set; }
 

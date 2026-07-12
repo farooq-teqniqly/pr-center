@@ -92,6 +92,26 @@ public sealed class AppLockTests : IDisposable
     }
 
     [Fact]
+    public async Task UnlockAsync_WhenAlreadyUnlocked_IsIdempotentAndDoesNotRekey()
+    {
+        // Arrange
+        await SetPasswordAsync("correct horse");
+        var keyHolder = new VaultKeyHolder();
+        await using var context = _database.CreateContext();
+        var appLock = CreateAppLock(context, keyHolder);
+        Assert.True(await appLock.UnlockAsync("correct horse", CancellationToken.None));
+        var keyAfterFirstUnlock = keyHolder.GetKeyOrThrow();
+
+        // Act
+        var secondResult = await appLock.UnlockAsync("any password", CancellationToken.None);
+
+        // Assert
+        Assert.True(secondResult);
+        Assert.Equal(keyAfterFirstUnlock, keyHolder.GetKeyOrThrow());
+        Assert.Equal(AppLockState.Unlocked, await appLock.GetStateAsync(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task UnlockAsync_WhenUninitialized_Throws()
     {
         // Arrange

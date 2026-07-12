@@ -36,6 +36,7 @@ internal sealed partial class AppLock : IAppLock
     {
         var initialized = await _context
             .AppSecurity.AsNoTracking()
+            .Where(security => security.Id == AppSecurity.SingletonId)
             .AnyAsync(cancellationToken)
             .ConfigureAwait(false);
         if (!initialized)
@@ -54,9 +55,18 @@ internal sealed partial class AppLock : IAppLock
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
+        // Idempotent when already unlocked: no re-derivation, no re-key. Unlock
+        // is a transition from Locked, so an unlock while Unlocked is a no-op
+        // success -- access is already granted for this process.
+        if (_keyHolder.HasKey)
+        {
+            return true;
+        }
+
         var security =
             await _context
                 .AppSecurity.AsNoTracking()
+                .Where(row => row.Id == AppSecurity.SingletonId)
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false)
             ?? throw new InvalidOperationException("No app password has been set.");
@@ -77,7 +87,9 @@ internal sealed partial class AppLock : IAppLock
         {
             AesGcmCipher.Decrypt(key, sentinel);
         }
-        catch (AuthenticationTagMismatchException)
+        // Tag mismatch = wrong password; ArgumentException = a corrupt-length
+        // nonce/tag on the stored row. Both mean "cannot verify" -> stay Locked.
+        catch (Exception ex) when (ex is AuthenticationTagMismatchException or ArgumentException)
         {
             CryptographicOperations.ZeroMemory(key);
             LogUnlockFailed();

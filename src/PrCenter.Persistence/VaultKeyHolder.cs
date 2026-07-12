@@ -6,19 +6,29 @@ namespace PrCenter.Persistence;
 /// <summary>
 /// Holds the decrypted vault key in memory for the life of the process, shared
 /// across all Blazor circuits and tabs. Registered as a singleton; there is no
-/// idle auto-lock, so the key is discarded only when the process stops or the
-/// vault is reset (or cleared here). The key is zeroed on clear as a best effort.
+/// idle auto-lock, so the key is discarded only when the process stops (the
+/// container disposes the singleton) or the vault is reset. The key is zeroed
+/// on clear, on re-key, and on dispose as a best effort.
 /// </summary>
-internal sealed class VaultKeyHolder
+internal sealed class VaultKeyHolder : IDisposable
 {
     private readonly Lock _gate = new();
     private byte[]? _key;
 
     /// <summary>Gets a value indicating whether a decrypted key is currently held.</summary>
-    public bool HasKey => _key is not null;
+    public bool HasKey
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _key is not null;
+            }
+        }
+    }
 
     /// <summary>
-    /// Stores the decrypted key, replacing any existing one.
+    /// Stores the decrypted key, zeroing and replacing any existing one.
     /// </summary>
     /// <param name="key">The decrypted vault key.</param>
     /// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
@@ -28,20 +38,28 @@ internal sealed class VaultKeyHolder
 
         lock (_gate)
         {
+            if (_key is not null)
+            {
+                CryptographicOperations.ZeroMemory(_key);
+            }
+
             _key = key;
         }
     }
 
     /// <summary>
-    /// Gets the held key, or throws when the vault is locked.
+    /// Gets an ephemeral copy of the held key, or throws when the vault is locked.
+    /// A copy is returned so a concurrent <see cref="Clear"/> -- which zeroes the
+    /// internal array in place -- cannot corrupt a key already handed to a caller
+    /// that runs crypto outside this lock.
     /// </summary>
-    /// <returns>The decrypted vault key.</returns>
+    /// <returns>A copy of the decrypted vault key.</returns>
     /// <exception cref="VaultLockedException">No key is currently held.</exception>
     public byte[] GetKeyOrThrow()
     {
         lock (_gate)
         {
-            return _key ?? throw new VaultLockedException();
+            return (_key ?? throw new VaultLockedException()).ToArray();
         }
     }
 
@@ -57,4 +75,7 @@ internal sealed class VaultKeyHolder
             }
         }
     }
+
+    /// <inheritdoc />
+    public void Dispose() => Clear();
 }

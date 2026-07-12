@@ -35,6 +35,10 @@ a wrong password SHALL leave the state Locked with no key retained.
 - **WHEN** an unlock is attempted while Uninitialized
 - **THEN** the system rejects it, since no password has been set
 
+#### Scenario: Unlock while already Unlocked is an idempotent success
+- **WHEN** an unlock is attempted while already Unlocked
+- **THEN** the system returns success without re-deriving the key or replacing the held key, and the state stays Unlocked
+
 ### Requirement: The decrypted key is shared and held until the process stops
 The system SHALL hold the decrypted key in a single process-wide holder shared
 across all Blazor circuits and browser tabs, with no idle auto-lock; the key
