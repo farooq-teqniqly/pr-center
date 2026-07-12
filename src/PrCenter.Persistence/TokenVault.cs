@@ -87,10 +87,22 @@ internal sealed partial class TokenVault : ITokenVault
             );
             await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        // Closes the check-then-add race: if a concurrent first-run won the
-        // fixed-PK insert, this one fails and is reported as already initialized.
+        // Closes the check-then-add race, but only when a row now exists: a
+        // concurrent first-run that won the fixed-PK insert is an "already
+        // initialized" case, whereas a genuine write failure (I/O, permissions)
+        // must surface as itself rather than be mislabeled.
         catch (DbUpdateException ex)
         {
+            var nowInitialized = await _context
+                .AppSecurity.AsNoTracking()
+                .Where(security => security.Id == AppSecurity.SingletonId)
+                .AnyAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (!nowInitialized)
+            {
+                throw;
+            }
+
             throw new InvalidOperationException("The vault is already initialized.", ex);
         }
         finally
@@ -120,7 +132,10 @@ internal sealed partial class TokenVault : ITokenVault
         }
         finally
         {
+            // The key is an ephemeral copy from the holder; zero it (and the
+            // plaintext) so no extra key/secret material lingers on the heap.
             CryptographicOperations.ZeroMemory(plaintextBytes);
+            CryptographicOperations.ZeroMemory(key);
         }
 
         var existing = await _context
@@ -159,34 +174,42 @@ internal sealed partial class TokenVault : ITokenVault
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
 
         var key = _keyHolder.GetKeyOrThrow();
-
-        var row = await _context
-            .OwnerTokens.AsNoTracking()
-            .Where(entity => entity.Owner == owner)
-            .Select(entity => new
-            {
-                entity.Nonce,
-                entity.Ciphertext,
-                entity.Tag,
-            })
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (row is null)
-        {
-            return null;
-        }
-
-        var plaintext = AesGcmCipher.Decrypt(
-            key,
-            new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
-        );
         try
         {
-            return Encoding.UTF8.GetString(plaintext);
+            var row = await _context
+                .OwnerTokens.AsNoTracking()
+                .Where(entity => entity.Owner == owner)
+                .Select(entity => new
+                {
+                    entity.Nonce,
+                    entity.Ciphertext,
+                    entity.Tag,
+                })
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (row is null)
+            {
+                return null;
+            }
+
+            var plaintext = AesGcmCipher.Decrypt(
+                key,
+                new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
+            );
+            try
+            {
+                return Encoding.UTF8.GetString(plaintext);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(plaintext);
+            // Zero the ephemeral key copy on every path (including the no-row
+            // return), leaving the process-wide holder's key intact.
+            CryptographicOperations.ZeroMemory(key);
         }
     }
 
@@ -196,12 +219,23 @@ internal sealed partial class TokenVault : ITokenVault
         await _context.OwnerTokens.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await _context.AppSecurity.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 
-        // ExecuteDelete bypasses the change tracker, so any entity tracked from a
-        // prior store in this scope is now stale (row gone in the DB). Detach
-        // everything so a re-store in the same scope inserts cleanly instead of
-        // updating a phantom row.
-        _context.ChangeTracker.Clear();
+        // ExecuteDelete bypasses the change tracker, so any vault entity tracked
+        // from a prior store in this scope is now stale (row gone in the DB).
+        // Detach only the vault entities -- not the whole tracker -- so a re-store
+        // in the same scope inserts cleanly, without dropping unrelated pending
+        // changes (e.g. last-seen markers) tracked by the shared scoped context.
+        DetachAll<OwnerToken>();
+        DetachAll<AppSecurity>();
         _keyHolder.Clear();
         LogVaultReset();
+    }
+
+    private void DetachAll<TEntity>()
+        where TEntity : class
+    {
+        foreach (var entry in _context.ChangeTracker.Entries<TEntity>().ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 }

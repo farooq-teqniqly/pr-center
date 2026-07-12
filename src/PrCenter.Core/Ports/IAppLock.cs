@@ -4,8 +4,7 @@ namespace PrCenter.Core.Ports;
 
 /// <summary>
 /// Port for the app lock: the runtime gate that decides whether the vault is
-/// uninitialized, locked, or unlocked. The unlock transition is added by a
-/// later change.
+/// uninitialized, locked, or unlocked, and performs the unlock transition.
 /// </summary>
 public interface IAppLock
 {

@@ -85,7 +85,10 @@ internal sealed partial class AppLock : IAppLock
         );
         try
         {
-            AesGcmCipher.Decrypt(key, sentinel);
+            // The plaintext is the known sentinel, but zero it anyway to keep the
+            // "decrypted buffers are cleared by the caller" pattern consistent.
+            var sentinelPlaintext = AesGcmCipher.Decrypt(key, sentinel);
+            CryptographicOperations.ZeroMemory(sentinelPlaintext);
         }
         // Tag mismatch = wrong password; ArgumentException = a corrupt-length
         // nonce/tag on the stored row. Both mean "cannot verify" -> stay Locked.
