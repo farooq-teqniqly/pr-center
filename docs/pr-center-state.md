@@ -91,13 +91,19 @@ Gates decryption of the stored tokens and therefore all GitHub access, including
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Locked: container start
-    Locked --> Unlocked: correct app password --> KDF derives key --> tokens decrypted in memory
+    [*] --> Uninitialized: container start, no app password set
+    [*] --> Locked: container start, app password already set
+    Uninitialized --> Locked: set app password (write salt + Argon2id params + encrypted sentinel)
+    Locked --> Unlocked: correct app password --> Argon2id re-derives key --> sentinel decrypts (tag verifies) --> tokens decrypted in memory
     Unlocked --> Locked: container stops
-    Locked --> Locked: wrong password (verifier fails)
+    Locked --> Locked: wrong password (sentinel tag fails)
+    Unlocked --> Uninitialized: reset (wipe tokens + app-security row)
+    Locked --> Uninitialized: reset (wipe tokens + app-security row)
 ```
 
 Notes:
+- **Three states.** `Uninitialized` (no app password set yet), `Locked` (password set, key not in memory), `Unlocked` (key held). State is derived, not stored: a security row exists iff a password was set, and a key is held iff unlocked. The distinction matters for onboarding -- an uninitialized app shows "set a password," a locked one shows "enter your password."
+- **Setting the password does not unlock.** First-run set-password writes the salt, Argon2id parameters, and encrypted sentinel, leaving the app `Locked`; the user then unlocks with the same password. Password verification uses the sentinel: a failed AES-GCM authentication tag means a wrong password, and it works even before any token is stored.
 - **No polling or data while Locked** — the key is required to call GitHub. After a restart, the list is empty until I unlock.
 - **No auto-lock / idle timeout in v1** — once unlocked, stays unlocked until the container stops. The decrypted key lives server-side in the Blazor process, shared across browser tabs.
-- **Forgotten password has no recovery** — reset wipes stored tokens; I re-enter all three PATs.
+- **Forgotten password has no recovery** — reset wipes stored tokens and the security row, returning the app to `Uninitialized`; I set a new password and re-enter all three PATs.

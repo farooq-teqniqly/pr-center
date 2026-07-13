@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PrCenter.Core.Facts;
+using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
 
 namespace PrCenter.GitHub;
@@ -13,7 +14,10 @@ namespace PrCenter.GitHub;
 /// API. Discovery unions the review-requested and reviewed-by searches; the
 /// per-request bearer token comes from the token vault. A fetch failure is
 /// reported as a <see cref="OwnerFetchStatus"/>, never thrown, so one owner
-/// cannot abort a poll covering others.
+/// cannot abort a poll covering others. A <see cref="VaultLockedException"/> is
+/// the exception: it is a global precondition (the app is locked), not a
+/// per-owner fetch failure, so it propagates rather than being reported as a
+/// status; callers must ensure the vault is unlocked before polling.
 /// </summary>
 internal sealed partial class GitHubFactsClient : IGitHubFacts
 {
@@ -121,11 +125,16 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             LogFetchFailed(owner, exception.Message);
             return Failure(OwnerFetchStatus.Error, "A network error occurred contacting GitHub.");
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception)
+            when (exception is not (OperationCanceledException or VaultLockedException))
         {
             // A malformed payload or an unexpected response shape (missing or
             // wrong-typed fields) becomes an Error status, never an escaping
             // exception -- one owner must not abort a poll over the others.
+            // VaultLockedException is deliberately excluded: a locked vault is a
+            // global precondition (the app should not poll at all while locked,
+            // gated in #5), not a per-owner GitHub error, so it propagates rather
+            // than being mislabeled as this owner's fetch failure.
             LogFetchFailed(owner, exception.Message);
             return Failure(OwnerFetchStatus.Error, "GitHub returned an unexpected response.");
         }
@@ -187,10 +196,12 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             LogFetchFailed(owner, "timed out");
             return null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception)
+            when (exception is not (OperationCanceledException or VaultLockedException))
         {
             // Any network, parse, or shape failure yields null (the PR is
-            // unfetchable).
+            // unfetchable). VaultLockedException propagates: a locked vault is a
+            // global precondition (gated in #5), not a fetch failure for this PR.
             LogFetchFailed(owner, exception.Message);
             return null;
         }

@@ -51,4 +51,17 @@ public sealed class DiCompositionRootTests : IClassFixture<WebApplicationFactory
         // Assert
         Assert.Equal("PrCenter.Persistence", resolved.GetType().Assembly.GetName().Name);
     }
+
+    [Fact]
+    public void Host_WhenBuilt_ResolvesAppLockToPersistenceAdapter()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+
+        // Act
+        var resolved = scope.ServiceProvider.GetRequiredService<IAppLock>();
+
+        // Assert
+        Assert.Equal("PrCenter.Persistence", resolved.GetType().Assembly.GetName().Name);
+    }
 }

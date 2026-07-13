@@ -67,7 +67,10 @@ machines; see [pr-center-state.md](./pr-center-state.md)):
 Runtime state:
 
 - **App Lock state machine** -- the only true runtime FSM; gates polling and
-  the token vault (Locked on start, Unlock transitions to Unlocked).
+  the token vault. Three states: `Uninitialized` (no app password set),
+  `Locked` (password set, key not in memory), `Unlocked` (key held). Setting
+  the password moves `Uninitialized -> Locked`; unlocking moves
+  `Locked -> Unlocked`; reset returns to `Uninitialized`.
 
 Ports (defined in Core, implemented by adapters):
 
@@ -76,7 +79,10 @@ Ports (defined in Core, implemented by adapters):
   it, the derivers and `RefreshQueue` consume it.
 - **IStateStore** -- persists per-PR last-seen markers (and later owner
   settings).
-- **ITokenVault** -- encrypted token storage and in-memory decrypted key.
+- **ITokenVault** -- encrypted token storage at rest (set password, store/get
+  per-owner tokens, reset).
+- **IAppLock** -- the lock-state gate: derives `Uninitialized`/`Locked`/`Unlocked`
+  and performs unlock, holding the decrypted key in a process-wide singleton.
 
 ## PrCenter.GitHub -- adapter
 
@@ -87,8 +93,9 @@ HTTPS. Implements `IGitHubFacts`.
 ## PrCenter.Persistence -- adapter
 
 EF Core + SQLite for markers, tokens, and settings; token-vault crypto
-(KDF + AES at rest). Writes to a SQLite file on a mounted host volume.
-Implements `IStateStore` and `ITokenVault`.
+(Argon2id KDF + AES-GCM at rest). Writes to a SQLite file on a mounted host
+volume. Implements `IStateStore`, `ITokenVault`, and `IAppLock` (the latter
+backed by a process-wide singleton key holder).
 
 ## Crosscutting
 
