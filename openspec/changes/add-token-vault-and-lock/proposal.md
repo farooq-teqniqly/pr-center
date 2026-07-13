@@ -25,7 +25,7 @@ roadmap change #4, built on the persistence foundation from #3.
   until the container stops; no idle auto-lock.
 - New `IAppLock` port (session/key state) kept separate from `ITokenVault`
   (data at rest). `ITokenVault` gains `SetPassword`, `ResetVault`; `IAppLock`
-  gains `Unlock`, `IsUnlocked`, current-state query.
+  gains `Unlock` and a current-state query (`GetState`).
 - **BREAKING** to the current `ITokenVault` surface: `StoreTokenAsync` /
   `GetTokenAsync` keep their signatures but now require an unlocked vault and
   throw a `VaultLockedException` otherwise (defense in depth; polling is gated

@@ -1,3 +1,5 @@
+using PrCenter.Core.Locking;
+
 namespace PrCenter.Core.Ports;
 
 /// <summary>
@@ -27,6 +29,8 @@ public interface ITokenVault
     /// <param name="token">The fine-grained personal access token.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the token is stored.</returns>
+    /// <exception cref="ArgumentException"><paramref name="owner"/> or <paramref name="token"/> is null or whitespace.</exception>
+    /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
     Task StoreTokenAsync(string owner, string token, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -36,6 +40,8 @@ public interface ITokenVault
     /// <param name="owner">The GitHub owner (org or account) whose token to retrieve.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The decrypted token, or <see langword="null"/> if none stored.</returns>
+    /// <exception cref="ArgumentException"><paramref name="owner"/> is null or whitespace.</exception>
+    /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
     Task<string?> GetTokenAsync(string owner, CancellationToken cancellationToken = default);
 
     /// <summary>

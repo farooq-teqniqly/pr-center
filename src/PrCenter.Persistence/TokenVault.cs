@@ -205,8 +205,9 @@ internal sealed partial class TokenVault : ITokenVault
             }
             // A corrupt stored row or a key that does not match: keep the "token
             // or null" contract intact by not leaking a raw crypto exception.
-            catch (Exception ex)
-                when (ex is AuthenticationTagMismatchException or ArgumentException)
+            // CryptographicException covers AuthenticationTagMismatchException plus
+            // other AES-GCM failures (invalid key/tag size from a tampered row).
+            catch (Exception ex) when (ex is CryptographicException or ArgumentException)
             {
                 throw new InvalidOperationException(
                     $"The stored token for owner '{owner}' could not be decrypted; reset the vault and re-enter tokens.",
