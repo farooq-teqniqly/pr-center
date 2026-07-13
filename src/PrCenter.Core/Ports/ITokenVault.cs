@@ -42,6 +42,7 @@ public interface ITokenVault
     /// <returns>The decrypted token, or <see langword="null"/> if none stored.</returns>
     /// <exception cref="ArgumentException"><paramref name="owner"/> is null or whitespace.</exception>
     /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
+    /// <exception cref="InvalidOperationException">The stored token cannot be decrypted (corrupt row or a key that does not match).</exception>
     Task<string?> GetTokenAsync(string owner, CancellationToken cancellationToken = default);
 
     /// <summary>

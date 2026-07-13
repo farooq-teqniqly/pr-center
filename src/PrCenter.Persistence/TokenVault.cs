@@ -203,8 +203,9 @@ internal sealed partial class TokenVault : ITokenVault
                     new EncryptedPayload(row.Nonce, row.Ciphertext, row.Tag)
                 );
             }
-            // A corrupt stored row or a key that does not match: keep the "token
-            // or null" contract intact by not leaking a raw crypto exception.
+            // A corrupt stored row or a key that does not match: do not leak a raw
+            // crypto exception -- surface a domain-level InvalidOperationException
+            // (a decrypt failure is distinct from the no-row null return above).
             // CryptographicException covers AuthenticationTagMismatchException plus
             // other AES-GCM failures (invalid key/tag size from a tampered row).
             catch (Exception ex) when (ex is CryptographicException or ArgumentException)
