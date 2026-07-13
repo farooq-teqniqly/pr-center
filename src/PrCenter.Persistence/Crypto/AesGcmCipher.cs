@@ -9,6 +9,11 @@ namespace PrCenter.Persistence.Crypto;
 /// </summary>
 internal static class AesGcmCipher
 {
+    // Fixed 12-byte nonce per design D2 -- the standard AES-GCM size. Named
+    // explicitly rather than via NonceByteSizes.MaxSize so the stored format
+    // stays pinned to the documented value.
+    private const int NonceSizeBytes = 12;
+
     /// <summary>
     /// Encrypts plaintext under the key with a fresh random nonce.
     /// </summary>
@@ -21,7 +26,7 @@ internal static class AesGcmCipher
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(plaintext);
 
-        var nonce = RandomNumberGenerator.GetBytes(AesGcm.NonceByteSizes.MaxSize);
+        var nonce = RandomNumberGenerator.GetBytes(NonceSizeBytes);
         var ciphertext = new byte[plaintext.Length];
         var tag = new byte[AesGcm.TagByteSizes.MaxSize];
         using var aes = new AesGcm(key, AesGcm.TagByteSizes.MaxSize);
