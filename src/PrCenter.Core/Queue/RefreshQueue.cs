@@ -15,7 +15,7 @@ namespace PrCenter.Core.Queue;
 /// per-owner fetch failure degrades only that owner; a locked vault mid-poll
 /// aborts the whole refresh without touching the previously published snapshot.
 /// </summary>
-public sealed partial class RefreshQueue
+public sealed partial class RefreshQueue : IRefreshQueue
 {
     private readonly ITokenVault _vault;
     private readonly IGitHubFacts _facts;
@@ -46,15 +46,7 @@ public sealed partial class RefreshQueue
         _logger = logger;
     }
 
-    /// <summary>
-    /// Runs one queue refresh and publishes the resulting snapshot.
-    /// </summary>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the snapshot has been published.</returns>
-    /// <exception cref="VaultLockedException">
-    /// The vault locked mid-poll; the refresh is abandoned and the previously
-    /// published snapshot is left untouched.
-    /// </exception>
+    /// <inheritdoc />
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var owners = await _vault.ListOwnersAsync(cancellationToken).ConfigureAwait(false);
@@ -68,17 +60,17 @@ public sealed partial class RefreshQueue
                 await RefreshOwnerAsync(owner, items, statuses, cancellationToken)
                     .ConfigureAwait(false);
             }
+
+            _holder.Publish(items, statuses);
         }
         // A locked vault is a global precondition failure, not a per-owner one:
-        // abandon the whole refresh so the last good snapshot survives, but log it
-        // (baseline: no silent catch) before letting the loop resume waiting.
+        // abandon the whole refresh (no publish, so the last good snapshot
+        // survives) and log it -- the one owner of the mid-poll-lock warning, so
+        // the poll loop that calls this needs no lock-specific handling of its own.
         catch (VaultLockedException ex)
         {
             LogVaultLockedDuringRefresh(ex);
-            throw;
         }
-
-        _holder.Publish(items, statuses);
     }
 
     private async Task RefreshOwnerAsync(

@@ -112,10 +112,10 @@ public sealed class RefreshQueueTests
             .GetAuthenticatedUserLoginAsync("PerfectServe", Arg.Any<CancellationToken>())
             .ThrowsAsync(new VaultLockedException());
 
-        // Act / Assert
-        await Assert.ThrowsAsync<VaultLockedException>(() =>
-            CreateRefreshQueue().ExecuteAsync(CancellationToken.None)
-        );
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
         Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning);
         Assert.Same(previous, _holder.Current);
     }

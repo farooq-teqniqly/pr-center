@@ -32,9 +32,9 @@
 
 ## 6. Polling BackgroundService (D4, D6)
 
-- [ ] 6.1 Red: loop tests -- interval tick refreshes while Unlocked; wake while Locked/Uninitialized skips without touching the snapshot; trigger poke refreshes promptly; polls never overlap
-- [ ] 6.2 Green: implement the polling `BackgroundService` in `PrCenter.Web` -- `PeriodicTimer` plus trigger await, lock check per wake, DI scope created per wake to resolve `RefreshQueue`
-- [ ] 6.3 Green: poll-interval options bound from `appsettings.json` (default 5 minutes); test the configured-interval scenario
+- [x] 6.1 Red: loop tests -- interval tick refreshes while Unlocked; wake while Locked/Uninitialized skips without touching the snapshot; trigger poke refreshes promptly; polls never overlap
+- [x] 6.2 Green: implement the polling `BackgroundService` in `PrCenter.Web` -- `PeriodicTimer` plus trigger await, lock check per wake, DI scope created per wake to resolve `RefreshQueue`
+- [x] 6.3 Green: poll-interval options bound from `appsettings.json` (default 5 minutes); test the configured-interval scenario
 
 ## 7. Composition root and wiring
 
