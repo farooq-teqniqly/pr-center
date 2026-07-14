@@ -18,10 +18,10 @@
 
 ## 4. MarkSeen use case (D2)
 
-- [ ] 4.1 Red: marker-from-facts test -- marker equals max timestamp across fetched commits/comments/reviews, including own and bot events
-- [ ] 4.2 Red: null-fetch test -- no marker written, no exception surfaces
-- [ ] 4.3 Red: empty-activity fallback test -- marker falls back to the facts' last-touch stamp
-- [ ] 4.4 Green: implement `MarkSeen` (live fetch via `IGitHubFacts.GetPullRequestFactsAsync`, then `IStateStore.SetLastSeenAsync`); extract the high-water-mark helper so the caller reads as intent
+- [x] 4.1 Red: marker-from-facts test -- marker equals max timestamp across fetched commits/comments/reviews, including own and bot events
+- [x] 4.2 Red: null-fetch test -- no marker written, no exception surfaces
+- [x] 4.3 Red: empty-activity fallback test -- marker falls back to the facts' last-touch stamp
+- [x] 4.4 Green: implement `MarkSeen` (live fetch via `IGitHubFacts.GetPullRequestFactsAsync`, then `IStateStore.SetLastSeenAsync`); extract the high-water-mark helper so the caller reads as intent
 
 ## 5. Refresh trigger and UnlockApp (D3)
 
