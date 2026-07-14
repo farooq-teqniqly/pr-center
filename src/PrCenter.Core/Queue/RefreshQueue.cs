@@ -126,7 +126,14 @@ public sealed partial class RefreshQueue : IRefreshQueue
             )
         {
             LogOwnerFetchFailed(owner, ex);
-            statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Error, ex.Message));
+            // A friendly, transport-neutral detail rather than the raw exception
+            // text: a timed-out request reads as a timeout, everything else as a
+            // generic fetch failure. The full exception is in the log above.
+            var detail =
+                ex is OperationCanceledException
+                    ? "The GitHub request timed out."
+                    : "The owner's review queue could not be fetched.";
+            statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Error, detail));
         }
     }
 

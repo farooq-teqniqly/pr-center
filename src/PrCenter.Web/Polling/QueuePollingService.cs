@@ -78,8 +78,10 @@ internal sealed class QueuePollingService : BackgroundService
     private async Task PollWhenUnlockedAsync(CancellationToken cancellationToken)
     {
         // Gate on the app-lock state (the unlock UI gate), distinct from the vault
-        // crypto lock that RefreshQueue guards against mid-poll.
-        using var scope = _scopeFactory.CreateScope();
+        // crypto lock that RefreshQueue guards against mid-poll. An async scope so
+        // scoped IAsyncDisposable services (e.g. the EF Core context) dispose
+        // asynchronously.
+        await using var scope = _scopeFactory.CreateAsyncScope();
         var appLock = scope.ServiceProvider.GetRequiredService<IAppLock>();
         if (
             await appLock.GetStateAsync(cancellationToken).ConfigureAwait(false)

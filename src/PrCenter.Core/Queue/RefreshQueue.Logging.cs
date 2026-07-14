@@ -14,7 +14,7 @@ public sealed partial class RefreshQueue
     [LoggerMessage(
         EventId = 2,
         Level = LogLevel.Warning,
-        Message = "Queue refresh degraded owner '{Owner}': the fetch failed. Other owners still published."
+        Message = "Queue refresh degraded owner '{Owner}' after an error; that owner is omitted from this snapshot."
     )]
     private partial void LogOwnerFetchFailed(string owner, Exception exception);
 }
