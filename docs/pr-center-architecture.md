@@ -37,20 +37,25 @@ Adapters never reference each other.
 ## PrCenter.Web -- Presentation + Host (composition root)
 
 - **Blazor Server components** -- queue list, settings, unlock.
-- **Polling BackgroundService** -- interval timer plus a manual refresh
-  trigger; emits a "poll tick" that drives the `RefreshQueue` use case in Core.
+- **Polling BackgroundService** -- an interval timer and every on-demand
+  refresh (manual refresh, unlock) poke a single refresh trigger; the loop
+  awaits that one trigger and, on each wake while the app is Unlocked, drives
+  the `RefreshQueue` use case in Core.
 
 ## PrCenter.Core -- Business layer (pure, no I/O)
 
 Use cases (application services):
 
-- **RefreshQueue** -- orchestrates a poll: fetch facts per owner, run the
-  derivers, persist markers/status. (I/O orchestration; lands in the
-  polling-and-refresh change, not the derivation change.)
-- **GetQueue** -- returns the current derived queue for display.
+- **RefreshQueue** -- orchestrates a poll: enumerate owners, fetch facts per
+  owner, run the derivers against the stored last-seen markers, and publish an
+  in-memory queue snapshot with per-owner fetch status. (I/O orchestration;
+  lands in the polling-and-refresh change, not the derivation change.)
+- **GetQueue** -- returns the current queue snapshot for display, or an explicit
+  never-polled result.
 - **MarkSeen (live fetch)** -- on click-through, fresh live fetch of that PR
   before writing the last-seen marker.
-- **Unlock** -- app-password unlock; derives the key, decrypts tokens.
+- **UnlockApp** -- app-password unlock via the app lock; on success pokes the
+  refresh trigger for an immediate first poll.
 - **SaveOwnerToken / Settings** -- PAT entry and settings persistence.
 - **ResetVault (wipe tokens)** -- no-recovery wipe path.
 

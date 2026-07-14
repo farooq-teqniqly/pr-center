@@ -1,6 +1,7 @@
 using PrCenter.GitHub;
 using PrCenter.Persistence;
 using PrCenter.Web.Components;
+using PrCenter.Web.Polling;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,7 @@ builder
     .ConfigureHttpClient(client => client.BaseAddress = new Uri(gitHubBaseAddress))
     .AddStandardResilienceHandler();
 builder.Services.AddPersistenceAdapter(connectionString, builder.Environment.IsDevelopment());
+builder.Services.AddQueueServices(builder.Configuration);
 
 var app = builder.Build();
 
