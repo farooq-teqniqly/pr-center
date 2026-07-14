@@ -10,11 +10,11 @@
 
 ## 3. RefreshQueue use case (D4-D7)
 
-- [ ] 3.1 Red: multi-owner refresh test -- enumerates owners via vault, resolves login per owner, fetches facts, derives items against markers, publishes snapshot with ok statuses
-- [ ] 3.2 Red: per-owner failure isolation test -- one failing owner degrades only its status, others' items still published
-- [ ] 3.3 Red: no-owners test -- empty snapshot published, `IGitHubFacts` never called
-- [ ] 3.4 Red: mid-poll `VaultLockedException` test -- refresh aborts, warning logged, previously published snapshot untouched
-- [ ] 3.5 Green: implement `RefreshQueue` (ports via constructor injection, no `IServiceProvider`; `[LoggerMessage]` logging split into a `.Logging.cs` partial)
+- [x] 3.1 Red: multi-owner refresh test -- enumerates owners via vault, resolves login per owner, fetches facts, derives items against markers, publishes snapshot with ok statuses
+- [x] 3.2 Red: per-owner failure isolation test -- one failing owner degrades only its status, others' items still published
+- [x] 3.3 Red: no-owners test -- empty snapshot published, `IGitHubFacts` never called
+- [x] 3.4 Red: mid-poll `VaultLockedException` test -- refresh aborts, warning logged, previously published snapshot untouched
+- [x] 3.5 Green: implement `RefreshQueue` (ports via constructor injection, no `IServiceProvider`; `[LoggerMessage]` logging split into a `.Logging.cs` partial)
 
 ## 4. MarkSeen use case (D2)
 
