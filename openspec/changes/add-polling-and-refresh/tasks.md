@@ -38,8 +38,8 @@
 
 ## 7. Composition root and wiring
 
-- [ ] 7.1 Register the use cases, snapshot holder, trigger, `TimeProvider`, options, and hosted service in `Program.cs` / service-collection extensions
-- [ ] 7.2 Verify architecture tests still pass (Core stays free of GitHub/EF/ASP.NET references; adapters do not reference each other)
+- [x] 7.1 Register the use cases, snapshot holder, trigger, `TimeProvider`, options, and hosted service in `Program.cs` / service-collection extensions
+- [x] 7.2 Verify architecture tests still pass (Core stays free of GitHub/EF/ASP.NET references; adapters do not reference each other)
 
 ## 8. Verification and closeout
 
