@@ -5,8 +5,8 @@
 
 ## 2. Queue snapshot and its observation (D5)
 
-- [ ] 2.1 Red: tests for the snapshot holder and `GetQueue` -- never-polled state before any publish, latest snapshot after publish, atomic replacement (readers see old or new in full)
-- [ ] 2.2 Green: `QueueSnapshot` (items, per-owner statuses, snapshot instant) plus a singleton holder with atomic reference swap; `GetQueue` use case reads it; snapshot instant from `TimeProvider`
+- [x] 2.1 Red: tests for the snapshot holder and `GetQueue` -- never-polled state before any publish, latest snapshot after publish, atomic replacement (readers see old or new in full)
+- [x] 2.2 Green: `QueueSnapshot` (items, per-owner statuses, snapshot instant) plus a singleton holder with atomic reference swap; `GetQueue` use case reads it; snapshot instant from `TimeProvider`
 
 ## 3. RefreshQueue use case (D4-D7)
 
