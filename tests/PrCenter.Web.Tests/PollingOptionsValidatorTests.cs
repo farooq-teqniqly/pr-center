@@ -21,7 +21,7 @@ public sealed class PollingOptionsValidatorTests
         var options = new PollingOptions { Interval = TimeSpan.FromMinutes(minutes) };
 
         // Act
-        var result = validator.Validate(name: null, options);
+        var result = validator.Validate(null, options);
 
         // Assert
         Assert.Equal(expectedValid, result.Succeeded);
