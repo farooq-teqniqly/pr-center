@@ -78,6 +78,28 @@ public sealed class RefreshQueueTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenOneOwnerFetchThrows_DegradesOnlyThatOwnerWithoutCrashing()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["good", "bad"]);
+        StubOwner("good", ShownFact("good", "good/repo#1"));
+        _facts
+            .GetAuthenticatedUserLoginAsync("bad", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("No token is configured for owner 'bad'."));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var snapshot = _holder.Current;
+        Assert.NotNull(snapshot);
+        Assert.Equal("good/repo#1", Assert.Single(snapshot.Items).Identity.Id);
+        var badStatus = Assert.Single(snapshot.OwnerStatuses, status => status.Owner == "bad");
+        Assert.Equal(OwnerFetchStatus.Error, badStatus.Status);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithNoOwners_PublishesEmptySnapshotWithoutCallingGitHub()
     {
         // Arrange

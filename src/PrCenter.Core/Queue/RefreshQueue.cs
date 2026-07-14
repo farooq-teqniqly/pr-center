@@ -80,33 +80,54 @@ public sealed partial class RefreshQueue : IRefreshQueue
         CancellationToken cancellationToken
     )
     {
-        // Resolved per owner per poll: a replaced PAT must not read as a stale
-        // login, and the saving from caching across polls is negligible at a
-        // multi-minute cadence.
-        var myLogin = await _facts
-            .GetAuthenticatedUserLoginAsync(owner, cancellationToken)
-            .ConfigureAwait(false);
-        var result = await _facts
-            .GetReviewQueueFactsAsync(owner, myLogin, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (result.Status is not OwnerFetchStatus.Ok)
+        try
         {
-            statuses.Add(new OwnerStatus(owner, result.Status, result.Detail));
-            return;
-        }
-
-        foreach (var facts in result.Facts)
-        {
-            var item = await DeriveItemAsync(facts, myLogin, cancellationToken)
+            // Resolved per owner per poll: a replaced PAT must not read as a stale
+            // login, and the saving from caching across polls is negligible at a
+            // multi-minute cadence.
+            var myLogin = await _facts
+                .GetAuthenticatedUserLoginAsync(owner, cancellationToken)
                 .ConfigureAwait(false);
-            if (item is not null)
-            {
-                items.Add(item);
-            }
-        }
+            var result = await _facts
+                .GetReviewQueueFactsAsync(owner, myLogin, cancellationToken)
+                .ConfigureAwait(false);
 
-        statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Ok));
+            if (result.Status is not OwnerFetchStatus.Ok)
+            {
+                statuses.Add(new OwnerStatus(owner, result.Status, result.Detail));
+                return;
+            }
+
+            // Accumulate into a local list first so a fault part-way through cannot
+            // leave a half-derived owner in the published snapshot.
+            var ownerItems = new List<QueueItem>();
+            foreach (var facts in result.Facts)
+            {
+                var item = await DeriveItemAsync(facts, myLogin, cancellationToken)
+                    .ConfigureAwait(false);
+                if (item is not null)
+                {
+                    ownerItems.Add(item);
+                }
+            }
+
+            items.AddRange(ownerItems);
+            statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Ok));
+        }
+        // The vault crypto lock is a global abort -- rethrown to ExecuteAsync -- and a
+        // real shutdown cancellation propagates to stop the loop. Any other fault
+        // (a thrown login on auth/network/missing token, a timeout, or an
+        // unexpected error) degrades only this owner: "a per-owner fetch failure
+        // degrades only that owner." GetReviewQueueFactsAsync already reports its
+        // own failures as a status; this guard covers the throwing members.
+        catch (Exception ex)
+            when (ex is not VaultLockedException
+                && !(ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+            )
+        {
+            LogOwnerFetchFailed(owner, ex);
+            statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Error, ex.Message));
+        }
     }
 
     private async Task<QueueItem?> DeriveItemAsync(
