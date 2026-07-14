@@ -78,11 +78,16 @@ what existed when I looked, not an update judgment).
 ### D3. One wake mechanism: a refresh trigger poked by manual refresh and unlock
 
 Core defines a small `IRefreshTrigger` (fire-and-forget `RequestRefresh()`)
-backed by a bounded signal (`Channel` capacity 1, drop-write) that the polling
-`BackgroundService` awaits alongside its `PeriodicTimer`. Consequences:
+backed by a bounded signal (`Channel` capacity 1, drop-write). The polling
+`BackgroundService` awaits this one trigger; the interval is realized as another
+poker of it (a `TimeProvider` timer whose callback calls `RequestRefresh()`), so
+the loop has a single wake source rather than racing a `PeriodicTimer` against
+the trigger. Consequences:
 
 - Concurrent pokes coalesce into one poll; polls never overlap because the
-  single loop is the only consumer.
+  single loop is the only consumer, and it holds no trigger reader while a poll
+  is in flight, so wakes arriving mid-poll (timer or manual) collapse into at
+  most one follow-up poll.
 - A new Core `UnlockApp` use case wraps `IAppLock.UnlockAsync` and pokes the
   trigger on success, so unlocking yields an immediate first poll instead of
   waiting up to an interval. The future unlock UI (#6/#7) calls the use case,
@@ -93,12 +98,14 @@ backed by a bounded signal (`Channel` capacity 1, drop-write) that the polling
 
 ### D4. Lock gating lives in the loop; a mid-poll lock aborts quietly
 
-Each wake (timer or trigger), the loop checks `IAppLock.GetStateAsync`; anything
-but `Unlocked` skips the poll. If `VaultLockedException` escapes mid-poll (vault
-reset during a poll), the loop catches it, logs a warning (baseline rule: no
-silent catch), leaves the previous snapshot untouched, and resumes waiting.
-Per-owner fetch failures are not exceptions at all -- they arrive as
-`OwnerFetchStatus` values and degrade only that owner's entry in the snapshot.
+Each wake, the loop checks `IAppLock.GetStateAsync`; anything but `Unlocked`
+skips the poll. A `VaultLockedException` that escapes mid-poll (vault reset
+during a poll) is owned by `RefreshQueue`, which catches it, logs a warning
+(baseline rule: no silent catch), and abandons the poll without publishing --
+leaving the previous snapshot untouched. The loop therefore needs no
+lock-specific handling of its own. Per-owner fetch failures are not exceptions
+at all -- they arrive as `OwnerFetchStatus` values and degrade only that
+owner's entry in the snapshot.
 
 ### D5. The queue snapshot is an in-memory process singleton
 
@@ -114,8 +121,10 @@ snapshot instant comes from `TimeProvider`, keeping the holder testable.
 
 `PrCenterDbContext` and the adapters are scoped, but a `BackgroundService` is a
 singleton. The polling service creates a DI scope per wake and resolves the
-`RefreshQueue` use case from it. Use cases take their ports via constructor
-injection and never touch `IServiceProvider`.
+refresh use case from it through the `IRefreshQueue` abstraction (implemented by
+`RefreshQueue`), which also keeps the loop unit-testable with a substitute. Use
+cases take their ports via constructor injection and never touch
+`IServiceProvider`.
 
 ### D7. `myLogin` is resolved per owner per poll, no cross-poll cache
 

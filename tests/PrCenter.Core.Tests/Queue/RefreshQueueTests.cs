@@ -73,6 +73,7 @@ public sealed class RefreshQueueTests
         Assert.Equal("good/repo#1", Assert.Single(snapshot.Items).Identity.Id);
         var badStatus = Assert.Single(snapshot.OwnerStatuses, status => status.Owner == "bad");
         Assert.Equal(OwnerFetchStatus.Error, badStatus.Status);
+        Assert.Equal("boom", badStatus.Detail);
         Assert.DoesNotContain(snapshot.Items, item => item.Identity.Owner == "bad");
     }
 

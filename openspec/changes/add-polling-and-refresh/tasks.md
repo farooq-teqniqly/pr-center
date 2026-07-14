@@ -43,6 +43,6 @@
 
 ## 8. Verification and closeout
 
-- [ ] 8.1 Full solution build with warnings as errors, CSharpier check, all tests green
-- [ ] 8.2 Coverage pass per testing convention (coverlet collector + Cobertura grep); no authored-code holes in the new use cases
-- [ ] 8.3 Sweep docs if implementation diverged from design (design.md, architecture doc use-case list)
+- [x] 8.1 Full solution build with warnings as errors, CSharpier check, all tests green
+- [x] 8.2 Coverage pass per testing convention (coverlet collector + Cobertura grep); no authored-code holes in the new use cases
+- [x] 8.3 Sweep docs if implementation diverged from design (design.md, architecture doc use-case list)
