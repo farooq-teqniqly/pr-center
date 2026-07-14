@@ -1,7 +1,7 @@
 ## 1. Vault owner enumeration (D1)
 
-- [ ] 1.1 Red: `TokenVault` tests for `ListOwnersAsync` -- owners with tokens listed, empty vault lists none, works while locked without decryption (spec: token-vault delta)
-- [ ] 1.2 Green: add `ListOwnersAsync` to `ITokenVault` (XML docs) and implement in `TokenVault` as an `AsNoTracking` `Select(t => t.Owner)` projection
+- [x] 1.1 Red: `TokenVault` tests for `ListOwnersAsync` -- owners with tokens listed, empty vault lists none, works while locked without decryption (spec: token-vault delta)
+- [x] 1.2 Green: add `ListOwnersAsync` to `ITokenVault` (XML docs) and implement in `TokenVault` as an `AsNoTracking` `Select(t => t.Owner)` projection
 
 ## 2. Queue snapshot and its observation (D5)
 

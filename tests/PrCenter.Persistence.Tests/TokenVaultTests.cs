@@ -297,6 +297,53 @@ public sealed class TokenVaultTests : IDisposable
         Assert.True(await context.LastSeenMarkers.AsNoTracking().AnyAsync(CancellationToken.None));
     }
 
+    [Fact]
+    public async Task ListOwnersAsync_WithStoredTokens_ReturnsThoseOwners()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+        await vault.StoreTokenAsync("PerfectServe", "token_a", CancellationToken.None);
+        await vault.StoreTokenAsync("ps-unite", "token_b", CancellationToken.None);
+
+        // Act
+        var owners = await vault.ListOwnersAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(["PerfectServe", "ps-unite"], owners.OrderBy(owner => owner));
+    }
+
+    [Fact]
+    public async Task ListOwnersAsync_WithEmptyVault_ReturnsEmptyList()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+
+        // Act
+        var owners = await vault.ListOwnersAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Empty(owners);
+    }
+
+    [Fact]
+    public async Task ListOwnersAsync_WhileLocked_ReturnsOwnersWithoutDecrypting()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        SeedSecurityAndToken(context);
+        var keyHolder = new VaultKeyHolder();
+        var vault = CreateVault(context, keyHolder);
+
+        // Act
+        var owners = await vault.ListOwnersAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(["PerfectServe"], owners);
+        Assert.False(keyHolder.HasKey);
+    }
+
     private static TokenVault CreateVault(PrCenterDbContext context, VaultKeyHolder keyHolder) =>
         new(context, keyHolder, NullLogger<TokenVault>.Instance);
 

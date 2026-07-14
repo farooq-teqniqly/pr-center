@@ -46,6 +46,15 @@ public interface ITokenVault
     Task<string?> GetTokenAsync(string owner, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Enumerates the owners that currently have a stored token. This is the
+    /// authoritative owner list for polling. It reads only the plaintext owner
+    /// key column, decrypts nothing, and works regardless of lock state.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The owners with a stored token; empty when none are stored.</returns>
+    Task<IReadOnlyList<string>> ListOwnersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Wipes the vault: deletes every stored owner token and the app-security
     /// row, and discards the in-memory key. Does not require the vault to be
     /// unlocked. There is no recovery -- the user must set a new password and

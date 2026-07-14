@@ -234,6 +234,21 @@ internal sealed partial class TokenVault : ITokenVault
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> ListOwnersAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        // Plaintext key column only -- no key, no decryption, so this works while
+        // the vault is Locked or Uninitialized (lock gating of polling is the app
+        // lock's concern, not the vault's).
+        return await _context
+            .OwnerTokens.AsNoTracking()
+            .Select(entity => entity.Owner)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task ResetVaultAsync(CancellationToken cancellationToken = default)
     {
         // Both deletes run in one transaction so a failure of the second cannot
