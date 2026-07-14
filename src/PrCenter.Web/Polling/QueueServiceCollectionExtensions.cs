@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PrCenter.Core.Queue;
 
 namespace PrCenter.Web.Polling;
@@ -42,7 +43,11 @@ internal static class QueueServiceCollectionExtensions
         services.AddScoped<MarkSeen>();
         services.AddScoped<UnlockApp>();
 
-        services.Configure<PollingOptions>(configuration.GetSection(PollingOptions.SectionName));
+        services.AddSingleton<IValidateOptions<PollingOptions>, PollingOptionsValidator>();
+        services
+            .AddOptions<PollingOptions>()
+            .Bind(configuration.GetSection(PollingOptions.SectionName))
+            .ValidateOnStart();
         services.AddHostedService<QueuePollingService>();
         return services;
     }

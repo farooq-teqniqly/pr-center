@@ -3,7 +3,9 @@
 ### Requirement: Background poll loop runs on a configurable interval
 The system SHALL run a background poll loop that refreshes the review queue on
 a configurable interval, defaulting to 5 minutes, read from application
-configuration until the settings change owns it.
+configuration until the settings change owns it. The configured interval SHALL
+fall within an allowed range of 5 minutes to 24 hours, inclusive; a value
+outside that range SHALL fail validation at startup rather than run.
 
 #### Scenario: Interval elapses while unlocked
 - **WHEN** the app is Unlocked and the poll interval elapses
@@ -12,6 +14,14 @@ configuration until the settings change owns it.
 #### Scenario: Configured interval is honored
 - **WHEN** a non-default poll interval is configured
 - **THEN** the loop waits that interval between scheduled polls
+
+#### Scenario: In-range interval is accepted
+- **WHEN** the configured interval is between 5 minutes and 24 hours inclusive
+- **THEN** startup validation passes and the loop uses that interval
+
+#### Scenario: Out-of-range interval is rejected
+- **WHEN** the configured interval is below 5 minutes or above 24 hours
+- **THEN** startup validation fails and the app does not start
 
 ### Requirement: Polling is gated on the app being unlocked
 The system SHALL NOT poll GitHub while the app lock state is anything but
