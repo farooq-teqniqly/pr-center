@@ -25,10 +25,10 @@
 
 ## 5. Refresh trigger and UnlockApp (D3)
 
-- [ ] 5.1 Red: trigger tests -- poke wakes a waiting consumer, pokes coalesce (capacity-1 drop-write), poke with no consumer pending is not lost
-- [ ] 5.2 Green: `IRefreshTrigger` port plus channel-backed implementation
-- [ ] 5.3 Red: `UnlockApp` tests -- successful unlock pokes the trigger, failed unlock does not, unlock result passes through
-- [ ] 5.4 Green: implement `UnlockApp` wrapping `IAppLock.UnlockAsync`
+- [x] 5.1 Red: trigger tests -- poke wakes a waiting consumer, pokes coalesce (capacity-1 drop-write), poke with no consumer pending is not lost
+- [x] 5.2 Green: `IRefreshTrigger` port plus channel-backed implementation
+- [x] 5.3 Red: `UnlockApp` tests -- successful unlock pokes the trigger, failed unlock does not, unlock result passes through
+- [x] 5.4 Green: implement `UnlockApp` wrapping `IAppLock.UnlockAsync`
 
 ## 6. Polling BackgroundService (D4, D6)
 
