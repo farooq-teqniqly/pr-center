@@ -92,6 +92,26 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
     }
 
     [Fact]
+    public async Task GetReviewQueueFactsAsync_MapsPullRequestAuthorLogin()
+    {
+        // Act
+        var facts = await FactsForAsync("A");
+
+        // Assert
+        Assert.Equal("author-a", facts.Identity.AuthorLogin);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenAuthorIsGhost_FallsBackToUnknown()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.GhostAuthorPullRequestResponse);
+
+        // Assert
+        Assert.Equal("unknown", result.Facts.Single().Identity.AuthorLogin);
+    }
+
+    [Fact]
     public async Task GetReviewQueueFactsAsync_MapsDraftAndOpenStatus()
     {
         // Act

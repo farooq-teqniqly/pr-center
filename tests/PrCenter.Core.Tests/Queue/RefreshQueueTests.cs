@@ -163,7 +163,8 @@ public sealed class RefreshQueueTests
                 "repo",
                 1,
                 "title",
-                $"https://github.com/{owner}/repo/pull/1"
+                $"https://github.com/{owner}/repo/pull/1",
+                TestLogins.Author
             ),
             new PullRequestStatus(
                 isDraft: false,

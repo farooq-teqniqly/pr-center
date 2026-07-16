@@ -2,17 +2,17 @@
 
 ## 1. Author fact (github-facts-model + github-adapter)
 
-- [ ] 1.1 Red: `PullRequestIdentity` guard test -- null/whitespace author login
+- [x] 1.1 Red: `PullRequestIdentity` guard test -- null/whitespace author login
       rejected; construction test that the author login is exposed
-- [ ] 1.2 Green: add `AuthorLogin` to `PullRequestIdentity` (constructor at 7
+- [x] 1.2 Green: add `AuthorLogin` to `PullRequestIdentity` (constructor at 7
       parameters, guarded, XML-documented); fix all existing construction
       sites (mapper, tests) to compile
-- [ ] 1.3 Red: mapper tests -- `author { login }` maps to the identity's
+- [x] 1.3 Red: mapper tests -- `author { login }` maps to the identity's
       author login; null author (ghost) falls back to `"unknown"`
-- [ ] 1.4 Green: map the top-level author in `PullRequestFactsMapper`,
+- [x] 1.4 Green: map the top-level author in `PullRequestFactsMapper`,
       reusing/extracting the existing author-login read so the updated-by
       fallback and the identity share one helper
-- [ ] 1.5 Confirm architecture tests still pass (facts stay
+- [x] 1.5 Confirm architecture tests still pass (facts stay
       infrastructure-free)
 
 ## 2. Roster and covered-by derivation (queue-derivation)

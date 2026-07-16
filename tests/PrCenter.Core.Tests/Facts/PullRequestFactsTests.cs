@@ -47,7 +47,8 @@ public sealed class PullRequestFactsTests
             repository: "repo",
             number: 1,
             title: "Add feature",
-            url: "https://github.com/owner/repo/pull/1"
+            url: "https://github.com/owner/repo/pull/1",
+            authorLogin: TestLogins.Author
         );
 
     private static PullRequestStatus ValidStatus() =>

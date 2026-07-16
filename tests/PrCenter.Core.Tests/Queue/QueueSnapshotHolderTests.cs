@@ -76,7 +76,8 @@ public sealed class QueueSnapshotHolderTests
                 "repo",
                 1,
                 "title",
-                "https://example.test/pr"
+                "https://example.test/pr",
+                TestLogins.Author
             ),
             "octocat",
             PublishInstant,
