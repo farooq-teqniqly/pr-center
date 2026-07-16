@@ -48,7 +48,7 @@ internal static class QueueItemDeriver
             facts.Status.LastUpdatedAt,
             state,
             UpdateDetector.HasUpdate(facts, myLogin, lastSeen),
-            CoveredFlag.IsCovered(facts, myLogin)
+            CoveredFlag.CoveringLogins(facts, myLogin).Count > 0
         );
     }
 }

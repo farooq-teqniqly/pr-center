@@ -17,18 +17,18 @@
 
 ## 2. Roster and covered-by derivation (queue-derivation)
 
-- [ ] 2.1 Red: `ReviewerRosterEntry`/roster deriver tests -- requested-only is
+- [x] 2.1 Red: `ReviewerRosterEntry`/roster deriver tests -- requested-only is
       Pending with `IsBot` false; latest review's state wins for multiple
       reviews; requested-and-reviewed appears once with the review state; bot
       reviewer kept and flagged; is-me flag set via `GitHubLogin` comparison;
       no ordering asserted
-- [ ] 2.2 Green: roster entry record (login, state enum
+- [x] 2.2 Green: roster entry record (login, state enum
       Pending/Approved/ChangesRequested/Commented, `IsBot`, `IsMe`) and a
       named roster deriver (pure, in `Derivation`)
-- [ ] 2.3 Red: `CoveredFlag` tests reworked to covering-reviewer logins --
+- [x] 2.3 Red: `CoveredFlag` tests reworked to covering-reviewer logins --
       other human review yields its login; distinct logins for repeat
       reviewers; pending-only, own-only, and bot-only yield empty
-- [ ] 2.4 Green: `CoveredFlag` returns the distinct covering logins; covered
+- [x] 2.4 Green: `CoveredFlag` returns the distinct covering logins; covered
       indicator derived from the list
 
 ## 3. QueueItem enrichment (queue-derivation)
