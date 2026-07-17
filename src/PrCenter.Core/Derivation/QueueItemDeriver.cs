@@ -44,11 +44,21 @@ internal static class QueueItemDeriver
 
         return new QueueItem(
             facts.Identity,
-            facts.Status.LastUpdatedBy,
-            facts.Status.LastUpdatedAt,
+            new LastUpdate(facts.Status.LastUpdatedBy, facts.Status.LastUpdatedAt),
             state,
             UpdateDetector.HasUpdate(facts, myLogin, lastSeen),
-            CoveredFlag.CoveringLogins(facts, myLogin).Count > 0
+            ReviewerRosterDeriver.Derive(facts, myLogin),
+            new MyEngagement(lastSeen, LastReviewedByMe(facts, myLogin)),
+            CoveredFlag.CoveringLogins(facts, myLogin)
         );
     }
+
+    // The instant of the user's latest review regardless of its state, or null
+    // when they have never reviewed -- "when I last reviewed" is a fact about my
+    // activity, not about whether that review still stands.
+    private static DateTimeOffset? LastReviewedByMe(PullRequestFacts facts, string myLogin) =>
+        facts
+            .Activity.Reviews.Where(review => GitHubLogin.IsMe(review.ReviewerLogin, myLogin))
+            .Select(review => (DateTimeOffset?)review.SubmittedAt)
+            .Max();
 }

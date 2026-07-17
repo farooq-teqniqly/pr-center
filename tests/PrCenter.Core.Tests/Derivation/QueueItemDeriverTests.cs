@@ -31,8 +31,8 @@ public sealed class QueueItemDeriverTests
         // Assert
         Assert.NotNull(item);
         Assert.Same(facts.Identity, item.Identity);
-        Assert.Equal(facts.Status.LastUpdatedBy, item.LastUpdatedBy);
-        Assert.Equal(facts.Status.LastUpdatedAt, item.LastUpdatedAt);
+        Assert.Equal(facts.Status.LastUpdatedBy, item.LastUpdate.By);
+        Assert.Equal(facts.Status.LastUpdatedAt, item.LastUpdate.At);
         Assert.Equal(MembershipState.AwaitingFirstReview, item.State);
         Assert.True(item.HasUpdate);
         Assert.True(item.IsAlreadyCovered);
@@ -52,6 +52,92 @@ public sealed class QueueItemDeriverTests
         Assert.Equal(MembershipState.AwaitingFirstReview, item.State);
         Assert.False(item.HasUpdate);
         Assert.False(item.IsAlreadyCovered);
+    }
+
+    [Fact]
+    public void Derive_PassesLastLookedMarkerThrough()
+    {
+        // Arrange
+        var facts = TestFacts.Create(requested: [MyLogin]);
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.Equal(Marker, item.MyEngagement.LastLookedAt);
+    }
+
+    [Fact]
+    public void Derive_WhenNeverLooked_LastLookedIsNull()
+    {
+        // Arrange
+        var facts = TestFacts.Create(requested: [MyLogin]);
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin, lastSeen: null);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.Null(item.MyEngagement.LastLookedAt);
+    }
+
+    [Fact]
+    public void Derive_LastReviewedIsGreatestOfMyReviewsRegardlessOfState()
+    {
+        // Arrange -- my dismissed-then-commented reviews plus another reviewer's later one
+        var facts = TestFacts.Create(
+            requested: [MyLogin],
+            reviews:
+            [
+                new ReviewFact(MyLogin, ReviewState.Commented, TestTime.At(1)),
+                new ReviewFact(MyLogin, ReviewState.ChangesRequested, TestTime.At(3)),
+                new ReviewFact(Other, ReviewState.Approved, TestTime.At(5)),
+            ]
+        );
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.Equal(TestTime.At(3), item.MyEngagement.LastReviewedAt);
+    }
+
+    [Fact]
+    public void Derive_WhenINeverReviewed_LastReviewedIsNull()
+    {
+        // Arrange
+        var facts = TestFacts.Create(
+            requested: [MyLogin],
+            reviews: [new ReviewFact(Other, ReviewState.Approved, TestTime.At(1))]
+        );
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.Null(item.MyEngagement.LastReviewedAt);
+    }
+
+    [Fact]
+    public void Derive_RidesRosterAndCoveringReviewersOnTheItem()
+    {
+        // Arrange
+        var facts = TestFacts.Create(
+            requested: [MyLogin],
+            reviews: [new ReviewFact(Other, ReviewState.ChangesRequested, TestTime.At(1))]
+        );
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.Contains(item.Roster, entry => entry.Login == MyLogin && entry.IsMe);
+        Assert.Contains(item.Roster, entry => entry.Login == Other);
+        Assert.Equal([Other], item.CoveredBy);
     }
 
     [Theory]

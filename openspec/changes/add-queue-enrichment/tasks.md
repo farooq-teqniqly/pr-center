@@ -33,16 +33,16 @@
 
 ## 3. QueueItem enrichment (queue-derivation)
 
-- [ ] 3.1 Red: `QueueItem` shape tests -- sub-records (`LastUpdate`,
+- [x] 3.1 Red: `QueueItem` shape tests -- sub-records (`LastUpdate`,
       `MyEngagement`) null-guarded; roster and covered-by lists guarded and
       read-only; `IsAlreadyCovered` derived from `CoveredBy`
-- [ ] 3.2 Green: regroup `QueueItem` into identity, last update, state,
+- [x] 3.2 Green: regroup `QueueItem` into identity, last update, state,
       has-update, roster, engagement, covered-by (constructor at 7 parameters)
-- [ ] 3.3 Red: `QueueItemDeriver` tests -- last-looked passes the marker
+- [x] 3.3 Red: `QueueItemDeriver` tests -- last-looked passes the marker
       through (null when never looked); last-reviewed is the greatest
       submitted timestamp among the user's reviews regardless of state (null
       when none); roster and covering reviewers ride on the item
-- [ ] 3.4 Green: deriver fills the new fields, reusing the existing
+- [x] 3.4 Green: deriver fills the new fields, reusing the existing
       latest-review-by-me mechanics; update every `QueueItem` construction
       site (RefreshQueue, tests)
 

@@ -79,10 +79,11 @@ public sealed class QueueSnapshotHolderTests
                 "https://example.test/pr",
                 TestLogins.Author
             ),
-            "octocat",
-            PublishInstant,
+            new LastUpdate("octocat", PublishInstant),
             MembershipState.AwaitingFirstReview,
             hasUpdate: false,
-            isAlreadyCovered: false
+            roster: [],
+            new MyEngagement(lastLookedAt: null, lastReviewedAt: null),
+            coveredBy: []
         );
 }
