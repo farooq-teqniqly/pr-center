@@ -48,20 +48,20 @@
 
 ## 4. Stale carry-over (polling-and-refresh)
 
-- [ ] 4.1 Red: `OwnerStatus` test -- `LastFreshAt` exposed, null allowed
+- [x] 4.1 Red: `OwnerStatus` test -- `LastFreshAt` exposed, null allowed
       (fresh-this-snapshot semantics)
-- [ ] 4.2 Green: add `DateTimeOffset? LastFreshAt` to `OwnerStatus`
-- [ ] 4.3 Red: `RefreshQueue` carry-over tests -- failed owner's items carried
+- [x] 4.2 Green: add `DateTimeOffset? LastFreshAt` to `OwnerStatus`
+- [x] 4.3 Red: `RefreshQueue` carry-over tests -- failed owner's items carried
       unchanged from the previous snapshot with `LastFreshAt` = previous
       snapshot instant; consecutive failures chain the original instant;
       recovery publishes fresh items with null `LastFreshAt`; never-fresh
       owner has status only, null instant, no items; removed owner leaves the
       snapshot; both the non-Ok-status path and the thrown-exception path
       carry over
-- [ ] 4.4 Green: carry-over in `RefreshQueue` (read previous snapshot from the
+- [x] 4.4 Green: carry-over in `RefreshQueue` (read previous snapshot from the
       holder; extract a named helper so `RefreshOwnerAsync` reads as intent);
       vault-locked abort path untouched
-- [ ] 4.5 Confirm the polling loop integration tests still pass end to end
+- [x] 4.5 Confirm the polling loop integration tests still pass end to end
 
 ## 5. Verification and closeout
 
