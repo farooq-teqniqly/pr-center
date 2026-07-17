@@ -279,6 +279,33 @@ public sealed class RefreshQueueTests
         Assert.DoesNotContain(snapshot.OwnerStatuses, status => status.Owner == "drop");
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenOwnerCasingDiffersBetweenPolls_CarriesStaleItemsAndFreshInstant()
+    {
+        // Arrange -- first poll fresh as "PerfectServe", second poll the vault reports the same owner lower-cased and errors
+        const string freshOwner = "PerfectServe";
+        var relistedOwner = freshOwner.ToLowerInvariant();
+        var clock = new AdvanceableTimeProvider(Instant);
+        var holder = new QueueSnapshotHolder(clock);
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns([freshOwner]);
+        StubOwner(freshOwner, ShownFact(freshOwner, $"{freshOwner}/repo#1"));
+        await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
+        clock.Now = Instant.AddMinutes(5);
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns([relistedOwner]);
+        StubOwnerError(relistedOwner, "boom");
+
+        // Act
+        await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var snapshot = holder.Current;
+        Assert.NotNull(snapshot);
+        Assert.Equal($"{freshOwner}/repo#1", Assert.Single(snapshot.Items).Identity.Id);
+        var status = Assert.Single(snapshot.OwnerStatuses);
+        Assert.Equal(OwnerFetchStatus.Error, status.Status);
+        Assert.Equal(Instant, status.LastFreshAt);
+    }
+
     private RefreshQueue CreateRefreshQueue() => new(_vault, _facts, _stateStore, _holder, _logger);
 
     private RefreshQueue RefreshQueueWith(QueueSnapshotHolder holder) =>

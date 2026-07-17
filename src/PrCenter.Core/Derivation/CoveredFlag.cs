@@ -36,6 +36,7 @@ internal static class CoveredFlag
             )
             .Select(review => review.ReviewerLogin)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .ToArray()
+            .AsReadOnly();
     }
 }

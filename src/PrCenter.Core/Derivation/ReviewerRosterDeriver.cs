@@ -62,7 +62,7 @@ internal static class ReviewerRosterDeriver
             );
         }
 
-        return entries;
+        return entries.AsReadOnly();
     }
 
     // One review per reviewer -- the latest by submitted timestamp, so a reviewer

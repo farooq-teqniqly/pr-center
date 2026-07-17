@@ -112,6 +112,16 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
     }
 
     [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenAuthorLoginIsBlank_FallsBackToUnknown()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.BlankLoginAuthorPullRequestResponse);
+
+        // Assert
+        Assert.Equal("unknown", result.Facts.Single().Identity.AuthorLogin);
+    }
+
+    [Fact]
     public async Task GetReviewQueueFactsAsync_MapsDraftAndOpenStatus()
     {
         // Act

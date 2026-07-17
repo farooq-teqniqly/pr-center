@@ -85,7 +85,7 @@ public sealed class QueueItemDeriverTests
     [Fact]
     public void Derive_LastReviewedIsGreatestOfMyReviewsRegardlessOfState()
     {
-        // Arrange -- my dismissed-then-commented reviews plus another reviewer's later one
+        // Arrange -- my commented-then-changes-requested reviews plus another reviewer's later one
         var facts = TestFacts.Create(
             requested: [MyLogin],
             reviews:
