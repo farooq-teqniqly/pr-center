@@ -59,10 +59,11 @@ Resulting constructor: identity, lastUpdate, state, hasUpdate, roster,
 myEngagement, coveredBy = 7. Author rides for free on `Identity` -- no new
 `QueueItem` field.
 
-`LastReviewedAt` is the latest review I submitted regardless of its state,
-dismissed included -- "when I last reviewed" is a fact about my activity, not
-about whether that review still stands. Reuses the deriver's existing
-latest-review-by-me mechanics.
+`LastReviewedAt` is the latest review I submitted regardless of its state
+(`Approved` / `ChangesRequested` / `Commented`) -- "when I last reviewed" is a
+fact about my activity, not about whether that review is my standing verdict.
+Dismissed reviews never reach Core (see D3), so "any state" spans only those
+three. Reuses the deriver's existing latest-review-by-me mechanics.
 
 ### D3. Roster: union of requested reviewers and submitted reviews
 
