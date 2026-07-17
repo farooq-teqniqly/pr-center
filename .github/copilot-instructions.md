@@ -35,6 +35,14 @@ flag them as defects**:
   `AsNoTracking()` by convention, but methods that load an entity to modify and
   save it (e.g. `StateStore.SetLastSeenAsync` using `FindAsync`) require change
   tracking. Do not flag those as missing `AsNoTracking`.
+- **`array.AsReadOnly()` and `list.AsReadOnly()` are valid and compile.**
+  `System.Collections.Generic.CollectionExtensions.AsReadOnly<T>(this IList<T>)`
+  ships in the BCL (.NET 7+); since `T[]` implements `IList<T>`, an idiom like
+  `source.ToArray().AsReadOnly()` binds to that extension and returns a
+  `ReadOnlyCollection<T>`. It requires no project-defined extension method. Do
+  not claim these calls do not compile or that they need `Array.AsReadOnly(...)`
+  instead -- both forms are correct; the instance-style call is a deliberate
+  choice (target framework is net10.0).
 
 Contracts worth knowing (flag genuine violations, not the pattern itself):
 
