@@ -122,6 +122,50 @@ internal static class GraphQlFixtures
         }
         """;
 
+    /// <summary>A review-queue response whose single PR has a null author (deleted "ghost" account).</summary>
+    public const string GhostAuthorPullRequestResponse = """
+        {
+          "data": {
+            "requested": { "nodes": [
+              {
+                "id": "G", "number": 7, "title": "PR G", "url": "https://github.com/acme/repo-g/pull/7",
+                "isDraft": false, "state": "OPEN", "updatedAt": "2026-07-07T10:00:00Z",
+                "author": null,
+                "repository": { "name": "repo-g", "owner": { "login": "acme" } },
+                "reviewRequests": { "nodes": [] },
+                "reviews": { "nodes": [] },
+                "commits": { "nodes": [] },
+                "comments": { "nodes": [] },
+                "reviewThreads": { "nodes": [] }
+              }
+            ] },
+            "reviewed": { "nodes": [] }
+          }
+        }
+        """;
+
+    /// <summary>A review-queue response whose single PR has a present author object with a blank login.</summary>
+    public const string BlankLoginAuthorPullRequestResponse = """
+        {
+          "data": {
+            "requested": { "nodes": [
+              {
+                "id": "G", "number": 7, "title": "PR G", "url": "https://github.com/acme/repo-g/pull/7",
+                "isDraft": false, "state": "OPEN", "updatedAt": "2026-07-07T10:00:00Z",
+                "author": { "login": "" },
+                "repository": { "name": "repo-g", "owner": { "login": "acme" } },
+                "reviewRequests": { "nodes": [] },
+                "reviews": { "nodes": [] },
+                "commits": { "nodes": [] },
+                "comments": { "nodes": [] },
+                "reviewThreads": { "nodes": [] }
+              }
+            ] },
+            "reviewed": { "nodes": [] }
+          }
+        }
+        """;
+
     /// <summary>A successful review-queue response with three distinct PRs (A in both searches).</summary>
     public const string ReviewQueueResponse = """
         {

@@ -51,13 +51,17 @@ public sealed partial class RefreshQueue : IRefreshQueue
     {
         var owners = await _vault.ListOwnersAsync(cancellationToken).ConfigureAwait(false);
 
+        // The last published snapshot is the source for carrying a failed owner's
+        // rows over as stale; an owner no longer listed is simply not iterated, so
+        // its rows drop out -- correct, it is no longer polled.
+        var previous = _holder.Current;
         var items = new List<QueueItem>();
         var statuses = new List<OwnerStatus>();
         try
         {
             foreach (var owner in owners)
             {
-                await RefreshOwnerAsync(owner, items, statuses, cancellationToken)
+                await RefreshOwnerAsync(owner, previous, items, statuses, cancellationToken)
                     .ConfigureAwait(false);
             }
 
@@ -75,6 +79,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
 
     private async Task RefreshOwnerAsync(
         string owner,
+        QueueSnapshot? previous,
         List<QueueItem> items,
         List<OwnerStatus> statuses,
         CancellationToken cancellationToken
@@ -94,7 +99,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
 
             if (result.Status is not OwnerFetchStatus.Ok)
             {
-                statuses.Add(new OwnerStatus(owner, result.Status, result.Detail));
+                CarryOverStaleOwner(owner, previous, items, statuses, result.Status, result.Detail);
                 return;
             }
 
@@ -133,8 +138,59 @@ public sealed partial class RefreshQueue : IRefreshQueue
                 ex is OperationCanceledException
                     ? "The GitHub request timed out."
                     : "The owner's review queue could not be fetched.";
-            statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Error, detail));
+            CarryOverStaleOwner(owner, previous, items, statuses, OwnerFetchStatus.Error, detail);
         }
+    }
+
+    // A failed owner keeps the rows from the last snapshot rather than vanishing,
+    // so a broken token does not silently empty that owner. Each carried status is
+    // stamped with when the owner was last fresh; the fresh instant chains forward
+    // across consecutive failures. An owner that has never been fresh (fails on its
+    // first poll) carries no rows and a null instant.
+    private static void CarryOverStaleOwner(
+        string owner,
+        QueueSnapshot? previous,
+        List<QueueItem> items,
+        List<OwnerStatus> statuses,
+        OwnerFetchStatus status,
+        string? detail
+    )
+    {
+        statuses.Add(new OwnerStatus(owner, status, detail, LastFreshInstant(previous, owner)));
+
+        if (previous is not null)
+        {
+            items.AddRange(
+                previous.Items.Where(item =>
+                    string.Equals(item.Identity.Owner, owner, StringComparison.OrdinalIgnoreCase)
+                )
+            );
+        }
+    }
+
+    // The instant this owner's rows were last fresh: the previous snapshot's own
+    // instant when the owner was Ok in it, otherwise the fresh instant already
+    // carried on the previous (also failed) status -- so consecutive failures keep
+    // pointing at the original fresh poll. Null when the owner was absent before.
+    private static DateTimeOffset? LastFreshInstant(QueueSnapshot? previous, string owner)
+    {
+        if (previous is null)
+        {
+            return null;
+        }
+
+        var previousStatus = previous.OwnerStatuses.FirstOrDefault(status =>
+            string.Equals(status.Owner, owner, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (previousStatus is null)
+        {
+            return null;
+        }
+
+        return previousStatus.Status is OwnerFetchStatus.Ok
+            ? previous.SnapshotAt
+            : previousStatus.LastFreshAt;
     }
 
     private async Task<QueueItem?> DeriveItemAsync(

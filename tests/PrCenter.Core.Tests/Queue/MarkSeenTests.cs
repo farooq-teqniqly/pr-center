@@ -158,7 +158,8 @@ public sealed class MarkSeenTests
                 Repository,
                 Number,
                 "title",
-                "https://github.com/PerfectServe/repo/pull/1"
+                "https://github.com/PerfectServe/repo/pull/1",
+                TestLogins.Author
             ),
             new PullRequestStatus(
                 isDraft: false,

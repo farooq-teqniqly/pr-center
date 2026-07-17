@@ -31,7 +31,8 @@ internal static class PullRequestFactsMapper
             repository: RequireString(repository, "name"),
             number: pr.GetProperty("number").GetInt32(),
             title: RequireString(pr, "title"),
-            url: RequireString(pr, "url")
+            url: RequireString(pr, "url"),
+            authorLogin: AuthorLogin(pr)
         );
 
         var (lastUpdatedBy, lastUpdatedAt) = LatestUpdate(pr, reviews, commits, comments);
@@ -182,9 +183,15 @@ internal static class PullRequestFactsMapper
             return events[0];
         }
 
-        var author = OptProp(pr, "author") is { } a ? GetString(a, "login") : null;
-        return (author ?? "unknown", pr.GetProperty("updatedAt").GetDateTimeOffset());
+        return (AuthorLogin(pr), pr.GetProperty("updatedAt").GetDateTimeOffset());
     }
+
+    // The PR author login, shared by the identity fact and the last-updated-by
+    // fallback. Falls back to "unknown" for a deleted "ghost" account (null
+    // author or blank login), never a null or blank value.
+    private static string AuthorLogin(JsonElement pr) =>
+        (OptProp(pr, "author") is { } author ? NonBlank(GetString(author, "login")) : null)
+        ?? "unknown";
 
     private static ReviewState? MapReviewState(string? state) =>
         state switch

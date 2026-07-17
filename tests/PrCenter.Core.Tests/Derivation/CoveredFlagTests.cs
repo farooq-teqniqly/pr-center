@@ -12,33 +12,52 @@ public sealed class CoveredFlagTests
     [InlineData(ReviewState.Approved)]
     [InlineData(ReviewState.ChangesRequested)]
     [InlineData(ReviewState.Commented)]
-    public void IsCovered_WhenAnotherReviewerHasReviewed_ReturnsTrue(ReviewState state)
+    public void CoveringLogins_WhenAnotherReviewerHasReviewed_YieldsTheirLogin(ReviewState state)
     {
         // Arrange
         var facts = TestFacts.Create(reviews: [new ReviewFact(Other, state, TestTime.At(1))]);
 
         // Act
-        var covered = CoveredFlag.IsCovered(facts, MyLogin);
+        var covering = CoveredFlag.CoveringLogins(facts, MyLogin);
 
         // Assert
-        Assert.True(covered);
+        Assert.Equal([Other], covering);
     }
 
     [Fact]
-    public void IsCovered_WhenOnlyPendingRequests_ReturnsFalse()
+    public void CoveringLogins_WhenReviewerReviewedRepeatedly_YieldsLoginOnce()
+    {
+        // Arrange
+        var facts = TestFacts.Create(
+            reviews:
+            [
+                new ReviewFact(Other, ReviewState.Commented, TestTime.At(1)),
+                new ReviewFact(Other, ReviewState.Approved, TestTime.At(2)),
+            ]
+        );
+
+        // Act
+        var covering = CoveredFlag.CoveringLogins(facts, MyLogin);
+
+        // Assert
+        Assert.Equal([Other], covering);
+    }
+
+    [Fact]
+    public void CoveringLogins_WhenOnlyPendingRequests_IsEmpty()
     {
         // Arrange
         var facts = TestFacts.Create(requested: [Other]);
 
         // Act
-        var covered = CoveredFlag.IsCovered(facts, MyLogin);
+        var covering = CoveredFlag.CoveringLogins(facts, MyLogin);
 
         // Assert
-        Assert.False(covered);
+        Assert.Empty(covering);
     }
 
     [Fact]
-    public void IsCovered_WhenOnlyOwnReviews_ReturnsFalse()
+    public void CoveringLogins_WhenOnlyOwnReviews_IsEmpty()
     {
         // Arrange
         var facts = TestFacts.Create(
@@ -46,14 +65,14 @@ public sealed class CoveredFlagTests
         );
 
         // Act
-        var covered = CoveredFlag.IsCovered(facts, MyLogin);
+        var covering = CoveredFlag.CoveringLogins(facts, MyLogin);
 
         // Assert
-        Assert.False(covered);
+        Assert.Empty(covering);
     }
 
     [Fact]
-    public void IsCovered_WhenOnlyBotReviewsByOthers_ReturnsFalse()
+    public void CoveringLogins_WhenOnlyBotReviewsByOthers_IsEmpty()
     {
         // Arrange
         var facts = TestFacts.Create(
@@ -64,28 +83,28 @@ public sealed class CoveredFlagTests
         );
 
         // Act
-        var covered = CoveredFlag.IsCovered(facts, MyLogin);
+        var covering = CoveredFlag.CoveringLogins(facts, MyLogin);
 
         // Assert
-        Assert.False(covered);
+        Assert.Empty(covering);
     }
 
     [Fact]
-    public void IsCovered_WithNullFacts_Throws()
+    public void CoveringLogins_WithNullFacts_Throws()
     {
         // Act / Assert
-        Assert.Throws<ArgumentNullException>(() => CoveredFlag.IsCovered(null!, MyLogin));
+        Assert.Throws<ArgumentNullException>(() => CoveredFlag.CoveringLogins(null!, MyLogin));
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void IsCovered_WithMissingMyLogin_Throws(string? myLogin)
+    public void CoveringLogins_WithMissingMyLogin_Throws(string? myLogin)
     {
         // Act / Assert
         Assert.ThrowsAny<ArgumentException>(() =>
-            CoveredFlag.IsCovered(TestFacts.Create(), myLogin!)
+            CoveredFlag.CoveringLogins(TestFacts.Create(), myLogin!)
         );
     }
 }

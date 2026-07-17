@@ -16,10 +16,12 @@ public sealed record PullRequestIdentity
     /// <param name="number">The pull request number within the repository.</param>
     /// <param name="title">The pull request title.</param>
     /// <param name="url">The pull request's web URL.</param>
+    /// <param name="authorLogin">The login of whoever opened the pull request, for display.</param>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="id"/>, <paramref name="owner"/>,
-    /// <paramref name="repository"/>, <paramref name="title"/>, or
-    /// <paramref name="url"/> is null, empty, or whitespace.
+    /// <paramref name="repository"/>, <paramref name="title"/>,
+    /// <paramref name="url"/>, or <paramref name="authorLogin"/> is null, empty,
+    /// or whitespace.
     /// </exception>
     public PullRequestIdentity(
         string id,
@@ -27,7 +29,8 @@ public sealed record PullRequestIdentity
         string repository,
         int number,
         string title,
-        string url
+        string url,
+        string authorLogin
     )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -35,6 +38,7 @@ public sealed record PullRequestIdentity
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorLogin);
 
         Id = id;
         Owner = owner;
@@ -42,6 +46,7 @@ public sealed record PullRequestIdentity
         Number = number;
         Title = title;
         Url = url;
+        AuthorLogin = authorLogin;
     }
 
     /// <summary>Gets the stable identifier used as the last-seen marker key.</summary>
@@ -61,4 +66,7 @@ public sealed record PullRequestIdentity
 
     /// <summary>Gets the pull request's web URL.</summary>
     public string Url { get; }
+
+    /// <summary>Gets the login of whoever opened the pull request, for display.</summary>
+    public string AuthorLogin { get; }
 }

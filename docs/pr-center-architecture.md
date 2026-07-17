@@ -48,8 +48,10 @@ Use cases (application services):
 
 - **RefreshQueue** -- orchestrates a poll: enumerate owners, fetch facts per
   owner, run the derivers against the stored last-seen markers, and publish an
-  in-memory queue snapshot with per-owner fetch status. (I/O orchestration;
-  lands in the polling-and-refresh change, not the derivation change.)
+  in-memory queue snapshot with per-owner fetch status. A failed owner's rows
+  are carried over from the last snapshot, labeled with when they were last
+  fresh, rather than dropped. (I/O orchestration; lands in the
+  polling-and-refresh change, not the derivation change.)
 - **GetQueue** -- returns the current queue snapshot for display, or an explicit
   never-polled result.
 - **MarkSeen (live fetch)** -- on click-through, fresh live fetch of that PR
@@ -66,8 +68,11 @@ machines; see [pr-center-state.md](./pr-center-state.md)):
   in which shown state, relative to the user.
 - **Update detector** -- signals a PR has an update by comparing current facts
   against the last-seen marker; other people's activity only.
-- **Already-covered flag** -- derived display decoration; true when >=1 other
-  reviewer has submitted any review.
+- **Reviewer roster** -- pure fn per poll; the union of directly requested
+  reviewers and those who reviewed, each with a state (pending or their latest
+  verdict), a bot flag, and an is-me flag. Ordering is presentation.
+- **Already-covered flag** -- derived display decoration; the distinct other
+  **human** reviewers who have reviewed (empty means not covered).
 
 Runtime state:
 

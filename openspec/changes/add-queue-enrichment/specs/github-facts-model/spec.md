@@ -1,8 +1,7 @@
-# github-facts-model Specification
+# github-facts-model Delta
 
-## Purpose
-TBD - created by archiving change add-queue-derivation. Update Purpose after archive.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: Pull-request facts are a transport-neutral Core type
 
 `PrCenter.Core` SHALL define a `PullRequestFacts` type (and its sub-records)
@@ -61,17 +60,3 @@ it, and it carries no actor-type flag.
 - **WHEN** a `PullRequestIdentity` is constructed
 - **THEN** it exposes the pull-request author's login as a required
   (non-null, non-whitespace) string
-
-### Requirement: Facts are pure data with guarded construction
-
-`PullRequestFacts` and its sub-records SHALL be immutable data carriers with no
-derivation behavior. Reference-type constructor parameters SHALL be null-guarded
-per the baseline; required strings SHALL reject null-or-whitespace.
-
-#### Scenario: Null required fact is rejected
-
-- **WHEN** a `PullRequestFacts` (or sub-record) is constructed with a null
-  reference-type argument that the contract requires
-- **THEN** construction throws `ArgumentNullException` (or
-  `ArgumentException` for a null-or-whitespace required string)
-

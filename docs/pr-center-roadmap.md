@@ -16,7 +16,8 @@ remains [pr-center-idea.md](./pr-center-idea.md) and
 | 3 | `add-state-store` | skeleton | Marker store + persistence foundation (migrations, test harness) |
 | 4 | `add-token-vault-and-lock` | 3 | Encryption at rest, unlock flow, app lock gating |
 | 5 | `add-polling-and-refresh` | 1, 2, 3, 4 | Poll loop, RefreshQueue, MarkSeen live fetch |
-| 6 | `add-review-queue-ui` | 5 | The review inbox list itself |
+| 5b | `add-queue-enrichment` | 5 | Row data the UI needs: author fact, enriched `QueueItem`, stale carry-over |
+| 6 | `add-review-queue-ui` | 5b | The review inbox list itself (presentation-only) |
 | 7 | `add-settings-and-onboarding` | 4 | PAT entry, owner list, poll interval UI |
 | 8 | `add-containerization` | 6, 7 | Podman/Docker image + volume |
 | 9 | `add-observability` | 8 | OpenTelemetry wiring |
@@ -55,8 +56,8 @@ migrations enabled with the first migration; startup migration application
 (the schema is not secret, so it runs while the app is still locked); and the
 real-SQLite-file integration-test harness (temp file per test, no
 Testcontainers) that #4 and #7 reuse. Token/security and settings schema are
-*not* here -- they ride with the changes that design their columns (see #4,
-#7), so no table shape is guessed before its behavior is understood. Closes
+*not* here -- they ride with the changes that design their columns (see #4
+and #7), so no table shape is guessed before its behavior is understood. Closes
 the state-store part of issue #6 (delete the stub throw tests, add guards +
 guard tests).
 
@@ -79,13 +80,39 @@ markers/status), manual refresh trigger, and MarkSeen (click-through does a
 fresh live fetch of that PR before writing the marker). Wires 1-4 together
 end to end; queue state becomes observable through `GetQueue`.
 
+### 5b. add-queue-enrichment
+
+Core-side enrichment split out of #6 after walking the UX mockups
+(docs/pr-center-ux-mockups.html) against the code: the mockup rows need data
+`QueueItem` does not carry, and deriving it in Blazor would leak derivation
+rules (bot filtering, me-relativity) into the UI. Delivers: the PR author as a
+fact (already fetched by the GraphQL query, dropped by the mapper); `QueueItem`
+grown with author, when-I-last-looked (the marker instant), when-I-last-reviewed
+(latest review by me), the reviewer roster with per-reviewer states
+(pending/approved/changes-requested/commented, bot flag, is-me), and the
+covering reviewers' names behind the covered flag; and per-owner stale
+carry-over in RefreshQueue -- a failed owner's items carry forward from the
+previous snapshot with a last-fresh instant on `OwnerStatus`, instead of
+silently vanishing (the mockup's "stale 13:55" chip; today's behavior drops
+them, the silent-empty trap the idea doc warns about).
+
 ### 6. add-review-queue-ui
 
-Blazor components for the inbox: grouped by org then repo, unseen-first then
-most-recently-updated within a group, update badge, last-updated by/when, when
+Blazor components for the inbox, presentation-only on top of 5b: grouped by org
+then repo, unseen-first then most-recently-updated within a group (intra-group
+sort confirmed here per the idea doc), update badge, last-updated by/when, when
 I last looked/reviewed, full reviewer roster with states, already-covered
-decoration, click-through opening GitHub + marking seen, per-owner status
-indicators, global error banner, "all caught up" empty state.
+decoration naming the covering reviewers, click-through opening GitHub +
+marking seen, per-owner status chips with stale labeling, global error banner,
+"all caught up" empty state (owner chips stay visible so "no PRs" is provably
+different from a failed fetch), and the unlock screen (mockup screen 01; the
+password *setup* flow stays in #7). Open questions parked here from the mockup
+walkthrough: UI freshness mechanism (timer polling `GetQueue` vs a
+snapshot-changed event on the holder -- SignalR is the render transport, not
+the freshness mechanism); byline fidelity ("pushed 2 commits" needs an
+activity summary, "replied to my comment" needs reply-target facts that do not
+exist -- likely plain "commented" in v1); click-through marker write
+fire-and-forget vs awaited before navigation.
 
 ### 7. add-settings-and-onboarding
 
