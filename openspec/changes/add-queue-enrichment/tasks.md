@@ -65,11 +65,11 @@
 
 ## 5. Verification and closeout
 
-- [ ] 5.1 Full build with warnings as errors, CSharpier check, all tests green
-- [ ] 5.2 Coverage per convention (coverlet collector + Cobertura grep) on
+- [x] 5.1 Full build with warnings as errors, CSharpier check, all tests green
+- [x] 5.2 Coverage per convention (coverlet collector + Cobertura grep) on
       Core and GitHub test projects; no authored-code regression;
       delete `TestResults/` afterward
-- [ ] 5.3 Sweep docs for contradictions with the new behavior (state doc's
+- [x] 5.3 Sweep docs for contradictions with the new behavior (state doc's
       "per-owner fetch failure" wording, architecture doc if it describes
       snapshot contents); roadmap already updated
-- [ ] 5.4 `openspec validate add-queue-enrichment` passes
+- [x] 5.4 `openspec validate add-queue-enrichment` passes
