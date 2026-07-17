@@ -67,6 +67,11 @@ The adapter SHALL map GraphQL payloads onto the facts model as follows:
   otherwise the commit author email, otherwise the commit author name.
 - Draft pull requests SHALL be fetched and mapped with `IsDraft` true, not
   excluded by the search query -- exclusion is Core's decision.
+- The pull-request author login maps from the already-fetched top-level
+  `author { login }`; when the author is null or the login blank (a deleted
+  "ghost" account), it SHALL fall back to `"unknown"`, matching the existing
+  last-updated-by fallback, never a null or blank value. The GraphQL query is
+  unchanged.
 
 #### Scenario: Bot review is marked
 
@@ -85,6 +90,17 @@ The adapter SHALL map GraphQL payloads onto the facts model as follows:
   account)
 - **THEN** `CommitFact.AuthorLogin` carries the commit author email (or name
   when the email is absent), never a null or blank value
+
+#### Scenario: Pull-request author is mapped
+
+- **WHEN** a pull-request payload carries `author { login }`
+- **THEN** the mapped identity's author login is that login
+
+#### Scenario: Ghost author falls back
+
+- **WHEN** a pull-request payload's `author` is null (deleted account)
+- **THEN** the mapped identity's author login is `"unknown"`, never null or
+  blank
 
 ### Requirement: Per-owner authentication via the token vault
 
