@@ -1,9 +1,9 @@
 ## 1. Core: snapshot change notification
 
-- [ ] 1.1 Write a failing `PrCenter.Core.Tests` test: `QueueSnapshotHolder.Publish` raises `Changed` after the reference swap, and a subscriber reading `Current` in the handler sees the just-published snapshot
-- [ ] 1.2 Write a failing test: `Publish` with no subscribers completes normally and the snapshot is readable afterward
-- [ ] 1.3 Add `event EventHandler? Changed` to `QueueSnapshotHolder`, raised inside `Publish` after the `Volatile.Write`; run tests green
-- [ ] 1.4 Refactor: null-safe raise, XML doc on the event; confirm the single raise site invariant
+- [x] 1.1 Write a failing `PrCenter.Core.Tests` test: `QueueSnapshotHolder.Publish` raises `Changed` after the reference swap, and a subscriber reading `Current` in the handler sees the just-published snapshot
+- [x] 1.2 Write a failing test: `Publish` with no subscribers completes normally and the snapshot is readable afterward
+- [x] 1.3 Add `event EventHandler? Changed` to `QueueSnapshotHolder`, raised inside `Publish` after the `Volatile.Write`; run tests green
+- [x] 1.4 Refactor: null-safe raise, XML doc on the event; confirm the single raise site invariant
 
 ## 2. Web project and DI wiring
 

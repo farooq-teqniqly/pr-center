@@ -27,6 +27,16 @@ public sealed class QueueSnapshotHolder
     public QueueSnapshot? Current => Volatile.Read(ref _current);
 
     /// <summary>
+    /// Occurs after a new snapshot has been published, so an observer can re-read
+    /// <see cref="Current"/> without polling on a timer. Raised after the reference
+    /// swap, on the publishing thread, so a handler reading <see cref="Current"/>
+    /// always sees the just-published snapshot; handlers must stay trivial and
+    /// marshal any UI work off that thread. <see cref="Publish"/> is the sole raise
+    /// site.
+    /// </summary>
+    public event EventHandler? Changed;
+
+    /// <summary>
     /// Publishes a new snapshot from the given items and owner statuses, stamped
     /// with the current instant, replacing any previous snapshot atomically.
     /// </summary>
@@ -46,6 +56,7 @@ public sealed class QueueSnapshotHolder
 
         var snapshot = new QueueSnapshot(items, ownerStatuses, _timeProvider.GetUtcNow());
         Volatile.Write(ref _current, snapshot);
+        Changed?.Invoke(this, EventArgs.Empty);
         return snapshot;
     }
 }

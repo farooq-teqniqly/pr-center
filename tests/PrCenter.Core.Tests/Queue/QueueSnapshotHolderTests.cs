@@ -68,6 +68,39 @@ public sealed class QueueSnapshotHolderTests
         Assert.Equal(newStatuses, current.OwnerStatuses);
     }
 
+    [Fact]
+    public void Publish_WithSubscriber_RaisesChangedWithTheNewSnapshotVisible()
+    {
+        // Arrange
+        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var items = new[] { Item("pr-1") };
+        var statuses = new[] { new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok) };
+        QueueSnapshot? observed = null;
+        holder.Changed += (_, _) => observed = holder.Current;
+
+        // Act
+        holder.Publish(items, statuses);
+
+        // Assert
+        Assert.NotNull(observed);
+        Assert.Equal(items, observed.Items);
+    }
+
+    [Fact]
+    public void Publish_WithNoSubscribers_DoesNotThrowAndPublishesTheSnapshot()
+    {
+        // Arrange
+        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var items = new[] { Item("pr-1") };
+        var statuses = new[] { new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok) };
+
+        // Act
+        var published = holder.Publish(items, statuses);
+
+        // Assert
+        Assert.Same(published, holder.Current);
+    }
+
     private static QueueItem Item(string id) =>
         new(
             new PullRequestIdentity(
