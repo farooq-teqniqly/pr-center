@@ -7,11 +7,11 @@
 
 ## 2. Web project and DI wiring
 
-- [ ] 2.1 Confirm `PrCenter.Web` and `PrCenter.Web.Tests` (bUnit + NSubstitute) exist and are registered in the solution; add `bunit.web` / `TestAuthorizationContext` support if missing
-- [ ] 2.2 Register DI for `GetQueue`, `UnlockApp`, `IAppLock`, `ITokenVault`, `IRefreshTrigger`, and `QueueSnapshotHolder` in the Web composition root (no `MarkSeen` -- it no longer exists)
-- [ ] 2.3 Confirm Bootstrap 5.3.3 and Inter are loaded in `App.razor` (already are); use Bootstrap for layout/cards/badges/buttons/utilities and Inter for type
-- [ ] 2.4 Add the tiny auto-dark script to `App.razor`'s `<head>`: set `document.documentElement`'s `data-bs-theme` from `matchMedia('(prefers-color-scheme: dark)')` at load
-- [ ] 2.5 Port the mockup's semantic state tokens into `wwwroot/app.css` as custom variables layered over Bootstrap: `:root` light set plus a `[data-bs-theme="dark"]` override block (replacing the mockup's `@media` query and its `data-theme` hook)
+- [x] 2.1 Confirm `PrCenter.Web` and `PrCenter.Web.Tests` (bUnit + NSubstitute) exist and are registered in the solution; add `bunit.web` / `TestAuthorizationContext` support if missing
+- [x] 2.2 Register DI for `GetQueue`, `UnlockApp`, `IAppLock`, `ITokenVault`, `IRefreshTrigger`, and `QueueSnapshotHolder` in the Web composition root (no `MarkSeen` -- it no longer exists)
+- [x] 2.3 Confirm Bootstrap 5.3.3 and Inter are loaded in `App.razor` (already are); use Bootstrap for layout/cards/badges/buttons/utilities and Inter for type
+- [x] 2.4 Add the tiny auto-dark script to `App.razor`'s `<head>`: set `document.documentElement`'s `data-bs-theme` from `matchMedia('(prefers-color-scheme: dark)')` at load
+- [x] 2.5 Port the mockup's semantic state tokens into `wwwroot/app.css` as custom variables layered over Bootstrap: `:root` light set plus a `[data-bs-theme="dark"]` override block (replacing the mockup's `@media` query and its `data-theme` hook)
 
 ## 3. Lock gate and unlock card
 

@@ -1,5 +1,64 @@
+/*
+ * Semantic state palette ported from docs/pr-center-ux-mockups.html. These
+ * tokens encode derived queue state (see change add-review-queue-ui, design
+ * D5); they are the presentation contract, not decoration. Light is the :root
+ * default; the dark set overrides under [data-bs-theme="dark"], which the
+ * auto-dark startup script in App.razor sets from the OS setting so Bootstrap
+ * and these tokens flip together. Typography is Inter (loaded in App.razor).
+ */
+:root {
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-2: #EDF0F3;
+    --ink: #1B2430;
+    --ink-2: #55606E;
+    --ink-3: #8A94A1;
+    --line: #D8DEE5;
+    --signal: #B97718;          /* has-update amber */
+    --signal-bg: #F7EDD9;
+    --ok: #2E7D4F;
+    --ok-bg: #E2F0E8;
+    --err: #B3392E;
+    --err-bg: #F6E3E1;
+    --info: #2B6CB0;
+    --info-bg: #E2ECF6;
+    --pending: #8A94A1;
+    --pending-bg: #EDF0F3;
+    --chrome: #E4E8EC;
+    --focus: #2B6CB0;
+    --sans: "Inter", system-ui, -apple-system, sans-serif;
+    --display: "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+
+    /* Bridge Bootstrap's own surfaces to the palette so scaffolding follows the theme. */
+    --bs-body-bg: var(--bg);
+    --bs-body-color: var(--ink);
+}
+
+[data-bs-theme="dark"] {
+    --bg: #14181F;
+    --surface: #1C222B;
+    --surface-2: #232A35;
+    --ink: #E6E9EE;
+    --ink-2: #9AA5B3;
+    --ink-3: #6B7686;
+    --line: #2E3644;
+    --signal: #E8A33D;
+    --signal-bg: #3A2F1B;
+    --ok: #3E9960;
+    --ok-bg: #1D3327;
+    --err: #C75248;
+    --err-bg: #3A2320;
+    --info: #5B8DD6;
+    --info-bg: #1F2C3F;
+    --pending: #8A94A1;
+    --pending-bg: #262E3A;
+    --chrome: #0F1319;
+    --focus: #5B8DD6;
+}
+
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: var(--sans);
 }
 
 a, .btn-link {
