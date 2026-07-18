@@ -15,12 +15,12 @@
 
 ## 3. Lock gate and unlock card
 
-- [ ] 3.1 Write failing bUnit tests for `LockGate`: Unlocked renders the inbox, Locked renders the unlock card, Uninitialized renders the settings placeholder (mock `IAppLock`)
-- [ ] 3.2 Implement `LockGate` reading `IAppLock.GetStateAsync`, re-evaluating on unlock and reset, no polling; run green
-- [ ] 3.3 Write failing bUnit tests for `UnlockCard`: correct password re-evaluates to inbox, wrong password shows the message and stays, reset clears tokens to Uninitialized
-- [ ] 3.4 Implement `UnlockCard` calling `UnlockApp.UnlockAsync` and `ITokenVault.ResetVaultAsync`; run green
-- [ ] 3.5 Implement the Uninitialized settings placeholder (routes toward #7, builds nothing)
-- [ ] 3.6 Add scoped `.razor.css` for the gate/unlock screens from the token block
+- [x] 3.1 Write failing bUnit tests for `LockGate`: Unlocked renders the inbox, Locked renders the unlock card, Uninitialized renders the settings placeholder (mock `IAppLock`)
+- [x] 3.2 Implement `LockGate` reading `IAppLock.GetStateAsync`, re-evaluating on unlock and reset, no polling; run green
+- [x] 3.3 Write failing bUnit tests for `UnlockCard`: correct password re-evaluates to inbox, wrong password shows the message and stays, reset clears tokens to Uninitialized
+- [x] 3.4 Implement `UnlockCard` calling `UnlockApp.UnlockAsync` and `ITokenVault.ResetVaultAsync`; run green
+- [x] 3.5 Implement the Uninitialized settings placeholder (routes toward #7, builds nothing)
+- [x] 3.6 Add scoped `.razor.css` for the gate/unlock screens from the token block
 
 ## 4. Inbox: grouping, sort, and freshness
 

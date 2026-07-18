@@ -1,0 +1,83 @@
+@using PrCenter.Core.Ports
+@using PrCenter.Core.Queue
+@inject UnlockApp UnlockApp
+@inject ITokenVault TokenVault
+
+<div class="card shadow-sm mx-auto" style="max-width: 24rem;" data-testid="unlock-card">
+    <div class="card-body">
+        <h1 class="card-title h4 mb-3">Unlock PR-Center</h1>
+
+        <label for="unlock-password" class="form-label">App password</label>
+        <input id="unlock-password"
+               type="password"
+               class="form-control"
+               data-testid="password"
+               @bind="_password"
+               @bind:event="onchange" />
+
+        @if (_wrongPassword)
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="unlock-error">
+                That password is not correct.
+            </div>
+        }
+
+        <div class="d-grid mt-3">
+            <button type="button"
+                    class="btn btn-primary"
+                    data-testid="unlock-submit"
+                    @onclick="SubmitAsync">
+                Unlock
+            </button>
+        </div>
+
+        <div class="text-center mt-3">
+            <button type="button"
+                    class="btn btn-link btn-sm text-danger"
+                    data-testid="reset-vault"
+                    @onclick="ResetAsync">
+                Reset stored tokens
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _password = string.Empty;
+    private bool _wrongPassword;
+
+    /// <summary>Invoked after a successful unlock, so the gate can re-evaluate.</summary>
+    [Parameter]
+    public EventCallback OnUnlocked { get; set; }
+
+    /// <summary>Invoked after the vault is reset, so the gate can re-evaluate.</summary>
+    [Parameter]
+    public EventCallback OnReset { get; set; }
+
+    private async Task SubmitAsync()
+    {
+        _wrongPassword = false;
+
+        if (string.IsNullOrWhiteSpace(_password))
+        {
+            _wrongPassword = true;
+            return;
+        }
+
+        var unlocked = await UnlockApp.UnlockAsync(_password);
+        if (unlocked)
+        {
+            await OnUnlocked.InvokeAsync();
+        }
+        else
+        {
+            _wrongPassword = true;
+        }
+    }
+
+    private async Task ResetAsync()
+    {
+        await TokenVault.ResetVaultAsync();
+        await OnReset.InvokeAsync();
+    }
+}
