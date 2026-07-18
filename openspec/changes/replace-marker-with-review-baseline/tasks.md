@@ -86,7 +86,7 @@
 
 ## 7. token-vault owns the persistence foundation (spec bookkeeping)
 
-- [ ] 7.1 Confirm the foundation behavior the token-vault spec now asserts
+- [x] 7.1 Confirm the foundation behavior the token-vault spec now asserts
   (startup migration, WAL/busy/command-timeout via `SqliteContextConfiguration`
   + `SqlitePragmaInterceptor`, Development-only diagnostics, real-file
   integration harness) still holds after sections 5-6 -- no code changes
@@ -94,17 +94,17 @@
 
 ## 8. Docs sweep
 
-- [ ] 8.1 Rewrite `docs/pr-center-state.md` section 2 to the review-derived
+- [x] 8.1 Rewrite `docs/pr-center-state.md` section 2 to the review-derived
   update machine (baseline = my latest review; null baseline = no update; no
   stored marker).
-- [ ] 8.2 Correct `docs/pr-center-roadmap.md` #3/#5 scope and confirm this change
+- [x] 8.2 Correct `docs/pr-center-roadmap.md` #3/#5 scope and confirm this change
   is recorded ahead of #6 (per the proposal's docs-swept note).
 
 ## 9. Verify green
 
-- [ ] 9.1 Run `dotnet csharpier check`, then `dotnet build` (warnings-as-errors)
+- [x] 9.1 Run `dotnet csharpier check`, then `dotnet build` (warnings-as-errors)
   and the full `dotnet test` suite; all green.
-- [ ] 9.2 Collect coverage per changed test project via the coverlet collector
+- [x] 9.2 Collect coverage per changed test project via the coverlet collector
   and confirm the changed Core/Persistence classes stay covered (null-baseline
   branch exercised); `rm -rf` the `TestResults/` artifact after reading.
-- [ ] 9.3 Run `openspec validate replace-marker-with-review-baseline --strict`.
+- [x] 9.3 Run `openspec validate replace-marker-with-review-baseline --strict`.
