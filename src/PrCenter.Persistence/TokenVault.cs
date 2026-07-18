@@ -267,9 +267,14 @@ internal sealed partial class TokenVault : ITokenVault
 
         // ExecuteDelete bypasses the change tracker, so any vault entity tracked
         // from a prior store in this scope is now stale (row gone in the DB).
-        // Detach only the vault entities -- not the whole tracker -- so a re-store
-        // in the same scope inserts cleanly, without dropping unrelated pending
-        // changes (e.g. last-seen markers) tracked by the shared scoped context.
+        // Detach only the vault entities -- not the whole tracker via
+        // ChangeTracker.Clear() -- so a re-store in the same scope inserts
+        // cleanly, without dropping unrelated pending changes on the shared
+        // scoped context. NOTE: this isolation is currently unprovable -- the
+        // context has no entity type besides OwnerToken/AppSecurity to stand in
+        // as the "unrelated" change (the old last-seen-marker test that did was
+        // removed with the marker). Add a substitute test when a third table
+        // (e.g. settings) lands, before any switch to ChangeTracker.Clear().
         DetachAll<OwnerToken>();
         DetachAll<AppSecurity>();
         _keyHolder.Clear();

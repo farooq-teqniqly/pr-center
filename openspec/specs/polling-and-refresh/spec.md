@@ -42,9 +42,11 @@ without error and without touching the published snapshot.
 ### Requirement: Queue refresh derives the queue from every owner with a token
 A queue refresh SHALL enumerate the owners with a stored token, and for each
 owner resolve the authenticated user's login, fetch that owner's review-queue
-facts, and run the derivers against the stored last-seen markers -- evaluating
-everything relative to the user. The refresh SHALL then publish a new queue
-snapshot containing the derived queue items and each owner's fetch status.
+facts, and run the derivers -- deriving each pull request's update baseline from
+its own facts (the user's latest review instant) -- evaluating everything
+relative to the user. The refresh SHALL NOT read or write any stored last-seen
+marker. The refresh SHALL then publish a new queue snapshot containing the
+derived queue items and each owner's fetch status.
 
 #### Scenario: Successful multi-owner refresh
 - **WHEN** a refresh runs with multiple owners having stored tokens and all fetches succeed
@@ -53,6 +55,10 @@ snapshot containing the derived queue items and each owner's fetch status.
 #### Scenario: Login resolved per owner per poll
 - **WHEN** a refresh runs
 - **THEN** the authenticated login is resolved for each owner during that poll, and the user-relative derivations for that owner's items use that login
+
+#### Scenario: Update baseline derived from facts, not storage
+- **WHEN** a refresh derives a pull request's has-update flag
+- **THEN** the baseline is the user's latest review instant computed from that pull request's facts, and no stored marker is read for it
 
 #### Scenario: No owners configured
 - **WHEN** a refresh runs while no owner tokens are stored
@@ -156,29 +162,4 @@ immediately rather than waiting for the interval.
 #### Scenario: Failed unlock does not trigger
 - **WHEN** an unlock attempt fails (wrong password)
 - **THEN** the trigger is not poked
-
-### Requirement: Mark-as-seen live-fetches the pull request and writes a fact-derived marker
-On click-through, the system SHALL fetch fresh facts for that single pull
-request and write its last-seen marker as the maximum activity timestamp in the
-fetched facts (commits, comments, and reviews, including the user's own and
-bots' -- the marker is a high-water mark of what existed when the user looked,
-not an update judgment). The marker SHALL NOT be derived from the local wall
-clock. When the live fetch returns no facts (pull request inaccessible or
-gone), no marker SHALL be written.
-
-#### Scenario: Marker set from fetched activity
-- **WHEN** the user clicks through to a pull request and the live fetch returns facts
-- **THEN** the last-seen marker is set to the maximum timestamp across the fetched commits, comments, and reviews
-
-#### Scenario: Activity between poll and click is not lost
-- **WHEN** another person's activity landed after the last poll but is present in the click-through live fetch
-- **THEN** the marker covers that activity, and activity landing after the live fetch still derives as an update on the next poll
-
-#### Scenario: Live fetch returns nothing
-- **WHEN** the user clicks through and the live fetch reports the pull request inaccessible or gone
-- **THEN** no marker is written and no error surfaces to the user
-
-#### Scenario: Facts with no activity events
-- **WHEN** the live fetch returns facts whose activity lists are all empty (defensive case)
-- **THEN** the marker falls back to the facts' last-touch stamp, staying in GitHub's timestamp domain
 

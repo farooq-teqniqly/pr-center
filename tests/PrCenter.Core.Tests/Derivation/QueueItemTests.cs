@@ -170,7 +170,7 @@ public sealed class QueueItemTests
 
     private static IReadOnlyList<ReviewerRosterEntry> ValidRoster() => [];
 
-    private static MyEngagement ValidEngagement() => new(lastLookedAt: null, lastReviewedAt: null);
+    private static MyEngagement ValidEngagement() => new(lastReviewedAt: null);
 
     private static IReadOnlyList<string> ValidCoveredBy() => [];
 }

@@ -16,10 +16,6 @@ internal static class QueueItemDeriver
     /// </summary>
     /// <param name="facts">The pull request's current facts.</param>
     /// <param name="myLogin">The login of the user the queue is evaluated for.</param>
-    /// <param name="lastSeen">
-    /// The instant the user last looked at the pull request, or
-    /// <see langword="null"/> if they never have.
-    /// </param>
     /// <returns>
     /// A <see cref="QueueItem"/> when the pull request is shown; otherwise
     /// <see langword="null"/>.
@@ -28,11 +24,7 @@ internal static class QueueItemDeriver
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="myLogin"/> is null, empty, or whitespace.
     /// </exception>
-    public static QueueItem? Derive(
-        PullRequestFacts facts,
-        string myLogin,
-        DateTimeOffset? lastSeen
-    )
+    public static QueueItem? Derive(PullRequestFacts facts, string myLogin)
     {
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentException.ThrowIfNullOrWhiteSpace(myLogin);
@@ -42,13 +34,18 @@ internal static class QueueItemDeriver
             return null;
         }
 
+        // The user's latest review is both the displayed engagement instant and
+        // the update baseline, so has-update and "when I last reviewed" are
+        // provably the same instant.
+        var myLastReviewedAt = LastReviewedByMe(facts, myLogin);
+
         return new QueueItem(
             facts.Identity,
             new LastUpdate(facts.Status.LastUpdatedBy, facts.Status.LastUpdatedAt),
             state,
-            UpdateDetector.HasUpdate(facts, myLogin, lastSeen),
+            UpdateDetector.HasUpdate(facts, myLogin, myLastReviewedAt),
             ReviewerRosterDeriver.Derive(facts, myLogin),
-            new MyEngagement(lastSeen, LastReviewedByMe(facts, myLogin)),
+            new MyEngagement(myLastReviewedAt),
             CoveredFlag.CoveringLogins(facts, myLogin)
         );
     }

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 
 namespace PrCenter.Persistence.Tests;
@@ -8,25 +7,32 @@ public sealed class SqliteTestDatabaseTests : IDisposable
     private readonly SqliteTestDatabase _database = new();
 
     [Fact]
-    public async Task MigratedDatabase_PersistsAndReadsBackAMarker()
+    public async Task MigratedDatabase_PersistsAndReadsBackAnOwnerToken()
     {
         // Arrange
-        var seenAt = DateTimeOffset.Parse("2026-07-01T09:30:00Z", CultureInfo.InvariantCulture);
         await using (var write = _database.CreateContext())
         {
-            write.LastSeenMarkers.Add(
-                new LastSeenMarker { PullRequestId = "pr-1", SeenAt = seenAt }
+            write.OwnerTokens.Add(
+                new OwnerToken
+                {
+                    Owner = "PerfectServe",
+                    Nonce = [1],
+                    Ciphertext = [2, 3],
+                    Tag = [4],
+                }
             );
             await write.SaveChangesAsync(CancellationToken.None);
         }
 
         // Act
         await using var read = _database.CreateContext();
-        var marker = await read.LastSeenMarkers.FindAsync(["pr-1"], CancellationToken.None);
+        var token = await read
+            .OwnerTokens.AsNoTracking()
+            .SingleOrDefaultAsync(entity => entity.Owner == "PerfectServe", CancellationToken.None);
 
         // Assert
-        Assert.NotNull(marker);
-        Assert.Equal(seenAt, marker.SeenAt);
+        Assert.NotNull(token);
+        Assert.Equal<byte[]>([2, 3], token.Ciphertext);
     }
 
     public void Dispose() => _database.Dispose();

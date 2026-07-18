@@ -14,7 +14,6 @@ public sealed class RefreshQueueTests
 
     private readonly ITokenVault _vault = Substitute.For<ITokenVault>();
     private readonly IGitHubFacts _facts = Substitute.For<IGitHubFacts>();
-    private readonly IStateStore _stateStore = Substitute.For<IStateStore>();
     private readonly QueueSnapshotHolder _holder = new(new FixedTimeProvider(Instant));
     private readonly CapturingLogger<RefreshQueue> _logger = new();
 
@@ -46,9 +45,6 @@ public sealed class RefreshQueueTests
         await _facts
             .Received(1)
             .GetAuthenticatedUserLoginAsync("ps-unite", Arg.Any<CancellationToken>());
-        await _stateStore
-            .Received(1)
-            .GetLastSeenAsync("PerfectServe/repo#1", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -306,10 +302,10 @@ public sealed class RefreshQueueTests
         Assert.Equal(Instant, status.LastFreshAt);
     }
 
-    private RefreshQueue CreateRefreshQueue() => new(_vault, _facts, _stateStore, _holder, _logger);
+    private RefreshQueue CreateRefreshQueue() => new(_vault, _facts, _holder, _logger);
 
     private RefreshQueue RefreshQueueWith(QueueSnapshotHolder holder) =>
-        new(_vault, _facts, _stateStore, holder, _logger);
+        new(_vault, _facts, holder, _logger);
 
     private void StubOwnerError(string owner, string detail)
     {

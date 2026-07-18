@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 namespace PrCenter.Persistence;
 
 /// <summary>
-/// EF Core context for PR-Center's local SQLite state. Holds the last-seen
-/// markers, the encrypted owner tokens, and the single app-security row;
-/// settings schema arrives with its own change.
+/// EF Core context for PR-Center's local SQLite state. Holds the encrypted owner
+/// tokens and the single app-security row; settings schema arrives with its own
+/// change.
 /// </summary>
 internal sealed class PrCenterDbContext : DbContext
 {
@@ -15,9 +15,6 @@ internal sealed class PrCenterDbContext : DbContext
     /// <param name="options">The options configured by the composition root.</param>
     public PrCenterDbContext(DbContextOptions<PrCenterDbContext> options)
         : base(options) { }
-
-    /// <summary>Gets the last-seen markers, one per pull request.</summary>
-    public DbSet<LastSeenMarker> LastSeenMarkers => Set<LastSeenMarker>();
 
     /// <summary>Gets the encrypted owner tokens, one per GitHub owner.</summary>
     public DbSet<OwnerToken> OwnerTokens => Set<OwnerToken>();
@@ -29,16 +26,6 @@ internal sealed class PrCenterDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
-
-        modelBuilder.Entity<LastSeenMarker>(marker =>
-        {
-            marker.HasKey(entity => entity.PullRequestId);
-
-            // The id is a GitHub GraphQL node id (well under 100 chars); 255 is
-            // an ample cap. SQLite does not enforce column length, so this is
-            // model/migration metadata rather than a runtime constraint.
-            marker.Property(entity => entity.PullRequestId).IsRequired().HasMaxLength(255);
-        });
 
         modelBuilder.Entity<OwnerToken>(token =>
         {

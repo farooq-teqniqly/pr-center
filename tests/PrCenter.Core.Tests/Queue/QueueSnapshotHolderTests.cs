@@ -83,7 +83,7 @@ public sealed class QueueSnapshotHolderTests
             MembershipState.AwaitingFirstReview,
             hasUpdate: false,
             roster: [],
-            new MyEngagement(lastLookedAt: null, lastReviewedAt: null),
+            new MyEngagement(lastReviewedAt: null),
             coveredBy: []
         );
 }
