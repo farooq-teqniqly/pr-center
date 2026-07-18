@@ -53,6 +53,8 @@ implements that revision.
   migration, SQLite connection config, Development-only diagnostics, real-file
   integration harness) that `state-store` introduced, reworded onto the vault
   schema. Behavior unchanged; only the owning capability moves.
+- `solution-structure`: the ports requirement drops `IStateStore`, leaving
+  `IGitHubFacts` and `ITokenVault` as the Core-defined ports.
 
 ### Removed Capabilities
 
