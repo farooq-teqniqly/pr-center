@@ -54,7 +54,8 @@ implements that revision.
   integration harness) that `state-store` introduced, reworded onto the vault
   schema. Behavior unchanged; only the owning capability moves.
 - `solution-structure`: the ports requirement drops `IStateStore`, leaving
-  `IGitHubFacts` and `ITokenVault` as the Core-defined ports.
+  `IGitHubFacts`, `ITokenVault`, and `IAppLock` (the previously omitted app-lock
+  port, corrected in the same pass) as the Core-defined ports.
 
 ### Removed Capabilities
 
