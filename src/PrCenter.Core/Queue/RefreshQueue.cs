@@ -9,17 +9,17 @@ namespace PrCenter.Core.Queue;
 /// <summary>
 /// Use case that refreshes the review queue: it enumerates the owners with a
 /// stored token, and for each owner resolves the authenticated login, fetches
-/// that owner's review-queue facts, and derives the shown queue items against the
-/// stored last-seen markers -- everything evaluated relative to the user. It then
-/// publishes a new snapshot of the derived items and each owner's fetch status. A
-/// per-owner fetch failure degrades only that owner; a locked vault mid-poll
-/// aborts the whole refresh without touching the previously published snapshot.
+/// that owner's review-queue facts, and derives the shown queue items -- deriving
+/// each pull request's update baseline from its own facts (the user's latest
+/// review instant), everything evaluated relative to the user. It then publishes
+/// a new snapshot of the derived items and each owner's fetch status. A per-owner
+/// fetch failure degrades only that owner; a locked vault mid-poll aborts the
+/// whole refresh without touching the previously published snapshot.
 /// </summary>
 public sealed partial class RefreshQueue : IRefreshQueue
 {
     private readonly ITokenVault _vault;
     private readonly IGitHubFacts _facts;
-    private readonly IStateStore _stateStore;
     private readonly QueueSnapshotHolder _holder;
     private readonly ILogger<RefreshQueue> _logger;
 
@@ -28,20 +28,17 @@ public sealed partial class RefreshQueue : IRefreshQueue
     /// </summary>
     /// <param name="vault">The vault enumerating the owners to poll.</param>
     /// <param name="facts">The GitHub facts port for login resolution and fetches.</param>
-    /// <param name="stateStore">The store of per-pull-request last-seen markers.</param>
     /// <param name="holder">The holder the refreshed snapshot is published into.</param>
     /// <param name="logger">The logger for the aborted-poll warning path.</param>
     public RefreshQueue(
         ITokenVault vault,
         IGitHubFacts facts,
-        IStateStore stateStore,
         QueueSnapshotHolder holder,
         ILogger<RefreshQueue> logger
     )
     {
         _vault = vault;
         _facts = facts;
-        _stateStore = stateStore;
         _holder = holder;
         _logger = logger;
     }
@@ -108,8 +105,9 @@ public sealed partial class RefreshQueue : IRefreshQueue
             var ownerItems = new List<QueueItem>();
             foreach (var facts in result.Facts)
             {
-                var item = await DeriveItemAsync(facts, myLogin, cancellationToken)
-                    .ConfigureAwait(false);
+                // The update baseline is derived from each pull request's own
+                // facts (my latest review instant); no stored marker is read.
+                var item = QueueItemDeriver.Derive(facts, myLogin);
                 if (item is not null)
                 {
                     ownerItems.Add(item);
@@ -191,17 +189,5 @@ public sealed partial class RefreshQueue : IRefreshQueue
         return previousStatus.Status is OwnerFetchStatus.Ok
             ? previous.SnapshotAt
             : previousStatus.LastFreshAt;
-    }
-
-    private async Task<QueueItem?> DeriveItemAsync(
-        PullRequestFacts facts,
-        string myLogin,
-        CancellationToken cancellationToken
-    )
-    {
-        var lastSeen = await _stateStore
-            .GetLastSeenAsync(facts.Identity.Id, cancellationToken)
-            .ConfigureAwait(false);
-        return QueueItemDeriver.Derive(facts, myLogin, lastSeen);
     }
 }

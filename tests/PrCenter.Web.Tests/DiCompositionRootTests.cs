@@ -31,19 +31,6 @@ public sealed class DiCompositionRootTests : IClassFixture<WebApplicationFactory
     }
 
     [Fact]
-    public void Host_WhenBuilt_ResolvesStateStoreToPersistenceAdapter()
-    {
-        // Arrange
-        using var scope = _factory.Services.CreateScope();
-
-        // Act
-        var resolved = scope.ServiceProvider.GetRequiredService<IStateStore>();
-
-        // Assert
-        Assert.Equal("PrCenter.Persistence", resolved.GetType().Assembly.GetName().Name);
-    }
-
-    [Fact]
     public void Host_WhenBuilt_ResolvesTokenVaultToPersistenceAdapter()
     {
         // Arrange

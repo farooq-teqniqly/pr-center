@@ -279,25 +279,6 @@ public sealed class TokenVaultTests : IDisposable
     }
 
     [Fact]
-    public async Task ResetVaultAsync_DoesNotDropUnrelatedTrackedChanges()
-    {
-        // Arrange
-        await using var context = _database.CreateContext();
-        SeedSecurityAndToken(context);
-        context.LastSeenMarkers.Add(
-            new LastSeenMarker { PullRequestId = "pr-1", SeenAt = DateTimeOffset.UnixEpoch }
-        );
-        var vault = CreateVault(context, new VaultKeyHolder());
-
-        // Act
-        await vault.ResetVaultAsync(CancellationToken.None);
-        await context.SaveChangesAsync(CancellationToken.None);
-
-        // Assert
-        Assert.True(await context.LastSeenMarkers.AsNoTracking().AnyAsync(CancellationToken.None));
-    }
-
-    [Fact]
     public async Task ListOwnersAsync_WithStoredTokens_ReturnsThoseOwners()
     {
         // Arrange

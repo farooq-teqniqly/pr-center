@@ -6,15 +6,15 @@ namespace PrCenter.Persistence;
 
 /// <summary>
 /// Registration entry point for the persistence adapter, letting the
-/// composition root bind <see cref="IStateStore"/> and <see cref="ITokenVault"/>
-/// without seeing the internal adapter types.
+/// composition root bind <see cref="ITokenVault"/> without seeing the internal
+/// adapter types.
 /// </summary>
 public static class PersistenceServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the SQLite context and the persistence adapter's
-    /// implementations of <see cref="IStateStore"/>, <see cref="ITokenVault"/>,
-    /// and <see cref="IAppLock"/> (with its singleton key holder).
+    /// implementations of <see cref="ITokenVault"/> and <see cref="IAppLock"/>
+    /// (with its singleton key holder).
     /// </summary>
     /// <param name="services">The service collection to add the adapter to.</param>
     /// <param name="connectionString">The SQLite connection string.</param>
@@ -46,7 +46,6 @@ public static class PersistenceServiceCollectionExtensions
                 options.EnableDetailedErrors();
             }
         });
-        services.AddScoped<IStateStore, StateStore>();
         services.AddScoped<ITokenVault, TokenVault>();
 
         // The decrypted key is shared across circuits for the life of the

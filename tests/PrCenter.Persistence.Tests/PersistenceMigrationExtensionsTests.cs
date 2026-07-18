@@ -1,5 +1,5 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PrCenter.Core.Ports;
 
 namespace PrCenter.Persistence.Tests;
 
@@ -11,27 +11,34 @@ public sealed class PersistenceMigrationExtensionsTests : IDisposable
     );
 
     [Fact]
-    public async Task MigratePersistenceAsync_SchemaLessFile_CreatesMarkerTableForRoundTrip()
+    public async Task MigratePersistenceAsync_SchemaLessFile_CreatesTokenTableForRoundTrip()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddPersistenceAdapter($"Data Source={_path};Pooling=False", isDevelopment: false);
         await using var provider = services.BuildServiceProvider();
-        var seenAt = DateTimeOffset.Parse(
-            "2026-07-01T09:30:00Z",
-            System.Globalization.CultureInfo.InvariantCulture
-        );
 
         // Act
         await provider.MigratePersistenceAsync(CancellationToken.None);
 
         // Assert
         using var scope = provider.CreateScope();
-        var store = scope.ServiceProvider.GetRequiredService<IStateStore>();
-        await store.SetLastSeenAsync("pr-1", seenAt, CancellationToken.None);
-        var read = await store.GetLastSeenAsync("pr-1", CancellationToken.None);
-        Assert.Equal(seenAt, read);
+        var context = scope.ServiceProvider.GetRequiredService<PrCenterDbContext>();
+        context.OwnerTokens.Add(
+            new OwnerToken
+            {
+                Owner = "PerfectServe",
+                Nonce = [1],
+                Ciphertext = [2, 3],
+                Tag = [4],
+            }
+        );
+        await context.SaveChangesAsync(CancellationToken.None);
+        var read = await context
+            .OwnerTokens.AsNoTracking()
+            .SingleAsync(token => token.Owner == "PerfectServe", CancellationToken.None);
+        Assert.Equal<byte[]>([2, 3], read.Ciphertext);
     }
 
     public void Dispose()

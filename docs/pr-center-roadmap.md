@@ -17,7 +17,8 @@ remains [pr-center-idea.md](./pr-center-idea.md) and
 | 4 | `add-token-vault-and-lock` | 3 | Encryption at rest, unlock flow, app lock gating |
 | 5 | `add-polling-and-refresh` | 1, 2, 3, 4 | Poll loop, RefreshQueue, MarkSeen live fetch |
 | 5b | `add-queue-enrichment` | 5 | Row data the UI needs: author fact, enriched `QueueItem`, stale carry-over |
-| 6 | `add-review-queue-ui` | 5b | The review inbox list itself (presentation-only) |
+| 5c | `replace-marker-with-review-baseline` | 5b | Update baseline = my last review; remove last-seen marker + `MarkSeen` |
+| 6 | `add-review-queue-ui` | 5c | The review inbox list itself (presentation-only) |
 | 7 | `add-settings-and-onboarding` | 4 | PAT entry, owner list, poll interval UI |
 | 8 | `add-containerization` | 6, 7 | Podman/Docker image + volume |
 | 9 | `add-observability` | 8 | OpenTelemetry wiring |
@@ -61,6 +62,9 @@ and #7), so no table shape is guessed before its behavior is understood. Closes
 the state-store part of issue #6 (delete the stub throw tests, add guards +
 guard tests).
 
+> Note (2026-07-17): the last-seen marker delivered here is removed by 5c; the
+> migrations-and-harness foundation stays (5c, #4, and #7 depend on it).
+
 ### 4. add-token-vault-and-lock
 
 App password: KDF choice (Argon2 vs PBKDF2, open question from the skeleton
@@ -80,6 +84,9 @@ markers/status), manual refresh trigger, and MarkSeen (click-through does a
 fresh live fetch of that PR before writing the marker). Wires 1-4 together
 end to end; queue state becomes observable through `GetQueue`.
 
+> Note (2026-07-17): `MarkSeen` and the marker-writing poll step are removed by
+> 5c, which derives the update baseline from my last review instead.
+
 ### 5b. add-queue-enrichment
 
 Core-side enrichment split out of #6 after walking the UX mockups
@@ -96,23 +103,34 @@ previous snapshot with a last-fresh instant on `OwnerStatus`, instead of
 silently vanishing (the mockup's "stale 13:55" chip; today's behavior drops
 them, the silent-empty trap the idea doc warns about).
 
+### 5c. replace-marker-with-review-baseline
+
+Revises the mark-as-seen model (idea doc, 2026-07-17). The update baseline flips
+from the stored last-seen marker to my own latest review instant -- already a
+GitHub fact -- so the indicator clears when I review on GitHub, never on a
+click-through (which mis-fired: open-and-close cleared it silently). Removes
+`MarkSeen`, the `LastSeenMarker` table (a drop migration), and the last-seen
+part of `state-store`; the migrations-and-harness foundation stays under
+`token-vault`. A never-reviewed PR is New, not Updated (no badge). Lands before
+#6 so the UI is built once on the final model.
+
 ### 6. add-review-queue-ui
 
-Blazor components for the inbox, presentation-only on top of 5b: grouped by org
+Blazor components for the inbox, presentation-only on top of 5b and 5c: grouped by org
 then repo, unseen-first then most-recently-updated within a group (intra-group
 sort confirmed here per the idea doc), update badge, last-updated by/when, when
-I last looked/reviewed, full reviewer roster with states, already-covered
-decoration naming the covering reviewers, click-through opening GitHub +
-marking seen, per-owner status chips with stale labeling, global error banner,
+I last reviewed, full reviewer roster with states, already-covered
+decoration naming the covering reviewers, click-through opening GitHub (a plain
+anchor -- no marking seen; the update indicator is review-derived per 5c),
+per-owner status chips with stale labeling, global error banner,
 "all caught up" empty state (owner chips stay visible so "no PRs" is provably
 different from a failed fetch), and the unlock screen (mockup screen 01; the
-password *setup* flow stays in #7). Open questions parked here from the mockup
-walkthrough: UI freshness mechanism (timer polling `GetQueue` vs a
-snapshot-changed event on the holder -- SignalR is the render transport, not
-the freshness mechanism); byline fidelity ("pushed 2 commits" needs an
-activity summary, "replied to my comment" needs reply-target facts that do not
-exist -- likely plain "commented" in v1); click-through marker write
-fire-and-forget vs awaited before navigation.
+password *setup* flow stays in #7). Open questions from the mockup walkthrough
+are resolved in the change's design.md: UI freshness = a snapshot-changed event
+on the holder (not a timer; SignalR is the render transport); byline collapses
+to who-and-when ("pushed 2 commits" / "replied to my comment" need facts that do
+not exist). The click-through marker-write question is moot -- 5c removes the
+marker entirely.
 
 ### 7. add-settings-and-onboarding
 
