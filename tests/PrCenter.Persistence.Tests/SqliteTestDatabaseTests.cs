@@ -26,7 +26,9 @@ public sealed class SqliteTestDatabaseTests : IDisposable
 
         // Act
         await using var read = _database.CreateContext();
-        var token = await read.OwnerTokens.FindAsync(["PerfectServe"], CancellationToken.None);
+        var token = await read
+            .OwnerTokens.AsNoTracking()
+            .SingleOrDefaultAsync(entity => entity.Owner == "PerfectServe", CancellationToken.None);
 
         // Assert
         Assert.NotNull(token);

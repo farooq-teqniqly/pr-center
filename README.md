@@ -17,9 +17,9 @@ state machines it observes.
 ### Solution layout
 
 - `src/PrCenter.Core` — use cases, derivers, app lock, and the ports
-  (`IGitHubFacts`, `IStateStore`, `ITokenVault`). References no GitHub or EF packages.
+  (`IGitHubFacts`, `ITokenVault`). References no GitHub or EF packages.
 - `src/PrCenter.GitHub` — adapter implementing `IGitHubFacts`.
-- `src/PrCenter.Persistence` — EF Core + SQLite adapter (`IStateStore`, `ITokenVault`).
+- `src/PrCenter.Persistence` — EF Core + SQLite adapter (`ITokenVault`).
 - `src/PrCenter.Web` — Blazor Server host and DI composition root.
 - `tests/*` — sibling `<Project>.Tests` for each, plus `PrCenter.ArchitectureTests`
   (NetArchTest) enforcing the dependency direction rules.

@@ -46,10 +46,10 @@ public interface IGitHubFacts
     );
 
     /// <summary>
-    /// Fetches fresh facts for a single pull request, used by mark-as-seen
-    /// click-through. A closed or merged pull request still returns facts (with
-    /// the closed-or-merged indicator set); the result is null only when the pull
-    /// request is inaccessible or does not exist.
+    /// Fetches fresh facts for a single pull request. A closed or merged pull
+    /// request still returns facts (with the closed-or-merged indicator set); the
+    /// result is null only when the pull request is inaccessible or does not
+    /// exist.
     /// </summary>
     /// <param name="owner">The GitHub owner (org or account) the pull request belongs to.</param>
     /// <param name="repository">The repository name.</param>

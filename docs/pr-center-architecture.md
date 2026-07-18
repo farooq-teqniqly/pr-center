@@ -47,15 +47,14 @@ Adapters never reference each other.
 Use cases (application services):
 
 - **RefreshQueue** -- orchestrates a poll: enumerate owners, fetch facts per
-  owner, run the derivers against the stored last-seen markers, and publish an
-  in-memory queue snapshot with per-owner fetch status. A failed owner's rows
-  are carried over from the last snapshot, labeled with when they were last
-  fresh, rather than dropped. (I/O orchestration; lands in the
-  polling-and-refresh change, not the derivation change.)
+  owner, run the derivers -- deriving each PR's update baseline from its own
+  facts (my latest review instant) -- and publish an in-memory queue snapshot
+  with per-owner fetch status. A failed owner's rows are carried over from the
+  last snapshot, labeled with when they were last fresh, rather than dropped.
+  (I/O orchestration; lands in the polling-and-refresh change, not the
+  derivation change.)
 - **GetQueue** -- returns the current queue snapshot for display, or an explicit
   never-polled result.
-- **MarkSeen (live fetch)** -- on click-through, fresh live fetch of that PR
-  before writing the last-seen marker.
 - **UnlockApp** -- app-password unlock via the app lock; on success pokes the
   refresh trigger for an immediate first poll.
 - **SaveOwnerToken / Settings** -- PAT entry and settings persistence.
@@ -67,7 +66,8 @@ machines; see [pr-center-state.md](./pr-center-state.md)):
 - **Membership deriver** -- pure fn per poll; decides whether a PR is shown and
   in which shown state, relative to the user.
 - **Update detector** -- signals a PR has an update by comparing current facts
-  against the last-seen marker; other people's activity only.
+  against my latest review instant; other people's activity only. A PR I have
+  never reviewed has no baseline, so it is new, not updated.
 - **Reviewer roster** -- pure fn per poll; the union of directly requested
   reviewers and those who reviewed, each with a state (pending or their latest
   verdict), a bot flag, and an is-me flag. Ordering is presentation.
@@ -87,8 +87,6 @@ Ports (defined in Core, implemented by adapters):
 - **IGitHubFacts** -- reads raw PR facts for an owner. Its return type (the
   PR facts model) is Core-owned contract surface: the GitHub adapter produces
   it, the derivers and `RefreshQueue` consume it.
-- **IStateStore** -- persists per-PR last-seen markers (and later owner
-  settings).
 - **ITokenVault** -- encrypted token storage at rest (set password, store/get
   per-owner tokens, reset).
 - **IAppLock** -- the lock-state gate: derives `Uninitialized`/`Locked`/`Unlocked`
@@ -102,10 +100,10 @@ HTTPS. Implements `IGitHubFacts`.
 
 ## PrCenter.Persistence -- adapter
 
-EF Core + SQLite for markers, tokens, and settings; token-vault crypto
+EF Core + SQLite for tokens and settings; token-vault crypto
 (Argon2id KDF + AES-GCM at rest). Writes to a SQLite file on a mounted host
-volume. Implements `IStateStore`, `ITokenVault`, and `IAppLock` (the latter
-backed by a process-wide singleton key holder).
+volume. Implements `ITokenVault` and `IAppLock` (the latter backed by a
+process-wide singleton key holder).
 
 ## Crosscutting
 

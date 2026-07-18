@@ -14,7 +14,7 @@ public sealed class QueueItemDeriverTests
     private const string Untracked = "untracked";
 
     [Fact]
-    public void Derive_WhenShownWithUpdateAndCoverage_MapsAllDerivedValues()
+    public void Derive_WhenShownWithUpdate_MapsIdentityStatusStateAndUpdate()
     {
         // Arrange -- my earlier review sets the baseline; another's later commit updates
         var facts = TestFacts.Create(
