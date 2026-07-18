@@ -2,12 +2,12 @@
 
 ## 1. Update detector measures against my last review
 
-- [ ] 1.1 In `PrCenter.Core.Tests/Derivation/UpdateDetectorTests.cs`, flip the
+- [x] 1.1 In `PrCenter.Core.Tests/Derivation/UpdateDetectorTests.cs`, flip the
   null-baseline test: rename/rewrite "unseen when never looked at" to
   **null baseline yields no update** (assert `HasUpdate` returns false when the
   baseline is null, even with other people's activity present). Rename the
   remaining tests off "marker" onto "my last review". Run to confirm red.
-- [ ] 1.2 In `src/PrCenter.Core/Derivation/UpdateDetector.cs`, rename the third
+- [x] 1.2 In `src/PrCenter.Core/Derivation/UpdateDetector.cs`, rename the third
   parameter `lastSeen` to `myLastReviewedAt` and change the null branch to
   `return false` (an unreviewed pull request is new, not updated). Leave the
   strictly-after / not-me / bot-filter comparison unchanged. Update the

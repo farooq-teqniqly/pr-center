@@ -12,32 +12,37 @@ public sealed class UpdateDetectorTests
     private const string Comment = "comment";
     private const string Review = "review";
 
-    private static readonly DateTimeOffset Marker = TestTime.At(2);
+    private static readonly DateTimeOffset MyLastReviewedAt = TestTime.At(2);
 
     [Fact]
-    public void HasUpdate_WhenNeverSeen_ReturnsTrue()
+    public void HasUpdate_WhenNeverReviewed_ReturnsFalse()
     {
-        // Arrange
-        var facts = TestFacts.Create();
+        // Arrange -- other people's activity is present, but with no review
+        // baseline the pull request is new, not updated
+        var facts = TestFacts.Create(
+            commits: [new CommitFact(Other, TestTime.At(3))],
+            comments: [new CommentFact(Other, TestTime.At(3))],
+            reviews: [new ReviewFact(Other, ReviewState.Commented, TestTime.At(3))]
+        );
 
         // Act
-        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, lastSeen: null);
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, myLastReviewedAt: null);
 
         // Assert
-        Assert.True(hasUpdate);
+        Assert.False(hasUpdate);
     }
 
     [Theory]
     [InlineData(Commit)]
     [InlineData(Comment)]
     [InlineData(Review)]
-    public void HasUpdate_WhenOtherPersonActivityAfterMarker_ReturnsTrue(string eventType)
+    public void HasUpdate_WhenOtherPersonActivityAfterMyLastReview_ReturnsTrue(string eventType)
     {
         // Arrange
         var facts = FactsWithOtherEventAt(eventType, TestTime.At(3));
 
         // Act
-        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, MyLastReviewedAt);
 
         // Assert
         Assert.True(hasUpdate);
@@ -47,15 +52,17 @@ public sealed class UpdateDetectorTests
     [InlineData(Commit)]
     [InlineData(Comment)]
     [InlineData(Review)]
-    public void HasUpdate_WhenOtherPersonActivityAtOrBeforeMarker_ReturnsFalse(string eventType)
+    public void HasUpdate_WhenOtherPersonActivityAtOrBeforeMyLastReview_ReturnsFalse(
+        string eventType
+    )
     {
         // Arrange
-        var atMarker = FactsWithOtherEventAt(eventType, TestTime.At(2));
-        var beforeMarker = FactsWithOtherEventAt(eventType, TestTime.At(1));
+        var atReview = FactsWithOtherEventAt(eventType, TestTime.At(2));
+        var beforeReview = FactsWithOtherEventAt(eventType, TestTime.At(1));
 
         // Act
-        var atResult = UpdateDetector.HasUpdate(atMarker, MyLogin, Marker);
-        var beforeResult = UpdateDetector.HasUpdate(beforeMarker, MyLogin, Marker);
+        var atResult = UpdateDetector.HasUpdate(atReview, MyLogin, MyLastReviewedAt);
+        var beforeResult = UpdateDetector.HasUpdate(beforeReview, MyLogin, MyLastReviewedAt);
 
         // Assert
         Assert.False(atResult);
@@ -63,7 +70,7 @@ public sealed class UpdateDetectorTests
     }
 
     [Fact]
-    public void HasUpdate_WhenOnlyOwnActivityAfterMarker_ReturnsFalse()
+    public void HasUpdate_WhenOnlyOwnActivityAfterMyLastReview_ReturnsFalse()
     {
         // Arrange
         var facts = TestFacts.Create(
@@ -73,14 +80,14 @@ public sealed class UpdateDetectorTests
         );
 
         // Act
-        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, MyLastReviewedAt);
 
         // Assert
         Assert.False(hasUpdate);
     }
 
     [Fact]
-    public void HasUpdate_WhenOnlyBotCommentsAndReviewsAfterMarker_ReturnsFalse()
+    public void HasUpdate_WhenOnlyBotCommentsAndReviewsAfterMyLastReview_ReturnsFalse()
     {
         // Arrange
         var facts = TestFacts.Create(
@@ -89,7 +96,7 @@ public sealed class UpdateDetectorTests
         );
 
         // Act
-        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, MyLastReviewedAt);
 
         // Assert
         Assert.False(hasUpdate);
@@ -106,20 +113,20 @@ public sealed class UpdateDetectorTests
         );
 
         // Act
-        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, MyLastReviewedAt);
 
         // Assert
         Assert.True(hasUpdate);
     }
 
     [Fact]
-    public void HasUpdate_WhenNoActivitySinceMarker_ReturnsFalse()
+    public void HasUpdate_WhenNoActivitySinceMyLastReview_ReturnsFalse()
     {
         // Arrange
         var facts = TestFacts.Create();
 
         // Act
-        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, Marker);
+        var hasUpdate = UpdateDetector.HasUpdate(facts, MyLogin, MyLastReviewedAt);
 
         // Assert
         Assert.False(hasUpdate);
@@ -130,7 +137,7 @@ public sealed class UpdateDetectorTests
     {
         // Act / Assert
         Assert.Throws<ArgumentNullException>(() =>
-            UpdateDetector.HasUpdate(null!, MyLogin, Marker)
+            UpdateDetector.HasUpdate(null!, MyLogin, MyLastReviewedAt)
         );
     }
 
@@ -142,7 +149,7 @@ public sealed class UpdateDetectorTests
     {
         // Act / Assert
         Assert.ThrowsAny<ArgumentException>(() =>
-            UpdateDetector.HasUpdate(TestFacts.Create(), myLogin!, Marker)
+            UpdateDetector.HasUpdate(TestFacts.Create(), myLogin!, MyLastReviewedAt)
         );
     }
 
