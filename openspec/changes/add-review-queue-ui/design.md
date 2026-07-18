@@ -12,15 +12,18 @@ inferred:
   contracts.
 - `QueueItem` exposes `Identity` (incl. `AuthorLogin`, `Url`), `LastUpdate`
   (`By`/`At`), `State`, `HasUpdate`, `Roster` (`ReviewerRosterEntry`: login,
-  `ReviewerState`, `IsBot`, `IsMe`), `MyEngagement` (`LastLookedAt?`,
-  `LastReviewedAt?`), and `CoveredBy` (+ derived `IsAlreadyCovered`).
+  `ReviewerState`, `IsBot`, `IsMe`), `MyEngagement` (`LastReviewedAt?` -- the
+  sole engagement instant since `replace-marker-with-review-baseline` dropped
+  `LastLookedAt`), and `CoveredBy` (+ derived `IsAlreadyCovered`).
+- `HasUpdate` is derived against the user's latest review instant, not a stored
+  marker: a never-reviewed PR has a null baseline and `HasUpdate` is false (it
+  is *new*, not *updated*). No `MarkSeen` use case exists to call anymore.
 - `OwnerStatus` exposes `Owner`, `Status` (`Ok | MisconfiguredToken | Error`),
   `Detail?`, and `LastFreshAt?` for the stale label.
 - `IAppLock.GetStateAsync()` returns `AppLockState`
   (`Uninitialized | Locked | Unlocked`). `UnlockApp.UnlockAsync(password)`
   returns bool and pokes `IRefreshTrigger` on success.
-  `ITokenVault.ResetVaultAsync()` backs the reset link. `MarkSeen.MarkSeenAsync` does its
-  own live fetch and marker write.
+  `ITokenVault.ResetVaultAsync()` backs the reset link.
 - `QueueSnapshotHolder.Publish` swaps an immutable snapshot by atomic reference;
   it has no change notification today -- the one Core gap this change closes.
 
@@ -76,18 +79,16 @@ means a subscriber that reads `Current` in the handler always sees the new
 snapshot. Subscribers run on the poll thread, so the handler does no work beyond
 `InvokeAsync`.
 
-### D3. Click-through dispatches MarkSeen, never awaits it
+### D3. Click-through is a plain anchor, no side effect
 
 The title link is a real anchor to `Identity.Url` with `target="_blank"` so
-GitHub opens in a new tab and the Blazor circuit survives. Alongside the
-navigation the row dispatches `MarkSeen.MarkSeenAsync` without awaiting it:
-the marker write is a server-side live fetch that must not delay opening the PR,
-and correctness of navigation does not depend on it. "Dispatched, not awaited"
-is not raw fire-and-forget -- the task is launched with its exceptions observed
-and logged (a `[LoggerMessage]` warning on failure), so a failed marker write
-surfaces in logs and never faults the circuit. The badge clears on the next
-published snapshot, not on click -- identical to the between-polls behavior the
-enrichment design already established, so no optimistic local mutation.
+GitHub opens in a new tab and the Blazor circuit survives. That is the whole
+interaction: there is no mark-as-seen dispatch, no click-time live fetch, no
+local mutation. `replace-marker-with-review-baseline` deleted the `MarkSeen`
+use case and the stored marker precisely because opening-and-not-reading wrote
+"seen" for changes the user never saw. The update badge now clears only on the
+next published snapshot after the user actually reviews the PR on GitHub --
+the safe over-notify direction. Nothing on click touches server state.
 
 ### D4. Byline collapses to who-and-when
 
@@ -98,11 +99,18 @@ non-goals in #5b). The byline renders `{LastUpdate.By} . {relative(At)}` only
 facts do not distinguish opening from a later push; who-last-touched-and-when
 is the honest projection. Relative-time formatting is a pure UI helper.
 
-### D5. Semantic styling is the presentation contract; typography is not
+### D5. Bootstrap + Inter scaffold; semantic tokens are the presentation contract
 
-The mockup's color and shape tokens *encode derived state* -- they are how the
-projection becomes legible, not decoration. These map one-to-one and are in
-scope:
+`App.razor` already loads Bootstrap 5.3.3 (CSS + JS bundle, CDN, SRI-pinned) and
+the Inter web font (Google Fonts CDN). This change uses them rather than
+hand-rolling structure and typography: Bootstrap owns layout, cards, badges,
+buttons, and utility spacing; Inter is the type face (superseding the earlier
+`system-ui` fallback plan). Custom CSS is reduced to what Bootstrap cannot
+express -- the mockup's *semantic state palette*.
+
+Those color and shape tokens *encode derived state* -- they are how the
+projection becomes legible, not decoration. Each is a custom token layered over
+Bootstrap; these map one-to-one and are in scope:
 
 | Visual | Backing field |
 |--------|---------------|
@@ -114,13 +122,22 @@ scope:
 | owner chip ok/stale + "stale {t}" | `OwnerStatus.Status` / `LastFreshAt` |
 | error banner | any non-`Ok` `OwnerStatus` |
 
-Explicitly out of scope: the exact Segoe Variable font stack (falls back to
-`system-ui`), pixel-exact hex matching, and an in-app light/dark toggle. Light
-and dark token sets both ship -- they cost nothing, driven by the mockup's
-`@media (prefers-color-scheme: dark)` query -- but the *toggle button* is #7 or
-later. The `:root` token block moves verbatim (minus the `data-theme` override
-that only the mockup's own toggle needs) into `wwwroot/app.css`; per-component
-rules live in scoped `.razor.css` files.
+Explicitly out of scope: pixel-exact hex matching and an in-app light/dark
+*toggle button* (that is #7).
+
+Dark mode is **auto**, following the OS/browser setting, with no toggle. Both
+light and dark token sets ship. The wrinkle: Bootstrap 5.3 color modes are
+attribute-driven (`data-bs-theme`), not `prefers-color-scheme`-driven, so a
+media query alone would darken the custom tokens while leaving Bootstrap's own
+surfaces light. To keep both in sync, a tiny inline script in `App.razor`'s
+`<head>` sets `document.documentElement`'s `data-bs-theme` to `dark`/`light`
+from `matchMedia('(prefers-color-scheme: dark)')` at load, and both Bootstrap
+and the custom tokens key off that attribute. The mockup's `:root` light tokens
+move into `wwwroot/app.css` with a `[data-bs-theme="dark"]` override block for
+the dark set (replacing the mockup's `@media` query and its own `data-theme`
+toggle hook); per-component rules live in scoped `.razor.css` files. When #7
+adds an explicit toggle it flips the same `data-bs-theme` attribute, so no
+retheming work is deferred -- only the button.
 
 ### D6. Grouping and intra-group sort live in the UI
 
@@ -142,7 +159,7 @@ LockGate                       reads IAppLock; picks Unlock | Uninitialized | In
     ErrorBanner                non-Ok owners
     EmptyState / NeverPolled   provable-empty vs null snapshot
     QueueGroup (per org/repo)  GroupHead + rows
-      QueueRow                 stripe, title link (MarkSeen), byline, RosterChips, times
+      QueueRow                 stripe, title link (plain anchor), byline, RosterChips, times
         RosterChips            ReviewerRosterEntry list
 ```
 
@@ -154,9 +171,10 @@ and `LockGate` touch use cases, keeping the leaf components pure render.
 - [Holder event raised on the poll thread] -> handler must stay trivial
   (`InvokeAsync` only); heavier work on the poll thread would slow polling.
   Bounded by contract: the only subscriber is the inbox.
-- [MarkSeen dispatched not awaited] -> a marker write can fail silently to the
-  user (logged, not surfaced). Accepted: the badge self-corrects on the next
-  poll, matching existing between-polls semantics.
+- [Badge persists until I review] -> a PR read on GitHub but not yet re-reviewed
+  keeps its badge across polls. This is the intended over-notify direction that
+  `replace-marker-with-review-baseline` chose over the click-through model, not
+  a regression; the PR genuinely still awaits my review.
 - [Byline honesty vs mockup] -> the rendered byline is less specific than the
   mockup's illustrative verbs; the mockup oversold data that never existed.
 - [Semantic color as sole signal] -> color-only encoding is an accessibility
