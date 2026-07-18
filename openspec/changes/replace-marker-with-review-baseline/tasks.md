@@ -59,29 +59,29 @@
 
 ## 5. Delete the marker store and port
 
-- [ ] 5.1 In `PrCenter.Persistence.Tests`, delete `StateStoreTests.cs`. Update
+- [x] 5.1 In `PrCenter.Persistence.Tests`, delete `StateStoreTests.cs`. Update
   `SqliteTestDatabaseTests.cs` / `PersistenceMigrationExtensionsTests.cs` if any
   assert the `LastSeenMarkers` table or marker round-trip; re-point the harness
   proof at the token-vault schema (per the token-vault spec's real-file
   scenario).
-- [ ] 5.2 Delete `src/PrCenter.Persistence/StateStore.cs`,
+- [x] 5.2 Delete `src/PrCenter.Persistence/StateStore.cs`,
   `StateStore.Logging.cs`, and `LastSeenMarker.cs`.
-- [ ] 5.3 Delete `src/PrCenter.Core/Ports/IStateStore.cs` (its whole surface is
+- [x] 5.3 Delete `src/PrCenter.Core/Ports/IStateStore.cs` (its whole surface is
   last-seen). Remove the `IStateStore` registration and its mention in the
   `AddPersistenceAdapter` summary in
   `src/PrCenter.Persistence/PersistenceServiceCollectionExtensions.cs`.
-- [ ] 5.4 In `src/PrCenter.Persistence/PrCenterDbContext.cs`, remove the
+- [x] 5.4 In `src/PrCenter.Persistence/PrCenterDbContext.cs`, remove the
   `LastSeenMarkers` `DbSet` and its `OnModelCreating` entity block; update the
   class summary to drop "last-seen markers".
 
 ## 6. Drop the marker table via migration
 
-- [ ] 6.1 With the `LastSeenMarker` entity already removed from the model
+- [x] 6.1 With the `LastSeenMarker` entity already removed from the model
   (section 5), generate a forward migration that drops the table:
   `dotnet ef migrations add DropLastSeenMarkers -p src/PrCenter.Persistence`.
   Verify the generated `Up` drops `LastSeenMarkers` and `Down` recreates it, and
   that the model snapshot no longer contains the entity.
-- [ ] 6.2 Apply migrations against a scratch SQLite file and confirm the table is
+- [x] 6.2 Apply migrations against a scratch SQLite file and confirm the table is
   gone and the token/security tables are untouched (no data migration needed).
 
 ## 7. token-vault owns the persistence foundation (spec bookkeeping)
