@@ -24,11 +24,11 @@
 
 ## 4. Inbox: grouping, sort, and freshness
 
-- [ ] 4.1 Write failing bUnit tests for `Inbox` grouping/sort: items grouped by owner then repository; within a group `HasUpdate` desc then `LastUpdate.At` desc; group order follows owner order and is stable across two snapshots
-- [ ] 4.2 Implement the grouping/sort projection as a pure helper over the snapshot, user-relative; run green
-- [ ] 4.3 Write failing test: `Inbox` subscribes to `QueueSnapshotHolder.Changed` in `OnInitialized`, re-renders from the new snapshot via `InvokeAsync(StateHasChanged)`, and unsubscribes on `Dispose`
-- [ ] 4.4 Implement the holder subscription and `IDisposable`; no UI timer; run green
-- [ ] 4.5 Write failing test + implement the manual refresh action poking `IRefreshTrigger` (no direct GitHub call)
+- [x] 4.1 Write failing bUnit tests for `Inbox` grouping/sort: items grouped by owner then repository; within a group `HasUpdate` desc then `LastUpdate.At` desc; group order follows owner order and is stable across two snapshots
+- [x] 4.2 Implement the grouping/sort projection as a pure helper over the snapshot, user-relative; run green
+- [x] 4.3 Write failing test: `Inbox` subscribes to `QueueSnapshotHolder.Changed` in `OnInitialized`, re-renders from the new snapshot via `InvokeAsync(StateHasChanged)`, and unsubscribes on `Dispose`
+- [x] 4.4 Implement the holder subscription and `IDisposable`; no UI timer; run green
+- [x] 4.5 Write failing test + implement the manual refresh action poking `IRefreshTrigger` (no direct GitHub call)
 
 ## 5. Queue row and roster chips
 

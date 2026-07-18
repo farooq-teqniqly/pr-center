@@ -1,0 +1,44 @@
+@using PrCenter.Core.Queue
+@implements IDisposable
+@inject GetQueue GetQueue
+@inject QueueSnapshotHolder Holder
+@inject IRefreshTrigger RefreshTrigger
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 mb-0">Review inbox</h1>
+    <button type="button"
+            class="btn btn-outline-secondary btn-sm"
+            data-testid="refresh"
+            @onclick="Refresh">
+        Refresh
+    </button>
+</div>
+
+@{
+    var snapshot = GetQueue.Execute();
+}
+
+@if (snapshot is not null)
+{
+    @foreach (var group in QueueLayout.Group(snapshot))
+    {
+        <section class="mb-4" data-testid="group">
+            <h2 class="h6 text-body-secondary">@group.Owner / @group.Repository</h2>
+            @foreach (var item in group.Items)
+            {
+                <QueueRow Item="item" />
+            }
+        </section>
+    }
+}
+
+@code {
+    protected override void OnInitialized() => Holder.Changed += OnSnapshotChanged;
+
+    private void Refresh() => RefreshTrigger.RequestRefresh();
+
+    private void OnSnapshotChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    /// <inheritdoc />
+    public void Dispose() => Holder.Changed -= OnSnapshotChanged;
+}

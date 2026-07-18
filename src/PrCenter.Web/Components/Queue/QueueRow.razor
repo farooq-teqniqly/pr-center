@@ -1,0 +1,10 @@
+@using PrCenter.Core.Derivation
+
+<div data-testid="pr" data-pr-id="@Item.Identity.Id">@Item.Identity.Title</div>
+
+@code {
+    /// <summary>The queue item this row renders.</summary>
+    [Parameter]
+    [EditorRequired]
+    public QueueItem Item { get; set; } = null!;
+}
