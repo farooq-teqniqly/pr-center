@@ -49,6 +49,10 @@ implements that revision.
   drop the last-looked instant.
 - `polling-and-refresh`: the poll derives the update baseline from facts; the
   mark-as-seen live-fetch requirement is removed.
+- `token-vault`: absorbs the persistence foundation requirements (startup
+  migration, SQLite connection config, Development-only diagnostics, real-file
+  integration harness) that `state-store` introduced, reworded onto the vault
+  schema. Behavior unchanged; only the owning capability moves.
 
 ### Removed Capabilities
 
