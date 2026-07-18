@@ -5,7 +5,7 @@ PR-Center is a read-only projection of GitHub state — it never mutates a PR. T
 There are three machines:
 
 1. **Membership** — whether a PR appears in my list at all, and why.
-2. **Seen/Updated** — for a shown PR, whether it has changed since I last looked. Orthogonal to membership.
+2. **Updated** — for a shown PR, whether another person has acted on it since I last reviewed it. A pure derivation, no stored seen state. Orthogonal to membership.
 3. **App lock** — whether the app is unlocked (tokens decrypted, polling active).
 
 ---
@@ -58,30 +58,32 @@ Notes:
 
 ---
 
-## 2. Seen / Updated (per shown PR)
+## 2. Updated (per shown PR)
 
-Orthogonal to membership: for any PR currently in `Shown`, has it changed since I last looked? This is the "update indicator."
+Orthogonal to membership: for any PR currently in `Shown`, has another person acted on it since I last reviewed it? This is the "update indicator." It is a pure derivation each poll -- there is no stored per-PR "seen" state (revised 2026-07-17).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Unseen: PR first enters my list
+    [*] --> New: PR first enters my list (I have not reviewed it)
 
-    Seen: Seen (current state == last-seen marker)
-    Unseen: Has update (other activity since last-seen marker)
+    New: New (no review by me yet -- no baseline, no badge)
+    UpToDate: Up to date (no other activity after my last review)
+    Updated: Updated (other activity after my last review)
 
-    Unseen --> Seen: I click through to the PR --> live fetch --> last-seen marker set to current state
-    Seen --> Unseen: poll detects OTHER people's activity since marker (new commit / comment / review)
-    Seen --> Seen: only my own activity, or a bare updatedAt bump (labels/title/base) --> no change
+    New --> UpToDate: I submit a review on GitHub (baseline now exists)
+    UpToDate --> Updated: poll detects OTHER people's activity after my last review (new commit / comment / review)
+    Updated --> UpToDate: I review again on GitHub --> my review advances the baseline past that activity
+    UpToDate --> UpToDate: only my own activity, or a bare updatedAt bump (labels/title/base) --> no change
 ```
 
 Notes:
-- A PR enters the list **Unseen** (I have not looked at it in-app yet).
-- "Update" = another person's new commit/push, new comment/reply, or new review — compared against the stored last-seen marker. **My own activity and bare `updatedAt` bumps do not count.** **Bot/CI comments and reviews do not count either** (a qodo or Copilot comment is noise, not a reason to re-look); **bot commits DO count** — a new commit is a real diff to review regardless of who authored it. Bot = the actor's type per the GitHub API (`user.type`/`__typename` == `Bot`), never login-text sniffing (see the 2026-07-10 GitHub adapter spike).
-- **Click-through does a fresh live fetch** before setting the marker, so I never clear an update that landed between the last poll and my click.
-- **The last-seen marker persists in the DB keyed by PR id and is never proactively deleted.** When a PR leaves the list (approved/closed/draft) the marker row stays; if the PR re-enters, its existing marker applies so it isn't falsely flagged as a fresh update. No cleanup/GC of old markers in v1 (simplest — the table just grows slowly; a single user's PR volume makes this a non-issue).
+- The baseline is **my own latest review instant**, a GitHub fact recomputed every poll -- not a stored marker. There is no "seen" state to persist and nothing to clean up or GC.
+- A PR I have **never reviewed** has no baseline, so it is **New**, not Updated -- it shows **without** an update badge. The badge is meaningful only once I have a review to measure against.
+- "Update" = another person's new commit/push, new comment/reply, or new review with a timestamp strictly after my last review. **My own activity is the baseline, not an update**, and bare `updatedAt` bumps do not count. **Bot/CI comments and reviews do not count either** (a qodo or Copilot comment is noise, not a reason to re-look); **bot commits DO count** — a new commit is a real diff to review regardless of who authored it. Bot = the actor's type per the GitHub API (`user.type`/`__typename` == `Bot`), never login-text sniffing (see the 2026-07-10 GitHub adapter spike).
+- **The indicator clears when I review on GitHub**, not when I click the in-app link. Clicking the link only opens the PR; opening and closing it without reviewing changes nothing, so a real update can never be silently cleared. The next poll (auto or manual) recomputes the state.
 
 ### "Already covered" — a derived flag, not a state
-Independent of Seen/Updated: a PR is flagged **already covered** when ≥1 *other* **human** reviewer has submitted any non-dismissed review (approved / changes-requested / commented). Pending (requested, no review) does not count, **and bot/CI reviews (qodo, Copilot, etc.) do not count** — a bot review is not human coverage. This is a display decoration that signals low marginal value; it never hides or moves the PR. (Decided 2026-07-10, resolving the former open question here; verified against real payloads in the GitHub adapter spike — e.g. a PR whose only human review was dismissed correctly derives as not covered.)
+Independent of the update indicator: a PR is flagged **already covered** when ≥1 *other* **human** reviewer has submitted any non-dismissed review (approved / changes-requested / commented). Pending (requested, no review) does not count, **and bot/CI reviews (qodo, Copilot, etc.) do not count** — a bot review is not human coverage. This is a display decoration that signals low marginal value; it never hides or moves the PR. (Decided 2026-07-10, resolving the former open question here; verified against real payloads in the GitHub adapter spike — e.g. a PR whose only human review was dismissed correctly derives as not covered.)
 
 ---
 
