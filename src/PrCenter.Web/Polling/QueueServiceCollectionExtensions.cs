@@ -13,8 +13,8 @@ internal static class QueueServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the queue snapshot holder, refresh trigger, clock, refresh/read/
-    /// mark-seen/unlock use cases, poll options bound from configuration, and the
-    /// polling background service.
+    /// unlock use cases, poll options bound from configuration, and the polling
+    /// background service.
     /// </summary>
     /// <param name="services">The service collection to add the services to.</param>
     /// <param name="configuration">The configuration the poll options bind from.</param>
@@ -40,7 +40,6 @@ internal static class QueueServiceCollectionExtensions
         services.AddScoped<RefreshQueue>();
         services.AddScoped<IRefreshQueue>(sp => sp.GetRequiredService<RefreshQueue>());
         services.AddScoped<GetQueue>();
-        services.AddScoped<MarkSeen>();
         services.AddScoped<UnlockApp>();
 
         services.AddSingleton<IValidateOptions<PollingOptions>, PollingOptionsValidator>();

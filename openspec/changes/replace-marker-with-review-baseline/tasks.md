@@ -45,14 +45,14 @@
 
 ## 4. Remove the mark-as-seen use case
 
-- [ ] 4.1 Delete `src/PrCenter.Core/Queue/MarkSeen.cs` and
+- [x] 4.1 Delete `src/PrCenter.Core/Queue/MarkSeen.cs` and
   `PrCenter.Core.Tests/Queue/MarkSeenTests.cs`.
-- [ ] 4.2 In `src/PrCenter.Web/Polling/QueueServiceCollectionExtensions.cs`,
+- [x] 4.2 In `src/PrCenter.Web/Polling/QueueServiceCollectionExtensions.cs`,
   remove the `services.AddScoped<MarkSeen>();` registration and drop "mark-seen"
   from the method/type summary. Update
   `PrCenter.Web.Tests/DiCompositionRootTests.cs` to stop resolving/asserting
   `MarkSeen`.
-- [ ] 4.3 Confirm no other caller uses `IGitHubFacts.GetPullRequestFactsAsync`
+- [x] 4.3 Confirm no other caller uses `IGitHubFacts.GetPullRequestFactsAsync`
   (grep). If `MarkSeen` was its only caller, note it as now-unused; leave the
   port method in place unless removing it is trivially clean (out of this
   change's stated scope otherwise).
