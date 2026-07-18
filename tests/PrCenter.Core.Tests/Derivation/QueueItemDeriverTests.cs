@@ -13,29 +13,26 @@ public sealed class QueueItemDeriverTests
     private const string Approved = "approved";
     private const string Untracked = "untracked";
 
-    private static readonly DateTimeOffset Marker = TestTime.At(2);
-
     [Fact]
     public void Derive_WhenShownWithUpdateAndCoverage_MapsAllDerivedValues()
     {
-        // Arrange
+        // Arrange -- my earlier review sets the baseline; another's later commit updates
         var facts = TestFacts.Create(
             requested: [MyLogin],
-            reviews: [new ReviewFact(Other, ReviewState.ChangesRequested, TestTime.At(1))],
+            reviews: [new ReviewFact(MyLogin, ReviewState.ChangesRequested, TestTime.At(1))],
             commits: [new CommitFact(Other, TestTime.At(3))]
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
         Assert.Same(facts.Identity, item.Identity);
         Assert.Equal(facts.Status.LastUpdatedBy, item.LastUpdate.By);
         Assert.Equal(facts.Status.LastUpdatedAt, item.LastUpdate.At);
-        Assert.Equal(MembershipState.AwaitingFirstReview, item.State);
+        Assert.Equal(MembershipState.AwaitingReReview, item.State);
         Assert.True(item.HasUpdate);
-        Assert.True(item.IsAlreadyCovered);
     }
 
     [Fact]
@@ -45,7 +42,7 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(requested: [MyLogin]);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
@@ -55,31 +52,38 @@ public sealed class QueueItemDeriverTests
     }
 
     [Fact]
-    public void Derive_PassesLastLookedMarkerThrough()
+    public void Derive_HasUpdateMeasuredAgainstMyLastReview()
     {
-        // Arrange
-        var facts = TestFacts.Create(requested: [MyLogin]);
+        // Arrange -- another's commit landed before my latest review, so no update
+        var facts = TestFacts.Create(
+            requested: [MyLogin],
+            reviews: [new ReviewFact(MyLogin, ReviewState.Commented, TestTime.At(3))],
+            commits: [new CommitFact(Other, TestTime.At(2))]
+        );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
-        Assert.Equal(Marker, item.MyEngagement.LastLookedAt);
+        Assert.False(item.HasUpdate);
     }
 
     [Fact]
-    public void Derive_WhenNeverLooked_LastLookedIsNull()
+    public void Derive_WhenINeverReviewedWithOthersActivity_HasNoUpdate()
     {
-        // Arrange
-        var facts = TestFacts.Create(requested: [MyLogin]);
+        // Arrange -- no review baseline of mine, so the pull request is new, not updated
+        var facts = TestFacts.Create(
+            requested: [MyLogin],
+            commits: [new CommitFact(Other, TestTime.At(3))]
+        );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, lastSeen: null);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
-        Assert.Null(item.MyEngagement.LastLookedAt);
+        Assert.False(item.HasUpdate);
     }
 
     [Fact]
@@ -97,7 +101,7 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
@@ -114,7 +118,7 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
@@ -131,7 +135,7 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.NotNull(item);
@@ -151,7 +155,7 @@ public sealed class QueueItemDeriverTests
         var facts = HiddenFacts(scenario);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin, Marker);
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
         Assert.Null(item);
@@ -161,7 +165,7 @@ public sealed class QueueItemDeriverTests
     public void Derive_WithNullFacts_Throws()
     {
         // Act / Assert
-        Assert.Throws<ArgumentNullException>(() => QueueItemDeriver.Derive(null!, MyLogin, Marker));
+        Assert.Throws<ArgumentNullException>(() => QueueItemDeriver.Derive(null!, MyLogin));
     }
 
     [Theory]
@@ -172,7 +176,7 @@ public sealed class QueueItemDeriverTests
     {
         // Act / Assert
         Assert.ThrowsAny<ArgumentException>(() =>
-            QueueItemDeriver.Derive(TestFacts.Create(), myLogin!, Marker)
+            QueueItemDeriver.Derive(TestFacts.Create(), myLogin!)
         );
     }
 

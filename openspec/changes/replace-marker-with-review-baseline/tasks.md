@@ -16,15 +16,15 @@
 
 ## 2. Queue item drops last-looked, derives its own baseline
 
-- [ ] 2.1 In `PrCenter.Core.Tests/Derivation/QueueItemDeriverTests.cs`, update
+- [x] 2.1 In `PrCenter.Core.Tests/Derivation/QueueItemDeriverTests.cs`, update
   the deriver tests to the new `Derive(facts, myLogin)` signature (no marker
   argument), assert the item's has-update is computed against the user's latest
   review instant, and replace "never looked and never reviewed" with
   **never reviewed is explicit** (last-reviewed null). Run to confirm red.
-- [ ] 2.2 In `src/PrCenter.Core/Derivation/MyEngagement.cs`, remove
+- [x] 2.2 In `src/PrCenter.Core/Derivation/MyEngagement.cs`, remove
   `LastLookedAt` (constructor param, property, and its docs); keep the one-field
   record carrying `LastReviewedAt` (D3 keeps the domain grouping).
-- [ ] 2.3 In `src/PrCenter.Core/Derivation/QueueItemDeriver.cs`, drop the
+- [x] 2.3 In `src/PrCenter.Core/Derivation/QueueItemDeriver.cs`, drop the
   `lastSeen` parameter; compute the baseline once via the existing
   `LastReviewedByMe(facts, myLogin)` and pass that same instant both to
   `UpdateDetector.HasUpdate` and to the single-field `MyEngagement`. Update the
@@ -32,12 +32,12 @@
 
 ## 3. Refresh stops touching the store
 
-- [ ] 3.1 In `PrCenter.Core.Tests/Queue/RefreshQueueTests.cs`, remove the
+- [x] 3.1 In `PrCenter.Core.Tests/Queue/RefreshQueueTests.cs`, remove the
   `IStateStore` substitute and any marker-read expectations; the refresh derives
   items from facts alone. Add/keep a case asserting a derived item's has-update
   reflects the review-derived baseline with no store interaction. Run to confirm
   red.
-- [ ] 3.2 In `src/PrCenter.Core/Queue/RefreshQueue.cs`, remove the `IStateStore`
+- [x] 3.2 In `src/PrCenter.Core/Queue/RefreshQueue.cs`, remove the `IStateStore`
   field, constructor parameter, and its `<param>` doc; rewrite
   `DeriveItemAsync` to call `QueueItemDeriver.Derive(facts, myLogin)` with no
   store round-trip (drop the `GetLastSeenAsync` call). Update the class summary
