@@ -32,13 +32,13 @@
 
 ## 5. Queue row and roster chips
 
-- [ ] 5.1 Write failing bUnit tests for `QueueRow`: updated PR shows amber stripe + "Updated" badge; never-reviewed PR shows no badge but still renders; byline is `{LastUpdate.By} . relative(At)`; covered decoration names `CoveredBy`; the two instants (`LastReviewedAt`, `LastUpdate.At`) render
-- [ ] 5.2 Implement `QueueRow` with the relative-time UI helper; run green
-- [ ] 5.3 Write failing bUnit tests for `RosterChips`: chip color by `ReviewerState`, dashed "me" ring for `IsMe`, bot treatment for `IsBot`, and text labels so state is never color-only
-- [ ] 5.4 Implement `RosterChips`; run green
-- [ ] 5.5 Write failing test: the title is a plain `target="_blank"` anchor to `Identity.Url` with no side effect (no dispatch, no live fetch, no mark-seen)
-- [ ] 5.6 Implement the plain-anchor title; run green
-- [ ] 5.7 Add scoped `.razor.css` for row and chips from the token block
+- [x] 5.1 Write failing bUnit tests for `QueueRow`: updated PR shows amber stripe + "Updated" badge; never-reviewed PR shows no badge but still renders; byline is `{LastUpdate.By} . relative(At)`; covered decoration names `CoveredBy`; the two instants (`LastReviewedAt`, `LastUpdate.At`) render
+- [x] 5.2 Implement `QueueRow` with the relative-time UI helper; run green
+- [x] 5.3 Write failing bUnit tests for `RosterChips`: chip color by `ReviewerState`, dashed "me" ring for `IsMe`, bot treatment for `IsBot`, and text labels so state is never color-only
+- [x] 5.4 Implement `RosterChips`; run green
+- [x] 5.5 Write failing test: the title is a plain `target="_blank"` anchor to `Identity.Url` with no side effect (no dispatch, no live fetch, no mark-seen)
+- [x] 5.6 Implement the plain-anchor title; run green
+- [x] 5.7 Add scoped `.razor.css` for row and chips from the token block
 
 ## 6. Owner status, banner, and empty states
 

@@ -21,6 +21,7 @@ public sealed class InboxViewTests : BunitContext
         Services.AddSingleton(_holder);
         Services.AddSingleton(new GetQueue(_holder));
         Services.AddSingleton(_trigger);
+        Services.AddSingleton(TimeProvider.System);
     }
 
     [Fact]
