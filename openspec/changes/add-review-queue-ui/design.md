@@ -151,20 +151,40 @@ polls. Sorting is a pure projection over the snapshot; no Core change.
 ### D7. Component decomposition
 
 ```
-LockGate                       reads IAppLock; picks Unlock | Uninitialized | Inbox
-  UnlockCard                   UnlockApp + ResetVault
-  Inbox (@page "/")            subscribes to holder Changed; reads GetQueue
-    AppBar                     polled/next stamps, Refresh -> IRefreshTrigger
-    OwnerChips                 OwnerStatuses
-    ErrorBanner                non-Ok owners
-    EmptyState / NeverPolled   provable-empty vs null snapshot
-    QueueGroup (per org/repo)  GroupHead + rows
-      QueueRow                 stripe, title link (plain anchor), byline, RosterChips, times
-        RosterChips            ReviewerRosterEntry list
+Inbox (@page "/")              hosts the gate; owns the render mode
+  LockGate                     reads IAppLock; picks Unlock | Uninitialized | its child
+    UnlockCard                 UnlockApp + ResetVault
+    UninitializedPlaceholder   dead-end message until #7 ships
+    InboxView                  subscribes to holder Changed; reads GetQueue
+      header                   title + Refresh -> IRefreshTrigger (inline)
+      OwnerChips               OwnerStatuses
+      ErrorBanner              non-Ok owners
+      EmptyState / NeverPolled provable-empty vs null snapshot
+      group section            owner/repo heading + rows (inline, per QueueLayout group)
+        QueueRow               stripe, title link (https anchor), byline, RosterChips, times
+          RosterChips          ReviewerRosterEntry list
 ```
 
-Each component takes its slice of the snapshot as a parameter; only `Inbox`
+Each component takes its slice of the snapshot as a parameter; only `InboxView`
 and `LockGate` touch use cases, keeping the leaf components pure render.
+
+Simplified during implementation from the original sketch, which had `LockGate`
+at the root wrapping an `Inbox` page, and named `AppBar`, `QueueGroup`, and
+`GroupHead` as their own components:
+
+- The page is the root and passes `InboxView` to `LockGate` as child content,
+  so the gate does not need to know what it is gating. The `@rendermode` then
+  sits on the page, where it applies to the whole subtree.
+- `AppBar` and `GroupHead` earned no parameters of their own once the grouping
+  moved into `QueueLayout` -- both are a heading and, for the app bar, one
+  button. They are markup inside `InboxView` rather than components that would
+  only forward what they were handed. `QueueGroup` collapsed the same way: the
+  `foreach` over `QueueLayout.Group(...)` renders the heading and its rows
+  directly.
+- The app bar carries the title and Refresh only. The polled/next stamps in the
+  original sketch are not rendered; `QueueSnapshot.SnapshotAt` exists but no
+  next-poll instant is exposed, so there was nothing honest to show. Adding
+  them is a separate change.
 
 ## Risks / Trade-offs
 
