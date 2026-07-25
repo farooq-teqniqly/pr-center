@@ -52,6 +52,25 @@ public sealed class InboxViewTests : BunitContext
     }
 
     [Fact]
+    public void InboxView_WhenOwnerStatusCasingDiffersFromItems_StillOrdersGroupsByThatSequence()
+    {
+        // Arrange: the status owner differs in case from the items' owner.
+        _holder.Publish(
+            [Item("a", "PerfectServe", "repo1"), Item("b", "ps-unite", "repo2")],
+            [
+                new OwnerStatus("PERFECTSERVE", OwnerFetchStatus.Ok),
+                new OwnerStatus("ps-unite", OwnerFetchStatus.Ok),
+            ]
+        );
+
+        // Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        Assert.Equal(["a", "b"], RenderedPrIds(cut));
+    }
+
+    [Fact]
     public void InboxView_WithinAGroup_OrdersUpdatedFirstThenMostRecent()
     {
         // Arrange

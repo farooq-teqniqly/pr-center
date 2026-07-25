@@ -37,9 +37,12 @@ internal static class QueueLayout
             .ToArray();
     }
 
+    // Owner identity is case-insensitive throughout Core (RefreshQueue matches
+    // owners with OrdinalIgnoreCase), so an owner whose status casing differs from
+    // its items' casing must still rank by its position, not fall through to the end.
     private static IReadOnlyDictionary<string, int> OwnerOrder(QueueSnapshot snapshot)
     {
-        var order = new Dictionary<string, int>(StringComparer.Ordinal);
+        var order = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < snapshot.OwnerStatuses.Count; index++)
         {
             order.TryAdd(snapshot.OwnerStatuses[index].Owner, index);
