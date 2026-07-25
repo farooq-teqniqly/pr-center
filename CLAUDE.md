@@ -115,6 +115,22 @@ Do not violate these without updating the idea/state docs first:
   when the user's own message for that turn explicitly asks for a commit ("commit and do
   X") -- that is itself the approval.
 
+## Pull requests (beyond baseline)
+
+- **Always squash merge.** When asked to merge a PR, use `gh pr merge <n> --squash` --
+  never a merge commit or rebase, even though the repo allows all three. `main` stays one
+  commit per PR, so its history reads as a list of shipped changes and any single entry can
+  be reverted whole.
+- **Squash subject:** the PR's conventional-commit title with the number appended --
+  `feat(web): add review queue UI (#22)`. Pass it explicitly (`--subject`) rather than
+  accepting whatever GitHub composes from the branch's commits.
+- **Squash body:** what shipped and why, plus a line naming any OpenSpec change archived in
+  the PR. Carry the `Co-Authored-By` trailer per the baseline.
+- A squash-merged branch reads as **unmerged** to `git branch --merged`, because its commits
+  never land on `main`. Before deleting one, confirm the content actually shipped with
+  `git diff --stat main <branch>` (empty output) rather than trusting `-d` to refuse; `-d`
+  will refuse a perfectly merged branch here, and `-D` alone proves nothing.
+
 ## PowerShell authoring rules
 
 Scripts under `docs/` (e.g. `Get-PRQueue.ps1`) target Windows PowerShell 5.1.
