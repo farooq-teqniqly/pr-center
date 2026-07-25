@@ -12,8 +12,9 @@ pull-request facts for every open PR relevant to the user in that owner); and
 `GetPullRequestFactsAsync(owner, repository, number)` returning the fresh
 facts for one pull request, or null when it is inaccessible or does not
 exist. A closed or merged pull request SHALL still return facts (with the
-closed-or-merged indicator set) so mark-as-seen can act on it. All string
-parameters SHALL be guarded against null or whitespace.
+closed-or-merged indicator set) so a caller holding its identity can observe
+that it is no longer open. All string parameters SHALL be guarded against null
+or whitespace.
 
 #### Scenario: Owner queue returns facts plus status
 

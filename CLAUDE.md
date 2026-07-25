@@ -37,7 +37,10 @@ Do not violate these without updating the idea/state docs first:
 - **"Has an update"** = new commits/pushes, new comments/replies, or a new review by another reviewer since last looked. A bare `updatedAt` bump does not count. Bot/CI comments and reviews do not count either; bot commits do. Bot detection is by API actor type, never login text.
 - **"Already covered"** counts only other humans' non-dismissed reviews — bot reviews never make a PR covered.
 - **Draft PRs are excluded** entirely, even when the user is a requested reviewer.
-- **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
+- **There is no mark-as-seen.** The update baseline is the user's own latest review instant,
+  derived from each PR's facts every poll -- no stored marker, and click-through is a plain
+  anchor with no side effect. A badge clears on the first poll after the user reviews the PR
+  on GitHub. (Replaced the click-through marker model in `replace-marker-with-review-baseline`.)
 - **Never mutate PR state** (no approve/comment/request-changes from the app).
 
 ## Code conventions (beyond baseline)
