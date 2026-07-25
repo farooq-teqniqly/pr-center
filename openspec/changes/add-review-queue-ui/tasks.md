@@ -52,4 +52,4 @@
 
 - [x] 7.1 Run the full solution build and `csharpier check`
 - [x] 7.2 Run `PrCenter.Web.Tests` and `PrCenter.Core.Tests`; collect coverage per the CLAUDE.md coverlet flow and confirm the new components are exercised
-- [ ] 7.3 Manually drive the app (locked -> unlock -> inbox, empty, and a non-ok owner) to confirm the four mockup screens render and re-render on publish without a timer
+- [x] 7.3 Manually drive the app (locked -> unlock -> inbox, empty, and a non-ok owner) to confirm the four mockup screens render and re-render on publish without a timer
