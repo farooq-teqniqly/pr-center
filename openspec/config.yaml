@@ -1,70 +1,35 @@
 schema: spec-driven
 
+# Keep this short. It is a pointer, not a copy.
+#
+# Everything about stack, code conventions, testing, build, commits, and writing
+# style lives in CLAUDE.md (which imports CLAUDE-baseline.md). Claude Code loads
+# both automatically every session, so restating them here bought nothing but a
+# second place to drift -- and it did drift: this file and CLAUDE.md both carried
+# a "mark-as-seen happens on click-through" invariant for weeks after
+# replace-marker-with-review-baseline deleted the concept.
+#
+# Add a rule to CLAUDE.md. Add it here only if OpenSpec artifacts need it and
+# nothing else does, and then put it under `rules:`, not in this context blob.
 context: |
   PR-Center: single-user, self-hosted "review inbox" for GitHub PRs awaiting the
   user's review across orgs (PerfectServe, ps-unite) and a personal account
   (farooq-teqniqly). Read-only projection of GitHub state -- never mutates PRs.
-  Runs in Podman/Docker on a workstation.
+  ASP.NET Core on net10.0 with a Blazor Server frontend, EF Core + SQLite on a
+  mounted volume, GitHub REST/GraphQL called directly. Runs in Podman/Docker on
+  a workstation.
 
-  Source docs: docs/pr-center-idea.md (product concept, Key Decisions win
-  conflicts), docs/pr-center-state.md (derived state machines). Conventions:
-  CLAUDE.md + CLAUDE-baseline.md (shared farooq-teqniqly .NET baseline).
+  Read before proposing or designing anything:
+  - CLAUDE.md and CLAUDE-baseline.md -- conventions, code style, testing, build,
+    commits, PR and merge rules. Authoritative; do not restate them in artifacts.
+  - docs/pr-center-idea.md -- product concept. Its Key Decisions win conflicts.
+  - docs/pr-center-state.md -- derived state machines.
+  - docs/pr-center-architecture.md -- project boundaries and dependency direction.
+  - openspec/specs/ -- what already ships. Check here before asserting current
+    behavior; the specs are the record, this file is not.
 
-  Stack: ASP.NET Core on net10.0, Blazor Server frontend, EF Core + SQLite on a
-  mounted volume (baseline override: SQLite, not SQL Server; integration tests
-  hit the real SQLite file -- no Testcontainers needed for the DB). GitHub API
-  called directly (REST/GraphQL), no gh CLI. One fine-grained PAT per owner,
-  entered in-app, encrypted at rest with an app-password-derived key.
-
-  Solution layout: one project per concern, PrCenter.<Area>, each with a
-  sibling <Project>.Tests. Central Package Management (Directory.Packages.props).
-  Formatting owned by CSharpier. xUnit v3 + NSubstitute; bUnit for Blazor
-  component tests. TDD for production behavior: red-green-refactor.
-
-  Design invariants (do not violate without updating the idea/state docs first):
-  - All PR state is evaluated relative to the user only; others' activity never
-    removes a PR, and the user's own activity never flips the update indicator.
-  - Membership is derived each poll as a pure function of current GitHub facts;
-    no stored transition FSM.
-  - "Has an update" = new commits/pushes, comments/replies, or a review by
-    another reviewer since last looked; a bare updatedAt bump does not count.
-    Bot/CI comments and reviews do not count either; bot commits do. Covered
-    counts only other humans' non-dismissed reviews. Bot detection is by API
-    actor type (user.type/__typename == Bot), never login text.
-  - Draft PRs are excluded entirely.
-  - Mark-as-seen happens on click-through via a fresh live fetch of that PR.
-  - Never mutate PR state from the app.
-
-  Code conventions (baseline highlights): internal sealed by default; no primary
-  constructors; null-guard public/internal entry points (except DI-injected
-  deps); source-generated logging ([LoggerMessage]); Async suffix; XML docs on
-  public/internal members in non-test projects; cyclomatic complexity <= 15;
-  constructor/method parameter count <= 7 (S107, SonarCloud flags 8+). When a
-  data carrier would exceed the limit, group its fields into cohesive sub-records
-  reflecting genuine concepts (e.g. identity/status/activity), not a flat list.
-  Favor domain expressiveness while implementing (not only at review): prefer
-  intention-revealing names (IsMe/NotMe over AreSame plus !), extract buried
-  mechanics into named helpers so callers read as intent, and name states/booleans
-  for the concept they represent. Always pass an explicit StringComparison to
-  string.Contains/IndexOf/StartsWith/EndsWith/Compare/Equals/Replace (CA1307/
-  CA1309): Ordinal/OrdinalIgnoreCase for identifiers, keys, and protocol values,
-  CurrentCulture* only for user-facing text meant to sort/compare per locale.
-  Default EF Core reads to AsNoTracking (with a
-  Select projection of just the needed columns); use tracking only when the
-  entity is modified and saved. FindAsync always tracks, so a read-only lookup is
-  a Where/Select/FirstOrDefaultAsync no-tracking query, not FindAsync.
-
-  Build: never pass -p:NuGetAudit=false to dodge an NU1902/NU1903 advisory error;
-  fix the real advisory -- bump the package (pin transitive deps directly via
-  Directory.Packages.props + a matching PackageReference, as done for AngleSharp
-  in PrCenter.Web.Tests.csproj) or, only if unpatched, add a commented
-  NuGetAuditSuppress entry in Directory.Build.props -- so plain dotnet build
-  stays clean.
-
-  Writing style: U.S. English; no emojis in docs; prefer hyphens or -- over em
-  dashes in new prose; never em dashes or smart quotes in PowerShell 5.1 string
-  literals. Conventional Commits enforced by .githooks/commit-msg; PR
-  descriptions under 200 words.
+  The design invariants in CLAUDE.md ("Design invariants") are binding on every
+  artifact. Do not violate one without updating the idea and state docs first.
 
 rules:
   proposal:
@@ -74,14 +39,17 @@ rules:
   design:
     - Verify inference-based decisions against source docs/code before recording
       them; mark unverified assumptions as open questions.
-    - Respect the design invariants listed in the project context.
+    - Respect the design invariants in CLAUDE.md.
+    - When implementation simplifies away a component or step this design named,
+      update the design to match what shipped and say why, rather than leaving
+      the doc describing a structure the code does not have.
   specs:
     - State requirements relative to the user only (never another reviewer's
       perspective).
+    - Spec the behavior that shipped, including hardening added during review --
+      a spec that understates the guarantee is drift.
   tasks:
     - "Follow TDD ordering: failing test first, then implementation, then
       refactor."
-    - "After finishing a set of tasks, stop and wait for explicit user approval
-      before committing -- do not commit automatically just because tests are
-      green. Committing without being asked is fine only when the user's own
-      message for that turn explicitly requests a commit."
+    - Wait for explicit approval before committing, per the commit rule in
+      CLAUDE.md.
