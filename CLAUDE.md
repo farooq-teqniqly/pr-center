@@ -37,7 +37,10 @@ Do not violate these without updating the idea/state docs first:
 - **"Has an update"** = new commits/pushes, new comments/replies, or a new review by another reviewer since last looked. A bare `updatedAt` bump does not count. Bot/CI comments and reviews do not count either; bot commits do. Bot detection is by API actor type, never login text.
 - **"Already covered"** counts only other humans' non-dismissed reviews — bot reviews never make a PR covered.
 - **Draft PRs are excluded** entirely, even when the user is a requested reviewer.
-- **Mark-as-seen** happens on click-through, via a fresh live fetch of that PR (not the last poll snapshot).
+- **There is no mark-as-seen.** The update baseline is the user's own latest review instant,
+  derived from each PR's facts every poll -- no stored marker, and click-through is a plain
+  anchor with no side effect. A badge clears on the first poll after the user reviews the PR
+  on GitHub. (Replaced the click-through marker model in `replace-marker-with-review-baseline`.)
 - **Never mutate PR state** (no approve/comment/request-changes from the app).
 
 ## Code conventions (beyond baseline)
@@ -111,6 +114,22 @@ Do not violate these without updating the idea/state docs first:
   explicit approval before committing.** Green tests are not approval. This does not apply
   when the user's own message for that turn explicitly asks for a commit ("commit and do
   X") -- that is itself the approval.
+
+## Pull requests (beyond baseline)
+
+- **Always squash merge.** When asked to merge a PR, use `gh pr merge <n> --squash` --
+  never a merge commit or rebase, even though the repo allows all three. `main` stays one
+  commit per PR, so its history reads as a list of shipped changes and any single entry can
+  be reverted whole.
+- **Squash subject:** the PR's conventional-commit title with the number appended --
+  `feat(web): add review queue UI (#22)`. Pass it explicitly (`--subject`) rather than
+  accepting whatever GitHub composes from the branch's commits.
+- **Squash body:** what shipped and why, plus a line naming any OpenSpec change archived in
+  the PR. Carry the `Co-Authored-By` trailer per the baseline.
+- A squash-merged branch reads as **unmerged** to `git branch --merged`, because its commits
+  never land on `main`. Before deleting one, confirm the content actually shipped with
+  `git diff --stat main <branch>` (empty output) rather than trusting `-d` to refuse; `-d`
+  will refuse a perfectly merged branch here, and `-D` alone proves nothing.
 
 ## PowerShell authoring rules
 
