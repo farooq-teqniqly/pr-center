@@ -107,6 +107,10 @@ Do not violate these without updating the idea/state docs first:
 ## Commits (beyond baseline)
 
 - The `commit-msg` hook lives in `.githooks/` (see [README](README.md#commit-message-format)).
+- **After finishing a set of tasks (e.g. an OpenSpec tasks.md batch), stop and wait for
+  explicit approval before committing.** Green tests are not approval. This does not apply
+  when the user's own message for that turn explicitly asks for a commit ("commit and do
+  X") -- that is itself the approval.
 
 ## PowerShell authoring rules
 

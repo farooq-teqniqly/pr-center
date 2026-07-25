@@ -81,3 +81,7 @@ rules:
   tasks:
     - "Follow TDD ordering: failing test first, then implementation, then
       refactor."
+    - "After finishing a set of tasks, stop and wait for explicit user approval
+      before committing -- do not commit automatically just because tests are
+      green. Committing without being asked is fine only when the user's own
+      message for that turn explicitly requests a commit."
