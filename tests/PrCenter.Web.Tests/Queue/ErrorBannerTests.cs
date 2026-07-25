@@ -64,4 +64,23 @@ public sealed class ErrorBannerTests : BunitContext
         Assert.Contains("ps-unite", banner.TextContent, StringComparison.Ordinal);
         Assert.EndsWith(".", banner.TextContent.Trim(), StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ErrorBanner_WhenTheDetailIsBlank_ExplainsTheFailureAnyway(string detail)
+    {
+        // Arrange
+        IReadOnlyList<OwnerStatus> statuses =
+        [
+            new OwnerStatus("ps-unite", OwnerFetchStatus.Error, detail),
+        ];
+
+        // Act
+        var cut = Render<ErrorBanner>(ps => ps.Add(p => p.OwnerStatuses, statuses));
+        var banner = cut.Find("[data-testid=error-banner]");
+
+        // Assert
+        Assert.EndsWith(".", banner.TextContent.Trim(), StringComparison.Ordinal);
+    }
 }

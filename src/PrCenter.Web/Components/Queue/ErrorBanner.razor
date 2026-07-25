@@ -17,9 +17,12 @@
     private IEnumerable<OwnerStatus> FailingOwners() =>
         OwnerStatuses.Where(status => status.Status != OwnerFetchStatus.Ok);
 
-    // A status without a detail still has to read as a sentence: the enum name is
-    // an identifier, not something to show a reader.
-    private static string Explain(OwnerStatus status) => status.Detail ?? Reason(status.Status);
+    // A status without a usable detail still has to read as a sentence: the enum
+    // name is an identifier, not something to show a reader. Blank counts as
+    // absent -- OwnerStatus does not constrain Detail, and a whitespace one would
+    // otherwise render a banner that trails off after "fetch failed:".
+    private static string Explain(OwnerStatus status) =>
+        string.IsNullOrWhiteSpace(status.Detail) ? Reason(status.Status) : status.Detail;
 
     private static string Reason(OwnerFetchStatus status) =>
         status switch
