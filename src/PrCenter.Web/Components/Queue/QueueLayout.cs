@@ -14,12 +14,19 @@ internal static class QueueLayout
     /// <summary>
     /// Groups and orders the snapshot's items for display.
     /// </summary>
-    /// <param name="snapshot">The snapshot whose items to group.</param>
-    /// <returns>The ordered display groups.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="snapshot"/> is null.</exception>
-    public static IReadOnlyList<QueueGroupView> Group(QueueSnapshot snapshot)
+    /// <param name="snapshot">
+    /// The snapshot whose items to group, or <see langword="null"/> when no refresh
+    /// has published one yet (the never-polled state).
+    /// </param>
+    /// <returns>
+    /// The ordered display groups, or an empty list when there is no snapshot.
+    /// </returns>
+    public static IReadOnlyList<QueueGroupView> Group(QueueSnapshot? snapshot)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot is null)
+        {
+            return [];
+        }
 
         var ownerOrder = OwnerOrder(snapshot);
 

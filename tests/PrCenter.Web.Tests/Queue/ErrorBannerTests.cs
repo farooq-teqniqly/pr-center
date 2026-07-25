@@ -44,4 +44,24 @@ public sealed class ErrorBannerTests : BunitContext
         Assert.Contains("ps-unite", banner.TextContent, StringComparison.Ordinal);
         Assert.Contains("token not SSO-authorized", banner.TextContent, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData(OwnerFetchStatus.MisconfiguredToken)]
+    [InlineData(OwnerFetchStatus.Error)]
+    public void ErrorBanner_WhenTheStatusCarriesNoDetail_ExplainsTheFailureWithoutNamingTheEnum(
+        OwnerFetchStatus status
+    )
+    {
+        // Arrange
+        IReadOnlyList<OwnerStatus> statuses = [new OwnerStatus("ps-unite", status)];
+
+        // Act
+        var cut = Render<ErrorBanner>(ps => ps.Add(p => p.OwnerStatuses, statuses));
+        var banner = cut.Find("[data-testid=error-banner]");
+
+        // Assert
+        Assert.DoesNotContain(status.ToString(), banner.TextContent, StringComparison.Ordinal);
+        Assert.Contains("ps-unite", banner.TextContent, StringComparison.Ordinal);
+        Assert.EndsWith(".", banner.TextContent.Trim(), StringComparison.Ordinal);
+    }
 }

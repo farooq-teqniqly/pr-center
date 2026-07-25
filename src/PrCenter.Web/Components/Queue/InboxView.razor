@@ -16,7 +16,7 @@
 
 @{
     var snapshot = GetQueue.Execute();
-    IReadOnlyList<QueueGroupView> groups = snapshot is null ? [] : QueueLayout.Group(snapshot);
+    var groups = QueueLayout.Group(snapshot);
 }
 
 @if (snapshot is null)
