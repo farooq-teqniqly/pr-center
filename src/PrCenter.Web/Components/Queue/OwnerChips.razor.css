@@ -1,0 +1,45 @@
+.owners {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+}
+
+.owners .lbl {
+    font-size: 12px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 4px;
+}
+
+.owner-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 12px 3px 9px;
+}
+
+.owner-chip .st {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+}
+
+.owner-chip.status-ok .st {
+    background: var(--ok);
+}
+
+.owner-chip.status-err .st {
+    background: var(--err);
+}

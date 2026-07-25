@@ -133,6 +133,69 @@ public sealed class InboxViewTests : BunitContext
         _trigger.Received(1).RequestRefresh();
     }
 
+    [Fact]
+    public void InboxView_WhenAllOwnersOk_ShowsOkChipsAndNoBanner()
+    {
+        // Arrange
+        _holder.Publish(
+            [Item("a", "PerfectServe", "repo1")],
+            [new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok)]
+        );
+
+        // Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        Assert.Single(cut.FindAll("[data-testid=owner-chip]"));
+        Assert.Empty(cut.FindAll("[data-testid=error-banner]"));
+    }
+
+    [Fact]
+    public void InboxView_WhenAnOwnerFails_ShowsBannerAndStillCarriesThatOwnersRows()
+    {
+        // Arrange
+        _holder.Publish(
+            [Item("a", "PerfectServe", "repo1"), Item("b", "ps-unite", "repo2")],
+            [
+                new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok),
+                new OwnerStatus("ps-unite", OwnerFetchStatus.Error, "token rejected"),
+            ]
+        );
+
+        // Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=error-banner]"));
+        Assert.Equal(["a", "b"], RenderedPrIds(cut));
+    }
+
+    [Fact]
+    public void InboxView_WhenPolledAndEmpty_ShowsAllCaughtUpWithOwnerChipsVisible()
+    {
+        // Arrange
+        _holder.Publish([], [new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok)]);
+
+        // Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=empty-state]"));
+        Assert.Single(cut.FindAll("[data-testid=owner-chip]"));
+    }
+
+    [Fact]
+    public void InboxView_WhenNeverPolled_ShowsTheDistinctNeverPolledState()
+    {
+        // Arrange / Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=never-polled]"));
+        Assert.Empty(cut.FindAll("[data-testid=empty-state]"));
+        Assert.Empty(cut.FindAll("[data-testid=owner-chip]"));
+    }
+
     private static IReadOnlyList<string?> RenderedPrIds(IRenderedComponent<InboxView> cut) =>
         cut.FindAll("[data-testid=pr]").Select(e => e.GetAttribute("data-pr-id")).ToList();
 

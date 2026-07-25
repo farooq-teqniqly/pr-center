@@ -16,19 +16,34 @@
 
 @{
     var snapshot = GetQueue.Execute();
+    IReadOnlyList<QueueGroupView> groups = snapshot is null ? [] : QueueLayout.Group(snapshot);
 }
 
-@if (snapshot is not null)
+@if (snapshot is null)
 {
-    @foreach (var group in QueueLayout.Group(snapshot))
+    <NeverPolled />
+}
+else
+{
+    <ErrorBanner OwnerStatuses="snapshot.OwnerStatuses" />
+    <OwnerChips OwnerStatuses="snapshot.OwnerStatuses" />
+
+    @if (groups.Count == 0)
     {
-        <section class="mb-4" data-testid="group">
-            <h2 class="h6 text-body-secondary">@group.Owner / @group.Repository</h2>
-            @foreach (var item in group.Items)
-            {
-                <QueueRow Item="item" />
-            }
-        </section>
+        <EmptyState />
+    }
+    else
+    {
+        @foreach (var group in groups)
+        {
+            <section class="mb-4" data-testid="group">
+                <h2 class="h6 text-body-secondary">@group.Owner / @group.Repository</h2>
+                @foreach (var item in group.Items)
+                {
+                    <QueueRow Item="item" />
+                }
+            </section>
+        }
     }
 }
 

@@ -1,0 +1,19 @@
+@using PrCenter.Core.Queue
+@using PrCenter.Core.Ports
+
+@foreach (var status in FailingOwners())
+{
+    <div class="banner" data-testid="error-banner" data-owner="@status.Owner">
+        <strong>@status.Owner fetch failed:</strong> @(status.Detail ?? status.Status.ToString())
+    </div>
+}
+
+@code {
+    /// <summary>The per-owner fetch statuses from the published snapshot.</summary>
+    [Parameter]
+    [EditorRequired]
+    public IReadOnlyList<OwnerStatus> OwnerStatuses { get; set; } = [];
+
+    private IEnumerable<OwnerStatus> FailingOwners() =>
+        OwnerStatuses.Where(status => status.Status != OwnerFetchStatus.Ok);
+}

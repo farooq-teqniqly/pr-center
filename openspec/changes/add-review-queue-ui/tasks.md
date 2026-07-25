@@ -42,11 +42,11 @@
 
 ## 6. Owner status, banner, and empty states
 
-- [ ] 6.1 Write failing bUnit tests for `OwnerChips` / `ErrorBanner`: all-ok shows ok chips and no banner; a non-`Ok` owner raises a labeled banner and a "stale {LastFreshAt}" chip while its carried rows still render
-- [ ] 6.2 Implement `OwnerChips` and `ErrorBanner`; run green
-- [ ] 6.3 Write failing bUnit tests: polled-and-empty shows "all caught up" with owner chips visible; null snapshot shows the distinct "polling has not run yet" state
-- [ ] 6.4 Implement `EmptyState` and `NeverPolled`; run green
-- [ ] 6.5 Add scoped `.razor.css` for chips, banner, and empty states
+- [x] 6.1 Write failing bUnit tests for `OwnerChips` / `ErrorBanner`: all-ok shows ok chips and no banner; a non-`Ok` owner raises a labeled banner and a "stale {LastFreshAt}" chip while its carried rows still render
+- [x] 6.2 Implement `OwnerChips` and `ErrorBanner`; run green
+- [x] 6.3 Write failing bUnit tests: polled-and-empty shows "all caught up" with owner chips visible; null snapshot shows the distinct "polling has not run yet" state
+- [x] 6.4 Implement `EmptyState` and `NeverPolled`; run green
+- [x] 6.5 Add scoped `.razor.css` for chips, banner, and empty states
 
 ## 7. Verification
 
