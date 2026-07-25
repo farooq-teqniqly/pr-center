@@ -1,6 +1,5 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using PrCenter.Core.Derivation;
 using PrCenter.Core.Facts;
@@ -14,14 +13,13 @@ public sealed class InboxViewTests : BunitContext
 {
     private static readonly DateTimeOffset BaseInstant = new(2026, 7, 14, 8, 0, 0, TimeSpan.Zero);
 
-    private readonly QueueSnapshotHolder _holder = new(
-        TimeProvider.System,
-        NullLogger<QueueSnapshotHolder>.Instance
-    );
+    private readonly CapturingLogger<QueueSnapshotHolder> _logger = new();
+    private readonly QueueSnapshotHolder _holder;
     private readonly IRefreshTrigger _trigger = Substitute.For<IRefreshTrigger>();
 
     public InboxViewTests()
     {
+        _holder = new QueueSnapshotHolder(TimeProvider.System, _logger);
         Services.AddSingleton(_holder);
         Services.AddSingleton(new GetQueue(_holder));
         Services.AddSingleton(_trigger);
@@ -122,8 +120,13 @@ public sealed class InboxViewTests : BunitContext
         cut.WaitForAssertion(() => Assert.Equal(["second"], RenderedPrIds(cut)));
     }
 
+    // Named for what it can actually observe. Unsubscription itself has no
+    // observable signal through the public surface: a disposed bUnit renderer
+    // silently ignores InvokeAsync(StateHasChanged), so neither a render count nor
+    // a faulted-subscriber log distinguishes "unsubscribed" from "still wired to a
+    // torn-down component" (both were verified against a no-op Dispose).
     [Fact]
-    public async Task InboxView_WhenDisposed_UnsubscribesFromTheHolder()
+    public async Task InboxView_WhenAPublishArrivesAfterDisposal_DoesNotDisturbThePublisher()
     {
         // Arrange
         _holder.Publish(
@@ -135,11 +138,15 @@ public sealed class InboxViewTests : BunitContext
         // Act
         await DisposeComponentsAsync();
 
-        // Assert: a publish after disposal must not fault a still-subscribed handler.
+        // Assert
         var exception = Record.Exception(() =>
-            _holder.Publish([], [new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok)])
+            _holder.Publish(
+                [Item("second", "PerfectServe", "repo1")],
+                [new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok)]
+            )
         );
         Assert.Null(exception);
+        Assert.Empty(_logger.Entries);
     }
 
     [Fact]

@@ -137,6 +137,52 @@ public sealed class QueueRowTests : BunitContext
         Assert.False(link.HasAttribute("onclick"));
     }
 
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html;base64,PHNjcmlwdD4=")]
+    [InlineData("http://github.test/org/repo/pull/1")]
+    [InlineData("not a url")]
+    public void QueueRow_WhenTheUrlIsNotHttps_RendersTheTitleAsTextWithNoAnchor(string url)
+    {
+        // Arrange
+        var item = Item(url: url);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.Empty(cut.FindAll("[data-testid=pr-title-link]"));
+        Assert.Equal("title", cut.Find("[data-testid=pr-title-text]").TextContent);
+    }
+
+    [Fact]
+    public void QueueRow_WhenTheClockAdvancesBetweenReads_FormatsEveryInstantFromOneRenderTime()
+    {
+        // Arrange
+        _timeProvider.AutoAdvanceAmount = TimeSpan.FromMinutes(30);
+        var item = Item(lastUpdateAt: Now.AddMinutes(-5), lastReviewedAt: Now.AddMinutes(-5));
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.Contains(
+            "5m ago",
+            cut.Find("[data-testid=byline]").TextContent,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            "5m ago",
+            cut.Find("[data-testid=last-update-at]").TextContent,
+            StringComparison.Ordinal
+        );
+        Assert.Contains(
+            "5m ago",
+            cut.Find("[data-testid=last-reviewed-at]").TextContent,
+            StringComparison.Ordinal
+        );
+    }
+
     private static QueueItem Item(
         bool hasUpdate = false,
         string lastUpdateBy = "octocat",

@@ -434,3 +434,6 @@ docs/pr-reviews/
 
 # PR Center SQLite database files
 prcenter.db*
+
+# Coverage collector output (throwaway; see CLAUDE.md testing section)
+TestResults/

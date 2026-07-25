@@ -7,7 +7,14 @@
         <div class="title-line">
             <span class="pr-num">#@Item.Identity.Number</span>
             <span class="pr-title">
-                <a href="@Item.Identity.Url" target="_blank" rel="noopener noreferrer" data-testid="pr-title-link">@Item.Identity.Title</a>
+                @if (LinksOverHttps)
+                {
+                    <a href="@Item.Identity.Url" target="_blank" rel="noopener noreferrer" data-testid="pr-title-link">@Item.Identity.Title</a>
+                }
+                else
+                {
+                    <span data-testid="pr-title-text">@Item.Identity.Title</span>
+                }
             </span>
             @if (Item.HasUpdate)
             {
@@ -18,12 +25,12 @@
                 <span class="covered" data-testid="covered-badge">covered &middot; @string.Join(", ", Item.CoveredBy)</span>
             }
         </div>
-        <div class="byline" data-testid="byline">@Item.LastUpdate.By &middot; @RelativeTime.Format(Item.LastUpdate.At, Now)</div>
+        <div class="byline" data-testid="byline">@Item.LastUpdate.By &middot; @RelativeTime.Format(Item.LastUpdate.At, _renderedAt)</div>
         <RosterChips Roster="Item.Roster" />
     </div>
     <div class="times">
         <span class="k">updated</span>
-        <span class="v" data-testid="last-update-at">@RelativeTime.Format(Item.LastUpdate.At, Now)</span>
+        <span class="v" data-testid="last-update-at">@RelativeTime.Format(Item.LastUpdate.At, _renderedAt)</span>
         <span class="k">I reviewed</span>
         <span class="v" data-testid="last-reviewed-at">@LastReviewedText()</span>
     </div>
@@ -35,10 +42,22 @@
     [EditorRequired]
     public QueueItem Item { get; set; } = null!;
 
-    private DateTimeOffset Now => TimeProvider.GetUtcNow();
+    private DateTimeOffset _renderedAt;
+
+    // Captured once per render: every relative time in this row measures from the
+    // same instant, so a render that straddles a minute boundary cannot show one
+    // field as "5m ago" and another as "6m ago".
+    protected override void OnParametersSet() => _renderedAt = TimeProvider.GetUtcNow();
+
+    // Only an absolute https URL becomes a link. The value comes from GitHub's own
+    // API today, but nothing in the type stops a javascript:/data: scheme from
+    // reaching the anchor, so an unrecognized URL renders as plain text instead.
+    private bool LinksOverHttps =>
+        Uri.TryCreate(Item.Identity.Url, UriKind.Absolute, out var url)
+        && string.Equals(url.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal);
 
     private string LastReviewedText() =>
         Item.MyEngagement.LastReviewedAt is { } lastReviewedAt
-            ? RelativeTime.Format(lastReviewedAt, Now)
+            ? RelativeTime.Format(lastReviewedAt, _renderedAt)
             : "never";
 }
