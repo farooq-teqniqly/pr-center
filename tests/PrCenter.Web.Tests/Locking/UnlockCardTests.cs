@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using PrCenter.Core.Ports;
 using PrCenter.Core.Queue;
 using PrCenter.Web.Components.Locking;
@@ -56,6 +57,25 @@ public sealed class UnlockCardTests : BunitContext
         Assert.True(reset);
     }
 
+    [Fact]
+    public void UnlockCard_WhenUnlockFailsUnexpectedly_ShowsUnlockFailureAndDoesNotInvokeOnUnlocked()
+    {
+        // Arrange
+        var appLock = Substitute.For<IAppLock>();
+        appLock
+            .UnlockAsync(Password, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("stored vault data is corrupt"));
+        var unlocked = false;
+        var cut = RenderCard(appLock, onUnlocked: () => unlocked = true);
+
+        // Act
+        Submit(cut, Password);
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=unlock-failure]"));
+        Assert.False(unlocked);
+    }
+
     private static IAppLock UnlockResult(string password, bool result)
     {
         var appLock = Substitute.For<IAppLock>();
@@ -76,6 +96,7 @@ public sealed class UnlockCardTests : BunitContext
         Action? onReset = null
     )
     {
+        Services.AddLogging();
         Services.AddSingleton(new UnlockApp(appLock, Substitute.For<IRefreshTrigger>()));
         Services.AddSingleton(vault ?? Substitute.For<ITokenVault>());
         return Render<UnlockCard>(ps =>

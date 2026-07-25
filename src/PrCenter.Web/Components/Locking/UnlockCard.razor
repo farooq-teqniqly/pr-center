@@ -1,7 +1,9 @@
+@using Microsoft.Extensions.Logging
 @using PrCenter.Core.Ports
 @using PrCenter.Core.Queue
 @inject UnlockApp UnlockApp
 @inject ITokenVault TokenVault
+@inject ILogger<UnlockCard> Logger
 
 <div class="card shadow-sm mx-auto" style="max-width: 24rem;" data-testid="unlock-card">
     <div class="card-body">
@@ -19,6 +21,13 @@
         {
             <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="unlock-error">
                 That password is not correct.
+            </div>
+        }
+
+        @if (_unlockFailed)
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="unlock-failure">
+                Unable to unlock: the stored vault data could not be read.
             </div>
         }
 
@@ -45,6 +54,7 @@
 @code {
     private string _password = string.Empty;
     private bool _wrongPassword;
+    private bool _unlockFailed;
 
     /// <summary>Invoked after a successful unlock, so the gate can re-evaluate.</summary>
     [Parameter]
@@ -57,6 +67,7 @@
     private async Task SubmitAsync()
     {
         _wrongPassword = false;
+        _unlockFailed = false;
 
         if (string.IsNullOrWhiteSpace(_password))
         {
@@ -64,14 +75,25 @@
             return;
         }
 
-        var unlocked = await UnlockApp.UnlockAsync(_password);
-        if (unlocked)
+        try
         {
-            await OnUnlocked.InvokeAsync();
+            var unlocked = await UnlockApp.UnlockAsync(_password);
+            if (unlocked)
+            {
+                await OnUnlocked.InvokeAsync();
+            }
+            else
+            {
+                _wrongPassword = true;
+            }
         }
-        else
+        // An unreadable vault (no password set, unsupported KDF version, corrupt
+        // stored data) is distinct from a wrong password. Left unhandled it faults
+        // the circuit and the card stops responding, so it is surfaced on the card.
+        catch (InvalidOperationException ex)
         {
-            _wrongPassword = true;
+            LogUnlockFailed(Logger, ex);
+            _unlockFailed = true;
         }
     }
 

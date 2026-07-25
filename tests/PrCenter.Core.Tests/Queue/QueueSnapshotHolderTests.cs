@@ -1,5 +1,6 @@
 namespace PrCenter.Core.Tests.Queue;
 
+using Microsoft.Extensions.Logging;
 using PrCenter.Core.Derivation;
 using PrCenter.Core.Facts;
 using PrCenter.Core.Ports;
@@ -21,7 +22,7 @@ public sealed class QueueSnapshotHolderTests
     public void Current_BeforeAnyPublish_IsNull()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var holder = Holder();
 
         // Act
         var current = holder.Current;
@@ -34,7 +35,7 @@ public sealed class QueueSnapshotHolderTests
     public void Publish_ThenCurrent_ReturnsSnapshotStampedFromTimeProvider()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var holder = Holder();
         var items = new[] { Item("pr-1") };
         var statuses = new[] { new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok) };
 
@@ -53,7 +54,7 @@ public sealed class QueueSnapshotHolderTests
     public void Publish_AfterAPreviousPublish_ReplacesTheSnapshotWhole()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var holder = Holder();
         holder.Publish([Item("pr-old")], [new OwnerStatus("old-owner", OwnerFetchStatus.Error)]);
         var newItems = new[] { Item("pr-new") };
         var newStatuses = new[] { new OwnerStatus("new-owner", OwnerFetchStatus.Ok) };
@@ -72,7 +73,7 @@ public sealed class QueueSnapshotHolderTests
     public void Publish_WithSubscriber_RaisesChangedWithTheNewSnapshotVisible()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var holder = Holder();
         var items = new[] { Item("pr-1") };
         var statuses = new[] { new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok) };
         QueueSnapshot? observed = null;
@@ -90,7 +91,7 @@ public sealed class QueueSnapshotHolderTests
     public void Publish_WithNoSubscribers_DoesNotThrowAndPublishesTheSnapshot()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(PublishInstant));
+        var holder = Holder();
         var items = new[] { Item("pr-1") };
         var statuses = new[] { new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok) };
 
@@ -100,6 +101,34 @@ public sealed class QueueSnapshotHolderTests
         // Assert
         Assert.Same(published, holder.Current);
     }
+
+    [Fact]
+    public void Publish_WhenASubscriberThrows_StillNotifiesTheOtherSubscribersAndLogsAWarning()
+    {
+        // Arrange
+        var logger = new CapturingLogger<QueueSnapshotHolder>();
+        var holder = Holder(logger);
+        var reachedSecondSubscriber = false;
+        holder.Changed += (_, _) => throw new InvalidOperationException("subscriber faulted");
+        holder.Changed += (_, _) => reachedSecondSubscriber = true;
+
+        // Act
+        var published = holder.Publish(
+            [Item("pr-1")],
+            [new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok)]
+        );
+
+        // Assert
+        Assert.True(reachedSecondSubscriber);
+        Assert.Same(published, holder.Current);
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    private static QueueSnapshotHolder Holder(ILogger<QueueSnapshotHolder>? logger = null) =>
+        new(
+            new FixedTimeProvider(PublishInstant),
+            logger ?? new CapturingLogger<QueueSnapshotHolder>()
+        );
 
     private static QueueItem Item(string id) =>
         new(

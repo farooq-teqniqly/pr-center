@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using PrCenter.Core.Derivation;
 using PrCenter.Core.Facts;
@@ -13,7 +14,10 @@ public sealed class InboxViewTests : BunitContext
 {
     private static readonly DateTimeOffset BaseInstant = new(2026, 7, 14, 8, 0, 0, TimeSpan.Zero);
 
-    private readonly QueueSnapshotHolder _holder = new(TimeProvider.System);
+    private readonly QueueSnapshotHolder _holder = new(
+        TimeProvider.System,
+        NullLogger<QueueSnapshotHolder>.Instance
+    );
     private readonly IRefreshTrigger _trigger = Substitute.For<IRefreshTrigger>();
 
     public InboxViewTests()

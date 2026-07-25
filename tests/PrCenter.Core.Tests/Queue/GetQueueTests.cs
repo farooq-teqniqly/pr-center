@@ -1,5 +1,6 @@
 namespace PrCenter.Core.Tests.Queue;
 
+using Microsoft.Extensions.Logging.Abstractions;
 using PrCenter.Core.Derivation;
 using PrCenter.Core.Ports;
 using PrCenter.Core.Queue;
@@ -12,7 +13,10 @@ public sealed class GetQueueTests
     public void Execute_BeforeAnyPublish_ReturnsNull()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(Instant));
+        var holder = new QueueSnapshotHolder(
+            new FixedTimeProvider(Instant),
+            NullLogger<QueueSnapshotHolder>.Instance
+        );
         var getQueue = new GetQueue(holder);
 
         // Act
@@ -26,7 +30,10 @@ public sealed class GetQueueTests
     public void Execute_AfterPublish_ReturnsLatestSnapshot()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(Instant));
+        var holder = new QueueSnapshotHolder(
+            new FixedTimeProvider(Instant),
+            NullLogger<QueueSnapshotHolder>.Instance
+        );
         var getQueue = new GetQueue(holder);
         holder.Publish([], [new OwnerStatus("PerfectServe", OwnerFetchStatus.Ok)]);
 
