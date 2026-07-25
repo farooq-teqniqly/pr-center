@@ -1,0 +1,32 @@
+@using PrCenter.Core.Locking
+@using PrCenter.Core.Ports
+@inject IAppLock AppLock
+
+@if (_state == AppLockState.Unlocked)
+{
+    @ChildContent
+}
+else if (_state == AppLockState.Locked)
+{
+    <UnlockCard OnUnlocked="ReloadStateAsync" OnReset="ReloadStateAsync" />
+}
+else if (_state == AppLockState.Uninitialized)
+{
+    <UninitializedPlaceholder />
+}
+
+@code {
+    private AppLockState? _state;
+
+    /// <summary>The inbox, rendered only when the app is unlocked.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    protected override async Task OnInitializedAsync() => await ReloadStateAsync();
+
+    private async Task ReloadStateAsync()
+    {
+        _state = await AppLock.GetStateAsync();
+        StateHasChanged();
+    }
+}

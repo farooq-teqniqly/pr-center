@@ -45,10 +45,21 @@ context: |
   Favor domain expressiveness while implementing (not only at review): prefer
   intention-revealing names (IsMe/NotMe over AreSame plus !), extract buried
   mechanics into named helpers so callers read as intent, and name states/booleans
-  for the concept they represent. Default EF Core reads to AsNoTracking (with a
+  for the concept they represent. Always pass an explicit StringComparison to
+  string.Contains/IndexOf/StartsWith/EndsWith/Compare/Equals/Replace (CA1307/
+  CA1309): Ordinal/OrdinalIgnoreCase for identifiers, keys, and protocol values,
+  CurrentCulture* only for user-facing text meant to sort/compare per locale.
+  Default EF Core reads to AsNoTracking (with a
   Select projection of just the needed columns); use tracking only when the
   entity is modified and saved. FindAsync always tracks, so a read-only lookup is
   a Where/Select/FirstOrDefaultAsync no-tracking query, not FindAsync.
+
+  Build: never pass -p:NuGetAudit=false to dodge an NU1902/NU1903 advisory error;
+  fix the real advisory -- bump the package (pin transitive deps directly via
+  Directory.Packages.props + a matching PackageReference, as done for AngleSharp
+  in PrCenter.Web.Tests.csproj) or, only if unpatched, add a commented
+  NuGetAuditSuppress entry in Directory.Build.props -- so plain dotnet build
+  stays clean.
 
   Writing style: U.S. English; no emojis in docs; prefer hyphens or -- over em
   dashes in new prose; never em dashes or smart quotes in PowerShell 5.1 string
@@ -70,3 +81,7 @@ rules:
   tasks:
     - "Follow TDD ordering: failing test first, then implementation, then
       refactor."
+    - "After finishing a set of tasks, stop and wait for explicit user approval
+      before committing -- do not commit automatically just because tests are
+      green. Committing without being asked is fine only when the user's own
+      message for that turn explicitly requests a commit."

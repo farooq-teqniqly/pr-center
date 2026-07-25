@@ -1,0 +1,34 @@
+@using PrCenter.Core.Queue
+@using PrCenter.Core.Ports
+
+@foreach (var status in FailingOwners())
+{
+    <div class="banner" data-testid="error-banner" data-owner="@status.Owner">
+        <strong>@status.Owner fetch failed:</strong> @Explain(status)
+    </div>
+}
+
+@code {
+    /// <summary>The per-owner fetch statuses from the published snapshot.</summary>
+    [Parameter]
+    [EditorRequired]
+    public IReadOnlyList<OwnerStatus> OwnerStatuses { get; set; } = [];
+
+    private IEnumerable<OwnerStatus> FailingOwners() =>
+        OwnerStatuses.Where(status => status.Status != OwnerFetchStatus.Ok);
+
+    // A status without a usable detail still has to read as a sentence: the enum
+    // name is an identifier, not something to show a reader. Blank counts as
+    // absent -- OwnerStatus does not constrain Detail, and a whitespace one would
+    // otherwise render a banner that trails off after "fetch failed:".
+    private static string Explain(OwnerStatus status) =>
+        string.IsNullOrWhiteSpace(status.Detail) ? Reason(status.Status) : status.Detail;
+
+    private static string Reason(OwnerFetchStatus status) =>
+        status switch
+        {
+            OwnerFetchStatus.MisconfiguredToken =>
+                "The stored token was rejected. Check that it is authorized for this owner.",
+            _ => "The owner's review queue could not be fetched.",
+        };
+}

@@ -1,0 +1,35 @@
+@using PrCenter.Core.Queue
+@using PrCenter.Core.Ports
+@inject TimeProvider TimeProvider
+
+<div class="owners">
+    <span class="lbl">Owners</span>
+    @foreach (var status in OwnerStatuses)
+    {
+        <span class="owner-chip @StatusClass(status.Status)" data-testid="owner-chip" data-owner="@status.Owner">
+            <span class="st"></span>@status.Owner &middot; @StatusText(status)
+        </span>
+    }
+</div>
+
+@code {
+    /// <summary>The per-owner fetch statuses from the published snapshot.</summary>
+    [Parameter]
+    [EditorRequired]
+    public IReadOnlyList<OwnerStatus> OwnerStatuses { get; set; } = [];
+
+    private static string StatusClass(OwnerFetchStatus status) =>
+        status == OwnerFetchStatus.Ok ? "status-ok" : "status-err";
+
+    private string StatusText(OwnerStatus status)
+    {
+        if (status.Status == OwnerFetchStatus.Ok)
+        {
+            return "ok";
+        }
+
+        var staleSince =
+            status.LastFreshAt is { } at ? RelativeTime.Format(at, TimeProvider.GetUtcNow()) : "never";
+        return $"stale {staleSince}";
+    }
+}

@@ -1,0 +1,14 @@
+.banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--err-bg);
+    color: var(--err);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 20px;
+    font-size: 13.5px;
+}
+
+.banner strong {
+    font-weight: 650;
+}

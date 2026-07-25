@@ -1,0 +1,8 @@
+.card {
+    background: var(--surface);
+    border-color: var(--line);
+}
+
+.card-title {
+    color: var(--ink);
+}

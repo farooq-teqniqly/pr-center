@@ -1,6 +1,7 @@
 namespace PrCenter.Core.Tests.Queue;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using PrCenter.Core.Facts;
@@ -14,7 +15,10 @@ public sealed class RefreshQueueTests
 
     private readonly ITokenVault _vault = Substitute.For<ITokenVault>();
     private readonly IGitHubFacts _facts = Substitute.For<IGitHubFacts>();
-    private readonly QueueSnapshotHolder _holder = new(new FixedTimeProvider(Instant));
+    private readonly QueueSnapshotHolder _holder = new(
+        new FixedTimeProvider(Instant),
+        NullLogger<QueueSnapshotHolder>.Instance
+    );
     private readonly CapturingLogger<RefreshQueue> _logger = new();
 
     [Fact]
@@ -144,7 +148,7 @@ public sealed class RefreshQueueTests
     {
         // Arrange -- first poll fresh, second poll the owner errors
         var clock = new AdvanceableTimeProvider(Instant);
-        var holder = new QueueSnapshotHolder(clock);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
         StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
         await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
@@ -168,7 +172,7 @@ public sealed class RefreshQueueTests
     {
         // Arrange -- first poll fresh, second poll login resolution throws
         var clock = new AdvanceableTimeProvider(Instant);
-        var holder = new QueueSnapshotHolder(clock);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
         StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
         await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
@@ -194,7 +198,7 @@ public sealed class RefreshQueueTests
     {
         // Arrange
         var clock = new AdvanceableTimeProvider(Instant);
-        var holder = new QueueSnapshotHolder(clock);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
         StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
         await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
@@ -215,7 +219,7 @@ public sealed class RefreshQueueTests
     {
         // Arrange
         var clock = new AdvanceableTimeProvider(Instant);
-        var holder = new QueueSnapshotHolder(clock);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
         StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
         await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
@@ -238,7 +242,10 @@ public sealed class RefreshQueueTests
     public async Task ExecuteAsync_WhenOwnerFailsOnFirstPoll_HasStatusOnlyWithNoItemsAndNullInstant()
     {
         // Arrange
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(Instant));
+        var holder = new QueueSnapshotHolder(
+            new FixedTimeProvider(Instant),
+            NullLogger<QueueSnapshotHolder>.Instance
+        );
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
         StubOwnerError("PerfectServe", "boom");
 
@@ -258,7 +265,10 @@ public sealed class RefreshQueueTests
     public async Task ExecuteAsync_WhenOwnerRemovedFromVault_DropsItsCarriedItems()
     {
         // Arrange -- both owners fresh, then one is removed from the vault
-        var holder = new QueueSnapshotHolder(new FixedTimeProvider(Instant));
+        var holder = new QueueSnapshotHolder(
+            new FixedTimeProvider(Instant),
+            NullLogger<QueueSnapshotHolder>.Instance
+        );
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["keep", "drop"]);
         StubOwner("keep", ShownFact("keep", "keep/repo#1"));
         StubOwner("drop", ShownFact("drop", "drop/repo#1"));
@@ -282,7 +292,7 @@ public sealed class RefreshQueueTests
         const string freshOwner = "PerfectServe";
         var relistedOwner = freshOwner.ToLowerInvariant();
         var clock = new AdvanceableTimeProvider(Instant);
-        var holder = new QueueSnapshotHolder(clock);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
         _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns([freshOwner]);
         StubOwner(freshOwner, ShownFact(freshOwner, $"{freshOwner}/repo#1"));
         await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);

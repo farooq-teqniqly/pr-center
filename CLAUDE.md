@@ -55,6 +55,7 @@ Do not violate these without updating the idea/state docs first:
   LINQ; `UpdateEvents(activity)` over three OR-ed `.Any(...)` chains), and name booleans and
   states for the concept they represent (`AwaitingReReview`, not a flag combination). This is a
   first-pass obligation while writing the code, not a cleanup deferred to PR review.
+- **Always pass an explicit `StringComparison` to `string.Contains`/`IndexOf`/`StartsWith`/`EndsWith`/`Compare`/`Equals`/`Replace`** (CA1307/CA1309). Use `Ordinal`/`OrdinalIgnoreCase` for identifiers, keys, and protocol values (logins, owner/repo names, GraphQL type names); reserve `CurrentCulture*` only for user-facing text actually meant to sort/compare per locale. This mirrors the existing `Equals`/`GetHashCode` comparer-matching rule below -- an implicit culture-aware comparison is itself a latent bug on non-`en-US` hosts, not just an analyzer nag.
 - **Default EF Core reads to `AsNoTracking`.** A query whose result is only read (not mutated
   and saved back) uses `AsNoTracking()`, and preferably a `Select` projection of just the
   columns needed, so no entity is materialized into the change tracker. Use tracking only when
@@ -87,6 +88,18 @@ Do not violate these without updating the idea/state docs first:
   `line-rate` only, not `branch-rate`. Design-time-only types (e.g. `PrCenterDbContextFactory`)
   read 0% because they are never exercised at runtime; exclude them from "uncovered" alarm.
 
+## Build (beyond baseline)
+
+- **Never build/restore with `-p:NuGetAudit=false`** to get past an `NU1902`/`NU1903`
+  advisory error -- that silences the check for the whole build, not just the flagged
+  package, and the error does not self-resolve. Fix the actual advisory instead: bump the
+  vulnerable package (direct or, if transitive, pin it directly via `Directory.Packages.props`
+  + a matching `PackageReference` in the affected project, as done for `AngleSharp` in
+  `PrCenter.Web.Tests.csproj`) to a patched version. Only if no patched version exists yet,
+  suppress that specific advisory with `<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-..." />`
+  in `Directory.Build.props`, with a comment explaining why (see the `SQLitePCLRaw` entry
+  there for the pattern), so `dotnet build` with no extra flags stays clean.
+
 ## Writing style (beyond baseline)
 
 - Do not silently rewrite existing British spellings in unrelated files; flag inconsistencies in files you are already editing.
@@ -94,6 +107,10 @@ Do not violate these without updating the idea/state docs first:
 ## Commits (beyond baseline)
 
 - The `commit-msg` hook lives in `.githooks/` (see [README](README.md#commit-message-format)).
+- **After finishing a set of tasks (e.g. an OpenSpec tasks.md batch), stop and wait for
+  explicit approval before committing.** Green tests are not approval. This does not apply
+  when the user's own message for that turn explicitly asks for a commit ("commit and do
+  X") -- that is itself the approval.
 
 ## PowerShell authoring rules
 

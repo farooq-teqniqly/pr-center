@@ -1,0 +1,42 @@
+@using PrCenter.Core.Derivation
+
+<div class="roster">
+    @foreach (var reviewer in Roster)
+    {
+        <span class="rev-chip @StateClass(reviewer.State) @(reviewer.IsMe ? "chip-me" : null) @(reviewer.IsBot ? "chip-bot" : null)"
+              data-testid="roster-chip"
+              data-login="@reviewer.Login">
+            @DisplayName(reviewer) &middot; @StateLabel(reviewer.State)@(reviewer.IsBot ? " · bot" : null)
+        </span>
+    }
+</div>
+
+@code {
+    /// <summary>The reviewer roster to render as chips.</summary>
+    [Parameter]
+    [EditorRequired]
+    public IReadOnlyList<ReviewerRosterEntry> Roster { get; set; } = [];
+
+    private static string DisplayName(ReviewerRosterEntry reviewer) =>
+        reviewer.IsMe ? "me" : reviewer.Login;
+
+    private static string StateLabel(ReviewerState state) =>
+        state switch
+        {
+            ReviewerState.Pending => "requested",
+            ReviewerState.Approved => "approved",
+            ReviewerState.ChangesRequested => "changes requested",
+            ReviewerState.Commented => "commented",
+            _ => state.ToString(),
+        };
+
+    private static string StateClass(ReviewerState state) =>
+        state switch
+        {
+            ReviewerState.Pending => "state-pending",
+            ReviewerState.Approved => "state-approved",
+            ReviewerState.ChangesRequested => "state-changes",
+            ReviewerState.Commented => "state-commented",
+            _ => "state-pending",
+        };
+}

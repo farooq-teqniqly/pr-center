@@ -1,0 +1,25 @@
+.empty {
+    padding: 72px 20px;
+    text-align: center;
+    color: var(--ink-2);
+}
+
+.empty .mark {
+    font-family: var(--mono);
+    font-size: 30px;
+    color: var(--ok);
+    display: block;
+    margin-bottom: 12px;
+}
+
+.empty h3 {
+    font-family: var(--display);
+    font-size: 19px;
+    margin: 0 0 6px;
+    color: var(--ink);
+}
+
+.empty p {
+    margin: 0;
+    font-size: 14px;
+}
