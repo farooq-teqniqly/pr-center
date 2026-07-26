@@ -70,8 +70,8 @@ it drives, and the implementation task is done when that test passes.
 
 ## 10. Reset confirmation on the unlock card
 
-- [ ] 10.1 Write failing bUnit tests on `UnlockCard`: invoking reset shows the confirmation step naming both the app password and the tokens, and calls nothing yet; a mismatched word calls nothing and stays on the confirmation step; cancelling calls nothing and returns to the unlock state; the exact word calls `ResetVaultAsync` once and raises `OnReset`.
-- [ ] 10.2 Implement the in-place confirmation step and rewrite the action's copy so it states the app password is destroyed too.
+- [x] 10.1 Write failing bUnit tests on `UnlockCard`: invoking reset shows the confirmation step naming both the app password and the tokens, and calls nothing yet; a mismatched word calls nothing and stays on the confirmation step; cancelling calls nothing and returns to the unlock state; the exact word calls `ResetVaultAsync` once and raises `OnReset`.
+- [x] 10.2 Implement the in-place confirmation step and rewrite the action's copy so it states the app password is destroyed too.
 
 ## 11. Close-out
 

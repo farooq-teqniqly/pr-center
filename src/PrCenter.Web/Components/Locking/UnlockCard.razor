@@ -40,21 +40,72 @@
             </button>
         </div>
 
-        <div class="text-center mt-3">
-            <button type="button"
-                    class="btn btn-link btn-sm text-danger"
-                    data-testid="reset-vault"
-                    @onclick="ResetAsync">
-                Reset stored tokens
-            </button>
-        </div>
+        @if (_confirmingReset)
+        {
+            <div class="border border-danger rounded p-3 mt-3" data-testid="reset-confirmation">
+                <p class="small mb-2">
+                    Resetting destroys your app password and every stored owner
+                    token. Nothing can be recovered: you will set a new app
+                    password and re-enter each token. Type
+                    <strong>@ConfirmationWord</strong> to confirm.
+                </p>
+
+                <label for="reset-confirm-word" class="form-label visually-hidden">
+                    Type @ConfirmationWord to confirm
+                </label>
+                <input id="reset-confirm-word"
+                       type="text"
+                       class="form-control"
+                       data-testid="reset-confirm-word"
+                       @bind="_confirmationWord"
+                       @bind:event="onchange" />
+
+                @if (_confirmationMismatched)
+                {
+                    <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="reset-mismatch">
+                        Type @ConfirmationWord exactly to confirm the reset.
+                    </div>
+                }
+
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm flex-fill"
+                            data-testid="reset-cancel"
+                            @onclick="CancelReset">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger btn-sm flex-fill"
+                            data-testid="reset-confirm"
+                            @onclick="ConfirmResetAsync">
+                        Reset everything
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center mt-3">
+                <button type="button"
+                        class="btn btn-link btn-sm text-danger"
+                        data-testid="reset-vault"
+                        @onclick="BeginReset">
+                    Forgot password? Reset the app password and all tokens
+                </button>
+            </div>
+        }
     </div>
 </div>
 
 @code {
+    private const string ConfirmationWord = "RESET";
+
     private string _password = string.Empty;
     private bool _wrongPassword;
     private bool _unlockFailed;
+    private bool _confirmingReset;
+    private string _confirmationWord = string.Empty;
+    private bool _confirmationMismatched;
 
     /// <summary>Invoked after a successful unlock, so the gate can re-evaluate.</summary>
     [Parameter]
@@ -97,9 +148,28 @@
         }
     }
 
-    private async Task ResetAsync()
+    private void BeginReset()
     {
+        _confirmingReset = true;
+        _confirmationWord = string.Empty;
+        _confirmationMismatched = false;
+    }
+
+    private void CancelReset() => _confirmingReset = false;
+
+    private async Task ConfirmResetAsync()
+    {
+        // Ordinal and case-sensitive: the typed word is a deliberate act, not a
+        // value to be helpfully interpreted, and this is the one action with no
+        // recovery.
+        if (!string.Equals(_confirmationWord, ConfirmationWord, StringComparison.Ordinal))
+        {
+            _confirmationMismatched = true;
+            return;
+        }
+
         await TokenVault.ResetVaultAsync();
+        _confirmingReset = false;
         await OnReset.InvokeAsync();
     }
 }
