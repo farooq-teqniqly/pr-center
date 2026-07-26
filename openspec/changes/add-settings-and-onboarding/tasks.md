@@ -28,12 +28,12 @@ it drives, and the implementation task is done when that test passes.
 
 ## 4. Core use cases
 
-- [ ] 4.1 Write failing `InitializeVaultTests`: success sets the password, unlocks, and pokes the trigger; a failure from `SetPasswordAsync` propagates and pokes nothing; an unlock that returns false leaves the app locked and pokes nothing; null/whitespace password throws.
-- [ ] 4.2 Implement `PrCenter.Core/Settings/InitializeVault.cs` composing `ITokenVault.SetPasswordAsync`, `IAppLock.UnlockAsync`, and `IRefreshTrigger`.
-- [ ] 4.3 Write failing `SaveOwnerTokenTests` and `RemoveOwnerTests`: each delegates to the vault and pokes the trigger on success; a throwing vault call does not poke; guard tests for null/whitespace arguments.
-- [ ] 4.4 Implement `SaveOwnerToken` and `RemoveOwner`.
-- [ ] 4.5 Write failing `SavePollIntervalTests`: an in-range interval is written and the trigger poked; a store failure does not poke.
-- [ ] 4.6 Implement `SavePollInterval` over `IAppSettingsStore` + `IRefreshTrigger`.
+- [x] 4.1 Write failing `InitializeVaultTests`: success sets the password, unlocks, and pokes the trigger; a failure from `SetPasswordAsync` propagates and pokes nothing; an unlock that returns false leaves the app locked and pokes nothing; null/whitespace password throws.
+- [x] 4.2 Implement `PrCenter.Core/Settings/InitializeVault.cs` composing `ITokenVault.SetPasswordAsync`, `IAppLock.UnlockAsync`, and `IRefreshTrigger`.
+- [x] 4.3 Write failing `SaveOwnerTokenTests` and `RemoveOwnerTests`: each delegates to the vault and pokes the trigger on success; a throwing vault call does not poke; guard tests for null/whitespace arguments.
+- [x] 4.4 Implement `SaveOwnerToken` and `RemoveOwner`.
+- [x] 4.5 Write failing `SavePollIntervalTests`: an in-range interval is written and the trigger poked; a store failure does not poke.
+- [x] 4.6 Implement `SavePollInterval` over `IAppSettingsStore` + `IRefreshTrigger`.
 
 ## 5. Poll loop reads the stored interval
 
