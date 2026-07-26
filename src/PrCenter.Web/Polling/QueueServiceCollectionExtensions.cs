@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PrCenter.Core.Queue;
 using PrCenter.Core.Settings;
 
@@ -23,8 +24,10 @@ internal static class QueueServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Process-wide state and signals shared across circuits.
-        services.AddSingleton(TimeProvider.System);
+        // Process-wide state and signals shared across circuits. The clock is a
+        // TryAdd because the persistence adapter registers the same one; whichever
+        // extension the host calls second must not add a second registration.
+        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<QueueSnapshotHolder>();
         services.AddSingleton<RefreshTrigger>();
         services.AddSingleton<IRefreshTrigger>(sp => sp.GetRequiredService<RefreshTrigger>());

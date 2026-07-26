@@ -31,6 +31,16 @@ public sealed class DiCompositionRootTests : IClassFixture<WebApplicationFactory
     }
 
     [Fact]
+    public void Host_WhenBuilt_RegistersExactlyOneTimeProvider()
+    {
+        // Act
+        var clocks = _factory.Services.GetServices<TimeProvider>();
+
+        // Assert
+        Assert.Single(clocks);
+    }
+
+    [Fact]
     public void Host_WhenBuilt_ResolvesTokenVaultToPersistenceAdapter()
     {
         // Arrange

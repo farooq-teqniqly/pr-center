@@ -86,6 +86,7 @@ delete and the typed-word vault reset. See design decision 10a.
 - [x] 11.6 Read cancellation the way `RefreshQueue` does in `QueuePollingService` -- only this service's own cancelled token means shutdown, so a request timeout arriving as `OperationCanceledException` degrades instead of ending the loop.
 - [x] 11.7 Audit every bound input for trimming. Trim the reset confirmation word, matching the owner-name confirmation. Reject a whitespace-only app password at setup, since the unlock card refuses one and the pair would otherwise lock the user out. Leave the password fields untrimmed and say why in a comment, so the next reader does not "fix" them.
 - [x] 11.8 Clear the failure message when a retried delete succeeds, and read "1 hour" rather than "1 hours" at exactly 60 minutes.
+- [x] 11.9 Register `TimeProvider` in `AddPersistenceAdapter` -- `TokenVault` needs it for `SavedAt`, and it was only registered by `AddQueueServices`, so the adapter could not stand alone. `TryAdd` on both sides so calling both extensions leaves one registration.
 
 ## 12. Close-out
 

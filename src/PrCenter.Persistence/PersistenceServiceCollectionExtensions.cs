@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PrCenter.Core.Ports;
 
 namespace PrCenter.Persistence;
@@ -46,6 +47,11 @@ public static class PersistenceServiceCollectionExtensions
                 options.EnableDetailedErrors();
             }
         });
+        // TokenVault stamps SavedAt from the clock, so the adapter registers it
+        // rather than relying on a host that happens to call another extension
+        // first. TryAdd, not Add: the queue services register the same clock, and
+        // whichever runs second must not add a duplicate.
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ITokenVault, TokenVault>();
 
         // The decrypted key is shared across circuits for the life of the
