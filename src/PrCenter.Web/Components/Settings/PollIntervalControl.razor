@@ -50,10 +50,17 @@
         _minutes = (int)_current.Value.TotalMinutes;
     }
 
-    private static string Describe(TimeSpan interval) =>
-        interval.TotalMinutes < 60
-            ? $"{(int)interval.TotalMinutes} minutes"
-            : $"{interval.TotalHours:0.##} hours";
+    // The minutes branch never reads "1 minute" because the minimum is 5, but the
+    // hours branch starts exactly at 1.
+    private static string Describe(TimeSpan interval)
+    {
+        if (interval.TotalMinutes < 60)
+        {
+            return $"{(int)interval.TotalMinutes} minutes";
+        }
+
+        return interval.TotalHours is 1 ? "1 hour" : $"{interval.TotalHours:0.##} hours";
+    }
 
     private async Task SaveAsync()
     {

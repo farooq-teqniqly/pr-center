@@ -270,6 +270,9 @@
             return;
         }
 
+        // Clear the message too: a retry after a locked-vault failure succeeds
+        // with the banner from the failed attempt still on screen otherwise.
+        _message = null;
         CancelDelete();
         await ReloadOwnersAsync();
     }

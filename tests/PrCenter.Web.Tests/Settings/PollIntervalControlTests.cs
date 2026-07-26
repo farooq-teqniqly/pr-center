@@ -34,6 +34,29 @@ public sealed class PollIntervalControlTests : BunitContext
     }
 
     [Theory]
+    [InlineData(30, "30 minutes")]
+    [InlineData(60, "1 hour")]
+    [InlineData(90, "1.5 hours")]
+    [InlineData(1440, "24 hours")]
+    public void PollIntervalControl_WhenRendered_DescribesTheIntervalInReadableUnits(
+        int minutes,
+        string expected
+    )
+    {
+        // Arrange
+        StoredInterval(TimeSpan.FromMinutes(minutes));
+
+        // Act
+        var cut = RenderControl();
+
+        // Assert
+        Assert.Equal(
+            $"PR-Center polls every {expected}.",
+            cut.Find("[data-testid=current-interval]").TextContent.Trim()
+        );
+    }
+
+    [Theory]
     [InlineData(5)]
     [InlineData(45)]
     [InlineData(1440)]

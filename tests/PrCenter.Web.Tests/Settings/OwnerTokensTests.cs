@@ -294,6 +294,28 @@ public sealed class OwnerTokensTests : BunitContext
     }
 
     [Fact]
+    public void OwnerTokens_WhenARetriedDeleteSucceeds_ClearsTheEarlierFailureMessage()
+    {
+        // Arrange
+        StoredOwners(new OwnerTokenSummary("ps-unite", SavedAt));
+        _vault
+            .DeleteTokenAsync("ps-unite", Arg.Any<CancellationToken>())
+            .Returns(
+                _ => throw new VaultLockedException("the vault is locked"),
+                _ => Task.CompletedTask
+            );
+        var cut = RenderTable();
+        BeginDelete(cut, "ps-unite");
+        ConfirmDelete(cut, "ps-unite");
+
+        // Act
+        ConfirmDelete(cut, "ps-unite");
+
+        // Assert
+        Assert.Empty(cut.FindAll("[data-testid=owner-token-error]"));
+    }
+
+    [Fact]
     public void OwnerTokens_WhenTheSaveFails_ShowsAMessageAndKeepsTheEnteredOwner()
     {
         // Arrange
