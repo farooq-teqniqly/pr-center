@@ -27,6 +27,7 @@ internal sealed partial class TokenVault : ITokenVault
 
     private readonly PrCenterDbContext _context;
     private readonly VaultKeyHolder _keyHolder;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<TokenVault> _logger;
 
     /// <summary>
@@ -34,15 +35,18 @@ internal sealed partial class TokenVault : ITokenVault
     /// </summary>
     /// <param name="context">The SQLite context.</param>
     /// <param name="keyHolder">The process-wide decrypted-key holder.</param>
+    /// <param name="timeProvider">The clock stamping each token's saved instant.</param>
     /// <param name="logger">The logger for the destructive reset path.</param>
     public TokenVault(
         PrCenterDbContext context,
         VaultKeyHolder keyHolder,
+        TimeProvider timeProvider,
         ILogger<TokenVault> logger
     )
     {
         _context = context;
         _keyHolder = keyHolder;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -141,6 +145,7 @@ internal sealed partial class TokenVault : ITokenVault
             CryptographicOperations.ZeroMemory(key);
         }
 
+        var savedAt = _timeProvider.GetUtcNow();
         var existing = await _context
             .OwnerTokens.FindAsync([owner], cancellationToken)
             .ConfigureAwait(false);
@@ -149,6 +154,7 @@ internal sealed partial class TokenVault : ITokenVault
             existing.Nonce = payload.Nonce;
             existing.Ciphertext = payload.Ciphertext;
             existing.Tag = payload.Tag;
+            existing.SavedAt = savedAt;
         }
         else
         {
@@ -159,6 +165,7 @@ internal sealed partial class TokenVault : ITokenVault
                     Nonce = payload.Nonce,
                     Ciphertext = payload.Ciphertext,
                     Tag = payload.Tag,
+                    SavedAt = savedAt,
                 }
             );
         }
@@ -234,6 +241,29 @@ internal sealed partial class TokenVault : ITokenVault
     }
 
     /// <inheritdoc />
+    /// <exception cref="ArgumentException"><paramref name="owner"/> is null or whitespace.</exception>
+    /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
+    public async Task DeleteTokenAsync(string owner, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
+
+        // Deleting secret material is a mutation of the token set, so it carries
+        // the same unlock requirement as storing one. The key itself is not
+        // needed -- only the proof that the password was entered -- so the copy
+        // is zeroed immediately rather than held across the delete.
+        CryptographicOperations.ZeroMemory(_keyHolder.GetKeyOrThrow());
+
+        await _context
+            .OwnerTokens.Where(entity => entity.Owner == owner)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // ExecuteDelete bypasses the change tracker, so a row tracked from an
+        // earlier store in this scope would otherwise linger as stale state.
+        DetachAll<OwnerToken>();
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> ListOwnersAsync(
         CancellationToken cancellationToken = default
     )
@@ -244,6 +274,20 @@ internal sealed partial class TokenVault : ITokenVault
         return await _context
             .OwnerTokens.AsNoTracking()
             .Select(entity => entity.Owner)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<OwnerTokenSummary>> ListOwnerTokensAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        // Plaintext owner and saved-at columns only -- the ciphertext is never
+        // projected, so this needs no key and works in every lock state.
+        return await _context
+            .OwnerTokens.AsNoTracking()
+            .Select(entity => new OwnerTokenSummary(entity.Owner, entity.SavedAt))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -270,11 +314,9 @@ internal sealed partial class TokenVault : ITokenVault
         // Detach only the vault entities -- not the whole tracker via
         // ChangeTracker.Clear() -- so a re-store in the same scope inserts
         // cleanly, without dropping unrelated pending changes on the shared
-        // scoped context. NOTE: this isolation is currently unprovable -- the
-        // context has no entity type besides OwnerToken/AppSecurity to stand in
-        // as the "unrelated" change (the old last-seen-marker test that did was
-        // removed with the marker). Add a substitute test when a third table
-        // (e.g. settings) lands, before any switch to ChangeTracker.Clear().
+        // scoped context. The AppSettings table is the "unrelated" entity that
+        // makes this provable: a pending settings change must survive a reset,
+        // which ChangeTracker.Clear() would discard.
         DetachAll<OwnerToken>();
         DetachAll<AppSecurity>();
         _keyHolder.Clear();

@@ -218,7 +218,12 @@ public sealed class AppLockTests : IDisposable
     private async Task SetPasswordAsync(string password)
     {
         await using var context = _database.CreateContext();
-        var vault = new TokenVault(context, new VaultKeyHolder(), NullLogger<TokenVault>.Instance);
+        var vault = new TokenVault(
+            context,
+            new VaultKeyHolder(),
+            TimeProvider.System,
+            NullLogger<TokenVault>.Instance
+        );
         await vault.SetPasswordAsync(password, CancellationToken.None);
     }
 

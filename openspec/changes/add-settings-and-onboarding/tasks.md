@@ -19,12 +19,12 @@ it drives, and the implementation task is done when that test passes.
 
 ## 3. Token deletion and saved-at (Persistence)
 
-- [ ] 3.1 Add `DeleteTokenAsync(string owner, ...)` to `ITokenVault` with XML docs naming the `VaultLockedException` and `ArgumentException` contracts.
-- [ ] 3.2 Extend `TokenVaultTests` (failing first) for deletion: deleting an owner with a token removes it from `ListOwnersAsync`; other owners' tokens and the security row survive; deleting an unknown owner succeeds silently; deleting while `Locked` and while `Uninitialized` throws `VaultLockedException` and removes nothing; a null/whitespace owner throws.
-- [ ] 3.3 Implement `TokenVault.DeleteTokenAsync` -- unlock gate first, then a single-row delete.
-- [ ] 3.4 Extend `TokenVaultTests` (failing first) for `SavedAt`: a store records the instant from the injected `TimeProvider`; a replace updates it; a row written without one reads back null.
-- [ ] 3.5 Inject `TimeProvider` into `TokenVault` and set `SavedAt` on every store path.
-- [ ] 3.6 Add a `ListOwnerTokensAsync`-style read returning owner plus `SavedAt` (no ciphertext, no decryption) on `ITokenVault`, with its own failing test first -- the settings table needs the instant and must not decrypt to get it.
+- [x] 3.1 Add `DeleteTokenAsync(string owner, ...)` to `ITokenVault` with XML docs naming the `VaultLockedException` and `ArgumentException` contracts.
+- [x] 3.2 Extend `TokenVaultTests` (failing first) for deletion: deleting an owner with a token removes it from `ListOwnersAsync`; other owners' tokens and the security row survive; deleting an unknown owner succeeds silently; deleting while `Locked` and while `Uninitialized` throws `VaultLockedException` and removes nothing; a null/whitespace owner throws.
+- [x] 3.3 Implement `TokenVault.DeleteTokenAsync` -- unlock gate first, then a single-row delete.
+- [x] 3.4 Extend `TokenVaultTests` (failing first) for `SavedAt`: a store records the instant from the injected `TimeProvider`; a replace updates it; a row written without one reads back null.
+- [x] 3.5 Inject `TimeProvider` into `TokenVault` and set `SavedAt` on every store path.
+- [x] 3.6 Add a `ListOwnerTokensAsync`-style read returning owner plus `SavedAt` (no ciphertext, no decryption) on `ITokenVault`, with its own failing test first -- the settings table needs the instant and must not decrypt to get it.
 
 ## 4. Core use cases
 
