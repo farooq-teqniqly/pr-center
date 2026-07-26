@@ -46,6 +46,19 @@ public interface ITokenVault
     Task<string?> GetTokenAsync(string owner, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes the stored token for one owner, removing that owner from the
+    /// enumerated owner list and therefore from the polled set. Deleting an owner
+    /// that has no stored token succeeds and removes nothing. This affects only
+    /// the named owner -- it is not a reset, and the app-security row is untouched.
+    /// </summary>
+    /// <param name="owner">The GitHub owner (org or account) whose token to delete.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the token is deleted.</returns>
+    /// <exception cref="ArgumentException"><paramref name="owner"/> is null or whitespace.</exception>
+    /// <exception cref="VaultLockedException">The vault is not unlocked.</exception>
+    Task DeleteTokenAsync(string owner, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Enumerates the owners that currently have a stored token. This is the
     /// authoritative owner list for polling. It reads only the plaintext owner
     /// key column, decrypts nothing, and works regardless of lock state.
@@ -53,6 +66,19 @@ public interface ITokenVault
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The owners with a stored token; empty when none are stored.</returns>
     Task<IReadOnlyList<string>> ListOwnersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Enumerates the owners that currently have a stored token along with when
+    /// each token was saved. Like <see cref="ListOwnersAsync"/> it reads only
+    /// plaintext columns, decrypts nothing, and works regardless of lock state --
+    /// the settings screen needs the saved instant and must not decrypt a token
+    /// to get it.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>One summary per owner with a stored token; empty when none are stored.</returns>
+    Task<IReadOnlyList<OwnerTokenSummary>> ListOwnerTokensAsync(
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Wipes the vault: deletes every stored owner token and the app-security

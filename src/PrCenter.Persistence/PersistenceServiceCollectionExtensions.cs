@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PrCenter.Core.Ports;
 
 namespace PrCenter.Persistence;
@@ -13,8 +14,8 @@ public static class PersistenceServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the SQLite context and the persistence adapter's
-    /// implementations of <see cref="ITokenVault"/> and <see cref="IAppLock"/>
-    /// (with its singleton key holder).
+    /// implementations of <see cref="ITokenVault"/>, <see cref="IAppLock"/>
+    /// (with its singleton key holder), and <see cref="IAppSettingsStore"/>.
     /// </summary>
     /// <param name="services">The service collection to add the adapter to.</param>
     /// <param name="connectionString">The SQLite connection string.</param>
@@ -46,6 +47,11 @@ public static class PersistenceServiceCollectionExtensions
                 options.EnableDetailedErrors();
             }
         });
+        // TokenVault stamps SavedAt from the clock, so the adapter registers it
+        // rather than relying on a host that happens to call another extension
+        // first. TryAdd, not Add: the queue services register the same clock, and
+        // whichever runs second must not add a duplicate.
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ITokenVault, TokenVault>();
 
         // The decrypted key is shared across circuits for the life of the
@@ -53,6 +59,10 @@ public static class PersistenceServiceCollectionExtensions
         // scoped context, so it is scoped.
         services.AddSingleton<VaultKeyHolder>();
         services.AddScoped<IAppLock, AppLock>();
+
+        // Settings touch no vault key, so this one is scoped only because it
+        // reads the scoped context.
+        services.AddScoped<IAppSettingsStore, AppSettingsStore>();
         return services;
     }
 }

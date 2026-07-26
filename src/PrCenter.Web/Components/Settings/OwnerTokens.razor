@@ -1,0 +1,283 @@
+@using System.Globalization
+@using PrCenter.Core.Locking
+@using PrCenter.Core.Ports
+@using PrCenter.Core.Queue
+@using PrCenter.Core.Settings
+@implements IDisposable
+@inject ILogger<OwnerTokens> Logger
+@inject ITokenVault TokenVault
+@inject GetQueue GetQueue
+@inject QueueSnapshotHolder Holder
+@inject SaveOwnerToken SaveOwnerToken
+@inject RemoveOwner RemoveOwner
+
+@{
+    var statuses = GetQueue.Execute()?.OwnerStatuses ?? [];
+}
+
+<table class="table align-middle">
+    <thead>
+        <tr>
+            <th scope="col">Owner</th>
+            <th scope="col">Token saved</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var summary in _owners)
+        {
+            <tr data-testid="owner-row" data-owner="@summary.Owner">
+                <td>@summary.Owner</td>
+                <td data-testid="owner-saved-at">@SavedAtText(summary.SavedAt)</td>
+                <td data-testid="owner-status">@StatusText(statuses, summary.Owner)</td>
+                <td class="text-end">
+                    @if (IsConfirming(summary.Owner))
+                    {
+                        <div class="border border-danger rounded p-2 text-start"
+                             data-testid="delete-confirmation">
+                            <p class="mb-2 small">
+                                Deleting removes the stored token for
+                                <strong>@summary.Owner</strong> and stops polling it. Type
+                                <strong>@summary.Owner</strong> to confirm.
+                            </p>
+
+                            <label for="delete-confirm-name" class="form-label visually-hidden">
+                                Type @summary.Owner to confirm
+                            </label>
+
+                            <input id="delete-confirm-name"
+                                   type="text"
+                                   class="form-control form-control-sm mb-2"
+                                   data-testid="delete-confirm-input"
+                                   @bind="_typedOwner"
+                                   @bind:event="onchange" />
+
+                            @if (_confirmationMismatched)
+                            {
+                                <div class="alert alert-danger py-1 px-2 mb-2 small"
+                                     role="alert"
+                                     data-testid="delete-mismatch">
+                                    Type @summary.Owner exactly to confirm the deletion.
+                                </div>
+                            }
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    data-testid="delete-cancel"
+                                    @onclick="CancelDelete">
+                                Cancel
+                            </button>
+                            <button type="button"
+                                    class="btn btn-danger btn-sm"
+                                    data-testid="delete-confirm"
+                                    @onclick="() => ConfirmDeleteAsync(summary.Owner)">
+                                Delete @summary.Owner
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                data-testid="delete-owner"
+                                @onclick="() => BeginDelete(summary.Owner)">
+                            Delete
+                        </button>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="row g-2 align-items-end">
+    <div class="col-sm-4">
+        <label for="new-owner" class="form-label">Owner</label>
+        <input id="new-owner"
+               type="text"
+               class="form-control"
+               data-testid="new-owner"
+               @bind="_owner"
+               @bind:event="onchange" />
+    </div>
+    <div class="col-sm-6">
+        <label for="new-token" class="form-label">Personal access token</label>
+        <input id="new-token"
+               type="password"
+               class="form-control"
+               data-testid="new-token"
+               @bind="_token"
+               @bind:event="onchange" />
+    </div>
+    <div class="col-sm-2 d-grid">
+        <button type="button"
+                class="btn btn-primary"
+                data-testid="save-owner"
+                @onclick="SaveAsync">
+            Save
+        </button>
+    </div>
+</div>
+
+<p class="form-text">
+    Saving an owner that already has a token replaces it. The token is not checked
+    against GitHub here -- whether it works shows up as that owner's status after
+    the next poll.
+</p>
+
+@if (_message is not null)
+{
+    <div class="alert alert-danger mb-0" role="alert" data-testid="owner-token-error">
+        @_message
+    </div>
+}
+
+@code {
+    private const int MaxOwnerLength = 255;
+    private const int MaxTokenLength = 512;
+
+    private IReadOnlyList<OwnerTokenSummary> _owners = [];
+    private string _owner = string.Empty;
+    private string _token = string.Empty;
+    private string? _message;
+    private string? _pendingDeleteOwner;
+    private string _typedOwner = string.Empty;
+    private bool _confirmationMismatched;
+
+    /// <inheritdoc />
+    public void Dispose() => Holder.Changed -= OnSnapshotChanged;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Holder.Changed += OnSnapshotChanged;
+        await ReloadOwnersAsync();
+    }
+
+    private static string SavedAtText(DateTimeOffset? savedAt) =>
+        savedAt is { } at
+            ? at.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture)
+            : "Unknown";
+
+    // An owner with no status in the current snapshot has not been fetched yet --
+    // a token saved since the last publish, or no publish at all. That is not a
+    // failure, and rendering it as one would blame the token for the wait.
+    private static string StatusText(IReadOnlyList<OwnerStatus> statuses, string owner)
+    {
+        var status = statuses.FirstOrDefault(s =>
+            string.Equals(s.Owner, owner, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (status is null)
+        {
+            return "Not yet polled";
+        }
+
+        var label = status.Status switch
+        {
+            OwnerFetchStatus.Ok => "OK",
+            OwnerFetchStatus.MisconfiguredToken => "Token rejected",
+            _ => "Fetch failed",
+        };
+
+        return status.Detail is null ? label : $"{label} - {status.Detail}";
+    }
+
+    private async Task SaveAsync()
+    {
+        // Trim both fields once and use the trimmed values for validation and for
+        // storage alike: a token pasted with a trailing newline is valid-looking
+        // whitespace that GitHub would reject a poll later, with no clue why.
+        var owner = _owner.Trim();
+        var token = _token.Trim();
+
+        _message = Rejection(owner, token);
+        if (_message is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            await SaveOwnerToken.SaveAsync(owner, token);
+        }
+        catch (VaultLockedException ex)
+        {
+            LogOwnerTokenWriteFailed(Logger, ex);
+            _message = "The vault is locked. Unlock PR-Center and try again.";
+            return;
+        }
+
+        _owner = string.Empty;
+        _token = string.Empty;
+        await ReloadOwnersAsync();
+    }
+
+    private static string? Rejection(string owner, string token) =>
+        (owner, token) switch
+        {
+            { owner.Length: 0 } => "Enter an owner name.",
+            { owner.Length: > MaxOwnerLength } =>
+                $"An owner name cannot be longer than {MaxOwnerLength} characters.",
+            _ when string.IsNullOrWhiteSpace(token) => "Enter a personal access token.",
+            { token.Length: > MaxTokenLength } =>
+                $"A personal access token cannot be longer than {MaxTokenLength} characters.",
+            _ => null,
+        };
+
+    private bool IsConfirming(string owner) =>
+        string.Equals(_pendingDeleteOwner, owner, StringComparison.Ordinal);
+
+    // Only one row confirms at a time, and starting on a new row abandons any
+    // half-typed confirmation on the old one -- carrying the typed text across
+    // rows is how a click on the wrong row gets confirmed by accident.
+    private void BeginDelete(string owner)
+    {
+        _message = null;
+        _pendingDeleteOwner = owner;
+        _typedOwner = string.Empty;
+        _confirmationMismatched = false;
+    }
+
+    private void CancelDelete()
+    {
+        _pendingDeleteOwner = null;
+        _typedOwner = string.Empty;
+        _confirmationMismatched = false;
+    }
+
+    // The typed name must match the row being confirmed, not merely name some
+    // stored owner: an exact match is what proves the user meant this row.
+    private async Task ConfirmDeleteAsync(string owner)
+    {
+        if (!string.Equals(_typedOwner.Trim(), owner, StringComparison.Ordinal))
+        {
+            _confirmationMismatched = true;
+            return;
+        }
+
+        // The confirmation stays open until the delete actually succeeds. Clearing
+        // it first would dismiss the only UI that explains what was being attempted
+        // while the token is in fact still stored.
+        try
+        {
+            await RemoveOwner.RemoveAsync(owner);
+        }
+        catch (VaultLockedException ex)
+        {
+            LogOwnerTokenWriteFailed(Logger, ex);
+            _message = "The vault is locked. Unlock PR-Center and try again.";
+            return;
+        }
+
+        // Clear the message too: a retry after a locked-vault failure succeeds
+        // with the banner from the failed attempt still on screen otherwise.
+        _message = null;
+        CancelDelete();
+        await ReloadOwnersAsync();
+    }
+
+    private async Task ReloadOwnersAsync() => _owners = await TokenVault.ListOwnerTokensAsync();
+
+    private void OnSnapshotChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+}

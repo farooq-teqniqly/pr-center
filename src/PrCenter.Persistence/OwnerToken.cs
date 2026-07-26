@@ -18,4 +18,13 @@ internal sealed class OwnerToken
 
     /// <summary>Gets or sets the AES-GCM authentication tag for the ciphertext.</summary>
     public byte[] Tag { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the instant this token was stored, set on every store
+    /// including a replacement. Null for a row written before the instant was
+    /// recorded -- read as "not recorded", never backfilled with a substitute,
+    /// since a wrong timestamp here would misinform the reader deciding whether a
+    /// token is stale. Readable without decrypting the token.
+    /// </summary>
+    public DateTimeOffset? SavedAt { get; set; }
 }

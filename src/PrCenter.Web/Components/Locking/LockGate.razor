@@ -8,21 +8,56 @@
 }
 else if (_state == AppLockState.Locked)
 {
-    <UnlockCard OnUnlocked="ReloadStateAsync" OnReset="ReloadStateAsync" />
+    @if (Locked is null)
+    {
+        <UnlockCard OnUnlocked="ReloadStateAsync" OnReset="ReloadStateAsync" />
+    }
+    else
+    {
+        @Locked(_reevaluate)
+    }
 }
 else if (_state == AppLockState.Uninitialized)
 {
-    <UninitializedPlaceholder />
+    @if (Uninitialized is null)
+    {
+        <UninitializedPlaceholder />
+    }
+    else
+    {
+        @Uninitialized(_reevaluate)
+    }
 }
 
 @code {
     private AppLockState? _state;
+    private EventCallback _reevaluate;
 
-    /// <summary>The inbox, rendered only when the app is unlocked.</summary>
+    /// <summary>The gated content, rendered only when the app is unlocked.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    protected override async Task OnInitializedAsync() => await ReloadStateAsync();
+    /// <summary>
+    /// The screen for the Locked state, defaulting to the unlock card. The
+    /// context is a callback that re-reads the lock state, so supplied content
+    /// that changes that state can move the gate on without a page reload.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<EventCallback>? Locked { get; set; }
+
+    /// <summary>
+    /// The screen for the Uninitialized state, defaulting to the placeholder
+    /// directing the user to settings. The context is the same re-read callback
+    /// the Locked screen receives.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<EventCallback>? Uninitialized { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _reevaluate = EventCallback.Factory.Create(this, ReloadStateAsync);
+        await ReloadStateAsync();
+    }
 
     private async Task ReloadStateAsync()
     {

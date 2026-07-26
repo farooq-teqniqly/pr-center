@@ -19,7 +19,7 @@ builder
     .ConfigureHttpClient(client => client.BaseAddress = new Uri(gitHubBaseAddress))
     .AddStandardResilienceHandler();
 builder.Services.AddPersistenceAdapter(connectionString, builder.Environment.IsDevelopment());
-builder.Services.AddQueueServices(builder.Configuration);
+builder.Services.AddQueueServices();
 
 var app = builder.Build();
 

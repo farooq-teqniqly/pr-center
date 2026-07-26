@@ -11,6 +11,7 @@ namespace PrCenter.Web.Tests.Locking;
 public sealed class UnlockCardTests : BunitContext
 {
     private const string Password = "correct horse";
+    private const string ConfirmationWord = "RESET";
 
     [Fact]
     public void UnlockCard_WithCorrectPassword_InvokesOnUnlocked()
@@ -42,7 +43,7 @@ public sealed class UnlockCardTests : BunitContext
     }
 
     [Fact]
-    public void UnlockCard_WhenResetInvoked_ResetsTheVaultAndInvokesOnReset()
+    public void UnlockCard_WhenResetIsInvoked_ShowsTheConfirmationStepAndWipesNothing()
     {
         // Arrange
         var vault = Substitute.For<ITokenVault>();
@@ -53,8 +54,88 @@ public sealed class UnlockCardTests : BunitContext
         cut.Find("[data-testid=reset-vault]").Click();
 
         // Assert
+        var step = cut.Find("[data-testid=reset-confirmation]").TextContent;
+        Assert.Contains("app password", step, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("token", step, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(vault.ReceivedCalls());
+        Assert.False(reset);
+    }
+
+    [Fact]
+    public void UnlockCard_WithTheConfirmationWord_ResetsTheVaultAndInvokesOnReset()
+    {
+        // Arrange
+        var vault = Substitute.For<ITokenVault>();
+        var reset = false;
+        var cut = RenderCard(Substitute.For<IAppLock>(), vault, onReset: () => reset = true);
+
+        // Act
+        ConfirmReset(cut, ConfirmationWord);
+
+        // Assert
         vault.Received(1).ResetVaultAsync(Arg.Any<CancellationToken>());
         Assert.True(reset);
+    }
+
+    [Theory]
+    [InlineData(" RESET")]
+    [InlineData("RESET ")]
+    [InlineData("  RESET\n")]
+    public void UnlockCard_WithTheConfirmationWordAndSurroundingWhitespace_ResetsTheVault(
+        string typed
+    )
+    {
+        // Arrange
+        var vault = Substitute.For<ITokenVault>();
+        var cut = RenderCard(Substitute.For<IAppLock>(), vault);
+
+        // Act
+        ConfirmReset(cut, typed);
+
+        // Assert
+        vault.Received(1).ResetVaultAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("reset")]
+    [InlineData("RESE")]
+    [InlineData("RESET ME")]
+    public void UnlockCard_WithAMismatchedConfirmationWord_WipesNothingAndStaysOnTheStep(
+        string typed
+    )
+    {
+        // Arrange
+        var vault = Substitute.For<ITokenVault>();
+        var reset = false;
+        var cut = RenderCard(Substitute.For<IAppLock>(), vault, onReset: () => reset = true);
+
+        // Act
+        ConfirmReset(cut, typed);
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=reset-confirmation]"));
+        Assert.Empty(vault.ReceivedCalls());
+        Assert.False(reset);
+    }
+
+    [Fact]
+    public void UnlockCard_WhenTheResetIsCancelled_WipesNothingAndReturnsToTheUnlockState()
+    {
+        // Arrange
+        var vault = Substitute.For<ITokenVault>();
+        var reset = false;
+        var cut = RenderCard(Substitute.For<IAppLock>(), vault, onReset: () => reset = true);
+        cut.Find("[data-testid=reset-vault]").Click();
+
+        // Act
+        cut.Find("[data-testid=reset-cancel]").Click();
+
+        // Assert
+        Assert.Empty(cut.FindAll("[data-testid=reset-confirmation]"));
+        Assert.NotNull(cut.Find("[data-testid=reset-vault]"));
+        Assert.Empty(vault.ReceivedCalls());
+        Assert.False(reset);
     }
 
     [Fact]
@@ -81,6 +162,13 @@ public sealed class UnlockCardTests : BunitContext
         var appLock = Substitute.For<IAppLock>();
         appLock.UnlockAsync(password, Arg.Any<CancellationToken>()).Returns(result);
         return appLock;
+    }
+
+    private static void ConfirmReset(IRenderedComponent<UnlockCard> cut, string typed)
+    {
+        cut.Find("[data-testid=reset-vault]").Click();
+        cut.Find("[data-testid=reset-confirm-word]").Change(typed);
+        cut.Find("[data-testid=reset-confirm]").Click();
     }
 
     private static void Submit(IRenderedComponent<UnlockCard> cut, string password)

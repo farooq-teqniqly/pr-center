@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using PrCenter.Core.Ports;
 using PrCenter.Persistence;
 
 namespace PrCenter.Persistence.Tests;
@@ -64,6 +65,26 @@ public sealed class PersistenceServiceCollectionExtensionsTests
         // Assert
         Assert.False(coreOptions.IsSensitiveDataLoggingEnabled);
         Assert.False(coreOptions.DetailedErrorsEnabled);
+    }
+
+    [Fact]
+    public void AddPersistenceAdapter_WithOnlyHostLogging_ResolvesTheVault()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Logging is the one thing every host registers before any adapter; the
+        // point of this test is that the adapter needs nothing beyond it.
+        services.AddLogging();
+        services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        // Act
+        var vault = scope.ServiceProvider.GetRequiredService<ITokenVault>();
+
+        // Assert
+        Assert.NotNull(vault);
     }
 
     [Fact]

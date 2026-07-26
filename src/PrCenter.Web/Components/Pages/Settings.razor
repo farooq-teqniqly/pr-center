@@ -1,0 +1,34 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using PrCenter.Web.Components.Locking
+@using PrCenter.Web.Components.Settings
+
+<PageTitle>Settings - PR-Center</PageTitle>
+
+<LockGate>
+    <Uninitialized Context="onSetupCompleted">
+        <SetupCard OnCompleted="onSetupCompleted" />
+    </Uninitialized>
+    <Locked Context="onUnlocked">
+        <div class="text-center mx-auto py-5" style="max-width: 32rem;" data-testid="unlock-first">
+            <h1 class="h4 mb-3">Settings are locked</h1>
+            <p class="text-body-secondary mb-0">
+                Unlock PR-Center with your app password to manage owner tokens and
+                the poll interval. <a href="/">Go to the inbox to unlock</a>.
+            </p>
+        </div>
+    </Locked>
+    <ChildContent>
+        <h1 class="h4 mb-4">Settings</h1>
+
+        <section class="mb-5" data-testid="owner-tokens">
+            <h2 class="h5 mb-3">Owner tokens</h2>
+            <OwnerTokens />
+        </section>
+
+        <section data-testid="poll-interval">
+            <h2 class="h5 mb-3">Poll interval</h2>
+            <PollIntervalControl />
+        </section>
+    </ChildContent>
+</LockGate>

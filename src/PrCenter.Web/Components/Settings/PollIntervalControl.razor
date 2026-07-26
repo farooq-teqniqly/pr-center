@@ -1,0 +1,79 @@
+@using PrCenter.Core.Ports
+@using PrCenter.Core.Settings
+@inject IAppSettingsStore SettingsStore
+@inject SavePollInterval SavePollInterval
+
+<p class="mb-2" data-testid="current-interval">
+    PR-Center polls every @Describe(_current.Value).
+</p>
+
+<div class="row g-2 align-items-end">
+    <div class="col-sm-4">
+        <label for="interval-minutes" class="form-label">Minutes between polls</label>
+        <input id="interval-minutes"
+               type="number"
+               class="form-control"
+               data-testid="interval-minutes"
+               @bind="_minutes"
+               @bind:event="onchange" />
+    </div>
+    <div class="col-sm-2 d-grid">
+        <button type="button"
+                class="btn btn-primary"
+                data-testid="save-interval"
+                @onclick="SaveAsync">
+            Save
+        </button>
+    </div>
+</div>
+
+<p class="form-text" data-testid="interval-range">@RangeText</p>
+
+@if (_message is not null)
+{
+    <div class="alert alert-danger mb-0" role="alert" data-testid="interval-error">
+        @_message
+    </div>
+}
+
+@code {
+    private const string RangeText =
+        "Choose an interval between 5 minutes and 24 hours (5 to 1440 minutes).";
+
+    private PollInterval _current = PollInterval.Default;
+    private int _minutes;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _current = await SettingsStore.GetPollIntervalAsync();
+        _minutes = (int)_current.Value.TotalMinutes;
+    }
+
+    // The minutes branch never reads "1 minute" because the minimum is 5, but the
+    // hours branch starts exactly at 1.
+    private static string Describe(TimeSpan interval)
+    {
+        if (interval.TotalMinutes < 60)
+        {
+            return $"{(int)interval.TotalMinutes} minutes";
+        }
+
+        return interval.TotalHours is 1 ? "1 hour" : $"{interval.TotalHours:0.##} hours";
+    }
+
+    private async Task SaveAsync()
+    {
+        var requested = TimeSpan.FromMinutes(_minutes);
+        if (requested < PollInterval.Min || requested > PollInterval.Max)
+        {
+            _message = RangeText;
+            return;
+        }
+
+        _message = null;
+        var interval = new PollInterval(requested);
+        await SavePollInterval.SaveAsync(interval);
+        _current = interval;
+    }
+}

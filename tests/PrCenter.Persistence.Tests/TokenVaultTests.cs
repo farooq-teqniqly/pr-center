@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using PrCenter.Core.Locking;
 using PrCenter.Persistence;
 
@@ -9,6 +10,8 @@ namespace PrCenter.Persistence.Tests;
 
 public sealed class TokenVaultTests : IDisposable
 {
+    private static readonly DateTimeOffset StoredAt = new(2026, 7, 26, 9, 30, 0, TimeSpan.Zero);
+
     private readonly SqliteTestDatabase _database = new();
 
     [Fact]
@@ -325,8 +328,238 @@ public sealed class TokenVaultTests : IDisposable
         Assert.False(keyHolder.HasKey);
     }
 
-    private static TokenVault CreateVault(PrCenterDbContext context, VaultKeyHolder keyHolder) =>
-        new(context, keyHolder, NullLogger<TokenVault>.Instance);
+    [Fact]
+    public async Task DeleteTokenAsync_OwnerWithToken_RemovesItFromTheOwnerList()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
+
+        // Act
+        await vault.DeleteTokenAsync("PerfectServe", CancellationToken.None);
+
+        // Assert
+        var owners = await vault.ListOwnersAsync(CancellationToken.None);
+        Assert.Empty(owners);
+    }
+
+    [Fact]
+    public async Task DeleteTokenAsync_OneOfSeveralOwners_LeavesTheOthersIntact()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
+        await vault.StoreTokenAsync("ps-unite", "github_pat_def", CancellationToken.None);
+
+        // Act
+        await vault.DeleteTokenAsync("PerfectServe", CancellationToken.None);
+
+        // Assert
+        var owners = await vault.ListOwnersAsync(CancellationToken.None);
+        Assert.Equal(["ps-unite"], owners);
+    }
+
+    [Fact]
+    public async Task DeleteTokenAsync_OwnerWithToken_LeavesTheSecurityRowIntact()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+        SeedSecurityAndToken(context);
+
+        // Act
+        await vault.DeleteTokenAsync("PerfectServe", CancellationToken.None);
+
+        // Assert
+        await using var readContext = _database.CreateContext();
+        Assert.True(await readContext.AppSecurity.AsNoTracking().AnyAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task DeleteTokenAsync_UnknownOwner_SucceedsAndRemovesNothing()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
+
+        // Act
+        await vault.DeleteTokenAsync("never-stored", CancellationToken.None);
+
+        // Assert
+        var owners = await vault.ListOwnersAsync(CancellationToken.None);
+        Assert.Equal(["PerfectServe"], owners);
+    }
+
+    [Fact]
+    public async Task DeleteTokenAsync_WhileLocked_ThrowsVaultLockedAndRemovesNothing()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        SeedSecurityAndToken(context);
+        var vault = CreateVault(context, new VaultKeyHolder());
+
+        // Act
+        await Assert.ThrowsAsync<VaultLockedException>(() =>
+            vault.DeleteTokenAsync("PerfectServe", CancellationToken.None)
+        );
+
+        // Assert
+        await using var readContext = _database.CreateContext();
+        Assert.Equal(
+            1,
+            await readContext.OwnerTokens.AsNoTracking().CountAsync(CancellationToken.None)
+        );
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteTokenAsync_NullOrWhitespaceOwner_Throws(string? owner)
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+
+        // Act / Assert
+        await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+            vault.DeleteTokenAsync(owner!, CancellationToken.None)
+        );
+    }
+
+    [Fact]
+    public async Task StoreTokenAsync_NewOwner_RecordsTheSavedInstant()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var clock = new FakeTimeProvider(StoredAt);
+        var vault = CreateVault(context, Unlocked(), clock);
+
+        // Act
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
+
+        // Assert
+        var summaries = await vault.ListOwnerTokensAsync(CancellationToken.None);
+        Assert.Equal(StoredAt, Assert.Single(summaries).SavedAt);
+    }
+
+    [Fact]
+    public async Task StoreTokenAsync_ReplacingAToken_UpdatesTheSavedInstant()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var clock = new FakeTimeProvider(StoredAt);
+        var vault = CreateVault(context, Unlocked(), clock);
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
+        clock.Advance(TimeSpan.FromDays(3));
+
+        // Act
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_def", CancellationToken.None);
+
+        // Assert
+        var summaries = await vault.ListOwnerTokensAsync(CancellationToken.None);
+        Assert.Equal(StoredAt.AddDays(3), Assert.Single(summaries).SavedAt);
+    }
+
+    [Fact]
+    public async Task ListOwnerTokensAsync_RowWrittenWithoutAnInstant_ReportsNoSavedInstant()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        SeedSecurityAndToken(context);
+        var vault = CreateVault(context, Unlocked());
+
+        // Act
+        var summaries = await vault.ListOwnerTokensAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Null(Assert.Single(summaries).SavedAt);
+    }
+
+    [Fact]
+    public async Task ListOwnerTokensAsync_SeveralOwners_ReturnsOneSummaryPerOwner()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+        await vault.StoreTokenAsync("PerfectServe", "github_pat_abc", CancellationToken.None);
+        await vault.StoreTokenAsync("ps-unite", "github_pat_def", CancellationToken.None);
+
+        // Act
+        var summaries = await vault.ListOwnerTokensAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(["PerfectServe", "ps-unite"], summaries.Select(s => s.Owner).Order());
+    }
+
+    [Fact]
+    public async Task ListOwnerTokensAsync_WhileLocked_ReturnsSummariesWithoutDecrypting()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        SeedSecurityAndToken(context);
+        var keyHolder = new VaultKeyHolder();
+        var vault = CreateVault(context, keyHolder);
+
+        // Act
+        var summaries = await vault.ListOwnerTokensAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal("PerfectServe", Assert.Single(summaries).Owner);
+        Assert.False(keyHolder.HasKey);
+    }
+
+    [Fact]
+    public async Task ListOwnerTokensAsync_NoStoredTokens_ReturnsEmpty()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var vault = CreateVault(context, Unlocked());
+
+        // Act
+        var summaries = await vault.ListOwnerTokensAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Empty(summaries);
+    }
+
+    [Fact]
+    public async Task ResetVaultAsync_WithAnUnrelatedPendingChange_LeavesItTracked()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        SeedSecurityAndToken(context);
+        var vault = CreateVault(context, Unlocked());
+        context.AppSettings.Add(
+            new AppSetting { Id = AppSetting.SingletonId, PollIntervalSeconds = 900 }
+        );
+
+        // Act
+        await vault.ResetVaultAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        // Assert
+        await using var readContext = _database.CreateContext();
+        var setting = await readContext
+            .AppSettings.AsNoTracking()
+            .SingleAsync(CancellationToken.None);
+        Assert.Equal(900, setting.PollIntervalSeconds);
+    }
+
+    private static TokenVault CreateVault(
+        PrCenterDbContext context,
+        VaultKeyHolder keyHolder,
+        TimeProvider? timeProvider = null
+    ) =>
+        new(
+            context,
+            keyHolder,
+            timeProvider ?? new FakeTimeProvider(StoredAt),
+            NullLogger<TokenVault>.Instance
+        );
 
     private static VaultKeyHolder Unlocked()
     {

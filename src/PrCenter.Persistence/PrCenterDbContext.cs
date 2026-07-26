@@ -3,9 +3,8 @@ using Microsoft.EntityFrameworkCore;
 namespace PrCenter.Persistence;
 
 /// <summary>
-/// EF Core context for PR-Center's local SQLite state. Holds the encrypted owner
-/// tokens and the single app-security row; settings schema arrives with its own
-/// change.
+/// EF Core context for PR-Center's local SQLite state: the encrypted owner
+/// tokens, the single app-security row, and the single app-settings row.
 /// </summary>
 internal sealed class PrCenterDbContext : DbContext
 {
@@ -22,6 +21,9 @@ internal sealed class PrCenterDbContext : DbContext
     /// <summary>Gets the single app-security row establishing the vault.</summary>
     public DbSet<AppSecurity> AppSecurity => Set<AppSecurity>();
 
+    /// <summary>Gets the single app-settings row holding the poll interval.</summary>
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +36,18 @@ internal sealed class PrCenterDbContext : DbContext
             token.Property(entity => entity.Nonce).IsRequired();
             token.Property(entity => entity.Ciphertext).IsRequired();
             token.Property(entity => entity.Tag).IsRequired();
+            token.Property(entity => entity.SavedAt);
+        });
+
+        modelBuilder.Entity<AppSetting>(setting =>
+        {
+            setting.HasKey(entity => entity.Id);
+
+            // Single-row table, same pattern as AppSecurity: the id is always 1
+            // and assigned explicitly, so "a row exists" means "an interval has
+            // been stored" and its absence means the default.
+            setting.Property(entity => entity.Id).ValueGeneratedNever();
+            setting.Property(entity => entity.PollIntervalSeconds).IsRequired();
         });
 
         modelBuilder.Entity<AppSecurity>(security =>
