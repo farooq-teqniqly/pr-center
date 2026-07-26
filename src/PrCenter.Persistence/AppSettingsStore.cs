@@ -12,6 +12,9 @@ namespace PrCenter.Persistence;
 /// </summary>
 internal sealed partial class AppSettingsStore : IAppSettingsStore
 {
+    private static readonly long MinSeconds = (long)PollInterval.Min.TotalSeconds;
+    private static readonly long MaxSeconds = (long)PollInterval.Max.TotalSeconds;
+
     private readonly PrCenterDbContext _context;
     private readonly ILogger<AppSettingsStore> _logger;
 
@@ -43,14 +46,17 @@ internal sealed partial class AppSettingsStore : IAppSettingsStore
             return PollInterval.Default;
         }
 
-        var stored = TimeSpan.FromSeconds(storedSeconds.Value);
-        var clamped = PollInterval.Clamp(stored);
-        if (clamped.Value != stored)
+        // Clamp in the column's own units before building a TimeSpan: the column is
+        // a long, and TimeSpan.FromSeconds throws for a magnitude a long can hold
+        // but a TimeSpan cannot. Converting first would put that throw ahead of the
+        // clamp, which is the one thing this read path must never do.
+        var storedInRange = Math.Clamp(storedSeconds.Value, MinSeconds, MaxSeconds);
+        if (storedInRange != storedSeconds.Value)
         {
-            LogIntervalClamped(stored, clamped.Value);
+            LogIntervalClamped(storedSeconds.Value, storedInRange);
         }
 
-        return clamped;
+        return new PollInterval(TimeSpan.FromSeconds(storedInRange));
     }
 
     /// <inheritdoc />

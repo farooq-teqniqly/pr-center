@@ -83,6 +83,8 @@ public sealed class AppSettingsStoreTests : IDisposable
     [InlineData(0, 5 * 60)]
     [InlineData(-30, 5 * 60)]
     [InlineData(48 * 60 * 60, 24 * 60 * 60)]
+    [InlineData(long.MaxValue, 24 * 60 * 60)]
+    [InlineData(long.MinValue, 5 * 60)]
     public async Task GetPollIntervalAsync_OutOfRangeStoredValue_ReturnsTheClampedValue(
         long storedSeconds,
         long expectedSeconds

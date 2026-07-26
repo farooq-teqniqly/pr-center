@@ -7,7 +7,7 @@ internal sealed partial class AppSettingsStore
     [LoggerMessage(
         EventId = 1,
         Level = LogLevel.Warning,
-        Message = "Stored poll interval {Stored} is outside the allowed range; using {Clamped} instead. Set a valid interval on the settings screen."
+        Message = "Stored poll interval {StoredSeconds}s is outside the allowed range; using {ClampedSeconds}s instead. Set a valid interval on the settings screen."
     )]
-    private partial void LogIntervalClamped(TimeSpan stored, TimeSpan clamped);
+    private partial void LogIntervalClamped(long storedSeconds, long clampedSeconds);
 }
