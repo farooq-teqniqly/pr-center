@@ -44,11 +44,11 @@ it drives, and the implementation task is done when that test passes.
 
 ## 6. Lock gate generalization and the settings route
 
-- [ ] 6.1 Write failing bUnit tests for `LockGate`: supplied `Locked`/`Uninitialized` fragments render for those states; when unsupplied, the unlock card and placeholder still render (the inbox regression check); `Unlocked` renders `ChildContent` either way.
-- [ ] 6.2 Add optional `Locked` and `Uninitialized` `RenderFragment` parameters to `LockGate.razor`, defaulting to the current components. `Inbox.razor` stays untouched.
-- [ ] 6.3 Write failing bUnit tests for the `/settings` page's three gated views: Uninitialized renders only the setup card; Locked renders the unlock-first message and link with no token, interval, or reset control; Unlocked renders the tokens table and interval control.
-- [ ] 6.4 Add `Components/Pages/Settings.razor` at `/settings` wrapping its three views in `LockGate`, and a nav entry in `NavMenu.razor`.
-- [ ] 6.5 Point `UninitializedPlaceholder.razor` at `/settings` with a real link; assert the link target in its test.
+- [x] 6.1 Write failing bUnit tests for `LockGate`: supplied `Locked`/`Uninitialized` fragments render for those states; when unsupplied, the unlock card and placeholder still render (the inbox regression check); `Unlocked` renders `ChildContent` either way.
+- [x] 6.2 Add optional `Locked` and `Uninitialized` `RenderFragment` parameters to `LockGate.razor`, defaulting to the current components. `Inbox.razor` stays untouched.
+- [x] 6.3 Write failing bUnit tests for the `/settings` page's three gated views: Uninitialized renders only the setup card; Locked renders the unlock-first message and link with no token, interval, or reset control; Unlocked renders the tokens table and interval control.
+- [x] 6.4 Add `Components/Pages/Settings.razor` at `/settings` wrapping its three views in `LockGate`, and a nav entry in `NavMenu.razor`.
+- [x] 6.5 Point `UninitializedPlaceholder.razor` at `/settings` with a real link; assert the link target in its test.
 
 ## 7. First-run setup card
 
