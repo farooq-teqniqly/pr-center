@@ -1,0 +1,170 @@
+@using System.Globalization
+@using PrCenter.Core.Ports
+@using PrCenter.Core.Queue
+@using PrCenter.Core.Settings
+@implements IDisposable
+@inject ITokenVault TokenVault
+@inject GetQueue GetQueue
+@inject QueueSnapshotHolder Holder
+@inject SaveOwnerToken SaveOwnerToken
+@inject RemoveOwner RemoveOwner
+
+@{
+    var statuses = GetQueue.Execute()?.OwnerStatuses ?? [];
+}
+
+<table class="table align-middle">
+    <thead>
+        <tr>
+            <th scope="col">Owner</th>
+            <th scope="col">Token saved</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var summary in _owners)
+        {
+            <tr data-testid="owner-row" data-owner="@summary.Owner">
+                <td>@summary.Owner</td>
+                <td data-testid="owner-saved-at">@SavedAtText(summary.SavedAt)</td>
+                <td data-testid="owner-status">@StatusText(statuses, summary.Owner)</td>
+                <td class="text-end">
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-testid="delete-owner"
+                            @onclick="() => DeleteAsync(summary.Owner)">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="row g-2 align-items-end">
+    <div class="col-sm-4">
+        <label for="new-owner" class="form-label">Owner</label>
+        <input id="new-owner"
+               type="text"
+               class="form-control"
+               data-testid="new-owner"
+               @bind="_owner"
+               @bind:event="onchange" />
+    </div>
+    <div class="col-sm-6">
+        <label for="new-token" class="form-label">Personal access token</label>
+        <input id="new-token"
+               type="password"
+               class="form-control"
+               data-testid="new-token"
+               @bind="_token"
+               @bind:event="onchange" />
+    </div>
+    <div class="col-sm-2 d-grid">
+        <button type="button"
+                class="btn btn-primary"
+                data-testid="save-owner"
+                @onclick="SaveAsync">
+            Save
+        </button>
+    </div>
+</div>
+
+<p class="form-text">
+    Saving an owner that already has a token replaces it. The token is not checked
+    against GitHub here -- whether it works shows up as that owner's status after
+    the next poll.
+</p>
+
+@if (_message is not null)
+{
+    <div class="alert alert-danger mb-0" role="alert" data-testid="owner-token-error">
+        @_message
+    </div>
+}
+
+@code {
+    private const int MaxOwnerLength = 255;
+    private const int MaxTokenLength = 512;
+
+    private IReadOnlyList<OwnerTokenSummary> _owners = [];
+    private string _owner = string.Empty;
+    private string _token = string.Empty;
+    private string? _message;
+
+    /// <inheritdoc />
+    public void Dispose() => Holder.Changed -= OnSnapshotChanged;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Holder.Changed += OnSnapshotChanged;
+        await ReloadOwnersAsync();
+    }
+
+    private static string SavedAtText(DateTimeOffset? savedAt) =>
+        savedAt is { } at
+            ? at.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture)
+            : "Unknown";
+
+    // An owner with no status in the current snapshot has not been fetched yet --
+    // a token saved since the last publish, or no publish at all. That is not a
+    // failure, and rendering it as one would blame the token for the wait.
+    private static string StatusText(IReadOnlyList<OwnerStatus> statuses, string owner)
+    {
+        var status = statuses.FirstOrDefault(s =>
+            string.Equals(s.Owner, owner, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (status is null)
+        {
+            return "Not yet polled";
+        }
+
+        var label = status.Status switch
+        {
+            OwnerFetchStatus.Ok => "OK",
+            OwnerFetchStatus.MisconfiguredToken => "Token rejected",
+            _ => "Fetch failed",
+        };
+
+        return status.Detail is null ? label : $"{label} - {status.Detail}";
+    }
+
+    private async Task SaveAsync()
+    {
+        _message = Rejection(_owner.Trim(), _token);
+        if (_message is not null)
+        {
+            return;
+        }
+
+        await SaveOwnerToken.SaveAsync(_owner.Trim(), _token);
+        _owner = string.Empty;
+        _token = string.Empty;
+        await ReloadOwnersAsync();
+    }
+
+    private static string? Rejection(string owner, string token) =>
+        (owner, token) switch
+        {
+            { owner.Length: 0 } => "Enter an owner name.",
+            { owner.Length: > MaxOwnerLength } =>
+                $"An owner name cannot be longer than {MaxOwnerLength} characters.",
+            _ when string.IsNullOrWhiteSpace(token) => "Enter a personal access token.",
+            { token.Length: > MaxTokenLength } =>
+                $"A personal access token cannot be longer than {MaxTokenLength} characters.",
+            _ => null,
+        };
+
+    private async Task DeleteAsync(string owner)
+    {
+        _message = null;
+        await RemoveOwner.RemoveAsync(owner);
+        await ReloadOwnersAsync();
+    }
+
+    private async Task ReloadOwnersAsync() => _owners = await TokenVault.ListOwnerTokensAsync();
+
+    private void OnSnapshotChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+}

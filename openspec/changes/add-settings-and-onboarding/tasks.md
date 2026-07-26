@@ -58,10 +58,10 @@ it drives, and the implementation task is done when that test passes.
 
 ## 8. Tokens table and owner editing
 
-- [ ] 8.1 Write failing bUnit `OwnerTokensTests`: rows render owner, saved instant, and the status from the published snapshot; a null saved instant renders an explicit unknown; an owner absent from the snapshot's statuses renders not-yet-polled, not a failure; a non-ok status renders its detail; no token value appears anywhere in the markup; `LastFreshAt` is not rendered.
-- [ ] 8.2 Implement the tokens table over the owner-plus-`SavedAt` read and `QueueSnapshotHolder`'s current snapshot.
-- [ ] 8.3 Write failing bUnit tests for the add/replace/delete controls: a valid submission calls `SaveOwnerToken`; delete calls `RemoveOwner`; empty or whitespace owner or token, owner over 255 characters, and token over 512 characters each show a message and call nothing; no GitHub port is touched on any path.
-- [ ] 8.4 Implement the add/replace/delete controls with the shape-only validation from decision 12.
+- [x] 8.1 Write failing bUnit `OwnerTokensTests`: rows render owner, saved instant, and the status from the published snapshot; a null saved instant renders an explicit unknown; an owner absent from the snapshot's statuses renders not-yet-polled, not a failure; a non-ok status renders its detail; no token value appears anywhere in the markup; `LastFreshAt` is not rendered.
+- [x] 8.2 Implement the tokens table over the owner-plus-`SavedAt` read and `QueueSnapshotHolder`'s current snapshot.
+- [x] 8.3 Write failing bUnit tests for the add/replace/delete controls: a valid submission calls `SaveOwnerToken`; delete calls `RemoveOwner`; empty or whitespace owner or token, owner over 255 characters, and token over 512 characters each show a message and call nothing; no GitHub port is touched on any path.
+- [x] 8.4 Implement the add/replace/delete controls with the shape-only validation from decision 12.
 
 ## 9. Poll interval control
 

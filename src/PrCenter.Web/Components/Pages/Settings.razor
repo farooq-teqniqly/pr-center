@@ -1,6 +1,7 @@
 @page "/settings"
 @rendermode InteractiveServer
 @using PrCenter.Web.Components.Locking
+@using PrCenter.Web.Components.Settings
 
 <PageTitle>Settings - PR-Center</PageTitle>
 
@@ -22,6 +23,7 @@
 
         <section class="mb-5" data-testid="owner-tokens">
             <h2 class="h5 mb-3">Owner tokens</h2>
+            <OwnerTokens />
         </section>
 
         <section data-testid="poll-interval">

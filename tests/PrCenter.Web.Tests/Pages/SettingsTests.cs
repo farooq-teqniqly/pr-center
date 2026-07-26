@@ -1,11 +1,12 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
 using PrCenter.Core.Queue;
 using PrCenter.Core.Settings;
-using PrCenter.Web.Components.Pages;
+using SettingsPage = PrCenter.Web.Components.Pages.Settings;
 
 namespace PrCenter.Web.Tests.Pages;
 
@@ -25,7 +26,7 @@ public sealed class SettingsTests : BunitContext
         RegisterLock(state);
 
         // Act
-        var cut = Render<Settings>();
+        var cut = Render<SettingsPage>();
 
         // Assert
         Assert.NotNull(cut.Find($"[data-testid={expectedTestId}]"));
@@ -49,7 +50,7 @@ public sealed class SettingsTests : BunitContext
         RegisterLock(state);
 
         // Act
-        var cut = Render<Settings>();
+        var cut = Render<SettingsPage>();
 
         // Assert
         Assert.Empty(cut.FindAll($"[data-testid={absentTestId}]"));
@@ -66,7 +67,7 @@ public sealed class SettingsTests : BunitContext
             .Returns(AppLockState.Uninitialized, AppLockState.Unlocked);
         appLock.UnlockAsync(password, Arg.Any<CancellationToken>()).Returns(true);
         Register(appLock);
-        var cut = Render<Settings>();
+        var cut = Render<SettingsPage>();
 
         // Act
         cut.Find("[data-testid=setup-password]").Change(password);
@@ -85,7 +86,7 @@ public sealed class SettingsTests : BunitContext
         RegisterLock(AppLockState.Locked);
 
         // Act
-        var cut = Render<Settings>();
+        var cut = Render<SettingsPage>();
 
         // Assert
         Assert.Equal("/", cut.Find("[data-testid=unlock-first] a").GetAttribute("href"));
@@ -100,14 +101,20 @@ public sealed class SettingsTests : BunitContext
 
     private void Register(IAppLock appLock)
     {
+        var vault = Substitute.For<ITokenVault>();
+        var trigger = Substitute.For<IRefreshTrigger>();
+        var holder = new QueueSnapshotHolder(
+            TimeProvider.System,
+            NullLogger<QueueSnapshotHolder>.Instance
+        );
+
         Services.AddLogging();
         Services.AddSingleton(appLock);
-        Services.AddSingleton(
-            new InitializeVault(
-                Substitute.For<ITokenVault>(),
-                appLock,
-                Substitute.For<IRefreshTrigger>()
-            )
-        );
+        Services.AddSingleton(vault);
+        Services.AddSingleton(holder);
+        Services.AddSingleton(new GetQueue(holder));
+        Services.AddSingleton(new InitializeVault(vault, appLock, trigger));
+        Services.AddSingleton(new SaveOwnerToken(vault, trigger));
+        Services.AddSingleton(new RemoveOwner(vault, trigger));
     }
 }
