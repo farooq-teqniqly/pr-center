@@ -18,11 +18,12 @@ namespace PrCenter.Web.Polling;
 /// wake -- timer or on-demand -- restarts the interval clock. DI scoping for the
 /// scoped ports is created per wake; the refresh use case is scope-agnostic.
 /// </summary>
-internal sealed class QueuePollingService : BackgroundService
+internal sealed partial class QueuePollingService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RefreshTrigger _trigger;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<QueuePollingService> _logger;
     private ITimer? _timer;
 
     /// <summary>
@@ -31,15 +32,18 @@ internal sealed class QueuePollingService : BackgroundService
     /// <param name="scopeFactory">The factory creating a DI scope per wake.</param>
     /// <param name="trigger">The refresh trigger the loop awaits and the timer pokes.</param>
     /// <param name="timeProvider">The clock backing the interval timer.</param>
+    /// <param name="logger">The logger for a cycle that faults.</param>
     public QueuePollingService(
         IServiceScopeFactory scopeFactory,
         RefreshTrigger trigger,
-        TimeProvider timeProvider
+        TimeProvider timeProvider,
+        ILogger<QueuePollingService> logger
     )
     {
         _scopeFactory = scopeFactory;
         _trigger = trigger;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -90,13 +94,42 @@ internal sealed class QueuePollingService : BackgroundService
             .ConfigureAwait(false);
         _timer?.Change(interval.Value, System.Threading.Timeout.InfiniteTimeSpan);
 
-        await PollWhenUnlockedAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
+        // A faulting poll must not escape into ExecuteAsync's loop: an exception
+        // there ends the BackgroundService for the life of the process, and the
+        // still-armed timer would go on poking a trigger nobody awaits. Polling is
+        // a repeating best-effort read, so one bad cycle is logged and skipped.
+        try
+        {
+            await PollWhenUnlockedAsync(scope.ServiceProvider, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogPollCycleFailed(ex);
+        }
     }
 
-    private static Task<PollInterval> ReadIntervalAsync(
+    private async Task<PollInterval> ReadIntervalAsync(
         IServiceProvider services,
         CancellationToken cancellationToken
-    ) => services.GetRequiredService<IAppSettingsStore>().GetPollIntervalAsync(cancellationToken);
+    )
+    {
+        // The interval read gates the re-arm, so its failure is the more dangerous
+        // one: without a fallback there is no next tick at all. The default keeps
+        // the loop alive at a sane cadence until the stored row is readable again.
+        try
+        {
+            return await services
+                .GetRequiredService<IAppSettingsStore>()
+                .GetPollIntervalAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogIntervalReadFailed(ex, PollInterval.Default.Value);
+            return PollInterval.Default;
+        }
+    }
 
     private static async Task PollWhenUnlockedAsync(
         IServiceProvider services,

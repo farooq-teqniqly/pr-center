@@ -1,6 +1,7 @@
 namespace PrCenter.Web.Tests;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using PrCenter.Core.Locking;
@@ -231,6 +232,70 @@ public sealed class QueuePollingServiceTests : IDisposable
         await service.StopAsync(Ct);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenAPollFaults_StillPollsOnTheNextInterval()
+    {
+        // Arrange
+        Unlocked();
+        var faulted = new TaskCompletionSource();
+        var recovered = new TaskCompletionSource();
+        var calls = 0;
+        _refreshQueue
+            .ExecuteAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                if (Interlocked.Increment(ref calls) == 1)
+                {
+                    faulted.TrySetResult();
+                    throw new InvalidOperationException("the fetch blew up");
+                }
+
+                recovered.TrySetResult();
+                return Task.CompletedTask;
+            });
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+        _time.Advance(PollInterval.Default.Value);
+        await faulted.Task.WaitAsync(Timeout, Ct);
+
+        // Act
+        _time.Advance(PollInterval.Default.Value);
+
+        // Assert
+        await recovered.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheIntervalReadFaults_FallsBackToTheDefaultAndKeepsPolling()
+    {
+        // Arrange
+        Unlocked();
+        var reads = 0;
+        _settings
+            .GetPollIntervalAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+                Interlocked.Increment(ref reads) == 2
+                    ? throw new InvalidOperationException("the settings row is unreadable")
+                    : PollInterval.Default
+            );
+        var firstPoll = SignalOnRefresh();
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+        _time.Advance(PollInterval.Default.Value);
+        await firstPoll.Task.WaitAsync(Timeout, Ct);
+        var secondPoll = SignalOnRefresh();
+
+        // Act
+        _time.Advance(PollInterval.Default.Value);
+
+        // Assert
+        await secondPoll.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+        await _refreshQueue.Received(2).ExecuteAsync(Arg.Any<CancellationToken>());
+    }
+
     private static async Task AssertNoPollAsync(TaskCompletionSource polled) =>
         await Assert.ThrowsAsync<TimeoutException>(() => polled.Task.WaitAsync(SettleWindow, Ct));
 
@@ -256,7 +321,12 @@ public sealed class QueuePollingServiceTests : IDisposable
     }
 
     private QueuePollingService CreateService() =>
-        new(_provider.GetRequiredService<IServiceScopeFactory>(), _trigger, _time);
+        new(
+            _provider.GetRequiredService<IServiceScopeFactory>(),
+            _trigger,
+            _time,
+            NullLogger<QueuePollingService>.Instance
+        );
 
     public void Dispose() => _provider.Dispose();
 }
