@@ -10,12 +10,12 @@ it drives, and the implementation task is done when that test passes.
 
 ## 2. Settings port and adapter (Core + Persistence)
 
-- [ ] 2.1 Add `PrCenter.Core/Ports/IAppSettingsStore.cs`: `GetPollIntervalAsync` returning `PollInterval`, `SetPollIntervalAsync(PollInterval, ...)`. Document that reads and writes require no vault key and work in every lock state, and that an absent row reads as the 5-minute default.
-- [ ] 2.2 Add `PrCenter.Persistence/AppSetting.cs` -- singleton row (`Id` always 1, `ValueGeneratedNever`) with a `long PollIntervalSeconds` column -- and map it in `PrCenterDbContext.OnModelCreating`; add the `AppSettings` `DbSet` and update the context's XML summary, which currently says settings schema arrives later.
-- [ ] 2.3 Add nullable `DateTimeOffset? SavedAt` to `PrCenter.Persistence/OwnerToken.cs` and map it as optional.
-- [ ] 2.4 Generate one EF migration covering both schema changes (`AddSettingsAndTokenSavedAt`); confirm the generated `Up` is additive and does not rewrite `OwnerToken` secret columns.
-- [ ] 2.5 Write failing `AppSettingsStoreTests` against a real temporary SQLite file (existing integration harness): absent row reads the 5-minute default and creates no row; an in-range write round-trips; a second write replaces rather than inserting; an out-of-range stored value reads back clamped with a warning logged; a read succeeds while the vault is locked.
-- [ ] 2.6 Implement `PrCenter.Persistence/AppSettingsStore.cs` plus its `.Logging.cs` partial for the clamp warning. Reads are `AsNoTracking` projections; the upsert tracks.
+- [x] 2.1 Add `PrCenter.Core/Ports/IAppSettingsStore.cs`: `GetPollIntervalAsync` returning `PollInterval`, `SetPollIntervalAsync(PollInterval, ...)`. Document that reads and writes require no vault key and work in every lock state, and that an absent row reads as the 5-minute default.
+- [x] 2.2 Add `PrCenter.Persistence/AppSetting.cs` -- singleton row (`Id` always 1, `ValueGeneratedNever`) with a `long PollIntervalSeconds` column -- and map it in `PrCenterDbContext.OnModelCreating`; add the `AppSettings` `DbSet` and update the context's XML summary, which currently says settings schema arrives later.
+- [x] 2.3 Add nullable `DateTimeOffset? SavedAt` to `PrCenter.Persistence/OwnerToken.cs` and map it as optional.
+- [x] 2.4 Generate one EF migration covering both schema changes (`AddSettingsAndTokenSavedAt`); confirm the generated `Up` is additive and does not rewrite `OwnerToken` secret columns.
+- [x] 2.5 Write failing `AppSettingsStoreTests` against a real temporary SQLite file (existing integration harness): absent row reads the 5-minute default and creates no row; an in-range write round-trips; a second write replaces rather than inserting; an out-of-range stored value reads back clamped with a warning logged; a read succeeds while the vault is locked.
+- [x] 2.6 Implement `PrCenter.Persistence/AppSettingsStore.cs` plus its `.Logging.cs` partial for the clamp warning. Reads are `AsNoTracking` projections; the upsert tracks.
 
 ## 3. Token deletion and saved-at (Persistence)
 
