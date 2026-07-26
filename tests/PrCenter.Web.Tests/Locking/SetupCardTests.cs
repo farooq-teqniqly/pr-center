@@ -11,7 +11,10 @@ namespace PrCenter.Web.Tests.Locking;
 
 public sealed class SetupCardTests : BunitContext
 {
-    private const string ValidPassword = "Str0ng-pass!";
+    // Shaped like a real passphrase (in range, with a digit and a symbol) but
+    // written as an obvious placeholder so secret scanners do not read a test
+    // fixture as a leaked credential.
+    private const string ValidPassword = "example-pass-9!";
 
     private readonly ITokenVault _vault = Substitute.For<ITokenVault>();
     private readonly IAppLock _appLock = Substitute.For<IAppLock>();
@@ -21,7 +24,7 @@ public sealed class SetupCardTests : BunitContext
         {
             { "short7c", "short7c" },
             { new string('x', 33), new string('x', 33) },
-            { ValidPassword, "Str0ng-pass" },
+            { ValidPassword, "example-pass-9" },
             { string.Empty, string.Empty },
         };
 

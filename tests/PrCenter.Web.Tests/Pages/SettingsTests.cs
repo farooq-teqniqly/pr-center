@@ -60,7 +60,7 @@ public sealed class SettingsTests : BunitContext
     public void Settings_WhenSetupCompletes_ReevaluatesTheLockStateAndShowsTheUnlockedView()
     {
         // Arrange
-        const string password = "Str0ng-pass!";
+        const string password = "example-pass-9!";
         var appLock = Substitute.For<IAppLock>();
         appLock
             .GetStateAsync(Arg.Any<CancellationToken>())
