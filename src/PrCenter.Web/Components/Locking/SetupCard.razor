@@ -77,9 +77,21 @@
         _message = null;
         _setupFailed = false;
 
+        // Length is measured on the raw value, and the password is never trimmed:
+        // whitespace is part of a passphrase, and trimming here but not on the
+        // unlock card would lock the user out of their own vault.
         if (_password.Length is < MinLength or > MaxLength)
         {
             _message = $"The app password must be {MinLength} to {MaxLength} characters.";
+            return;
+        }
+
+        // The unlock card refuses a whitespace-only password, so accepting one
+        // here would set a password that can never be typed back in -- and the
+        // only way out of that is the reset that destroys every stored token.
+        if (string.IsNullOrWhiteSpace(_password))
+        {
+            _message = "The app password cannot be only spaces.";
             return;
         }
 

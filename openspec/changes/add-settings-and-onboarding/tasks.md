@@ -84,6 +84,7 @@ delete and the typed-word vault reset. See design decision 10a.
 - [x] 11.4 Trim the token as well as the owner before validating and storing; add the failing test first. A pasted trailing newline otherwise stores fine and fails the next poll with no visible cause.
 - [x] 11.5 Keep the confirmation open and show a message when a store or delete fails on a locked vault, rather than dismissing the UI over a token that is still there. Log the suppressed exception.
 - [x] 11.6 Read cancellation the way `RefreshQueue` does in `QueuePollingService` -- only this service's own cancelled token means shutdown, so a request timeout arriving as `OperationCanceledException` degrades instead of ending the loop.
+- [x] 11.7 Audit every bound input for trimming. Trim the reset confirmation word, matching the owner-name confirmation. Reject a whitespace-only app password at setup, since the unlock card refuses one and the pair would otherwise lock the user out. Leave the password fields untrimmed and say why in a comment, so the next reader does not "fix" them.
 
 ## 12. Close-out
 

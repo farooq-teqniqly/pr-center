@@ -26,6 +26,10 @@ public sealed class SetupCardTests : BunitContext
             { new string('x', 33), new string('x', 33) },
             { ValidPassword, ValidPassword + "x" },
             { string.Empty, string.Empty },
+            // Length-valid but unusable: the unlock card refuses a whitespace-only
+            // password, so accepting one here sets a password that can never be
+            // typed back in, and the only way out destroys every stored token.
+            { "        ", "        " },
         };
 
     [Fact]

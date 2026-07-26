@@ -32,7 +32,10 @@ placeholder on the inbox.
 The system SHALL provide a first-run setup that sets the app password and, on
 success, unlocks the app in the same action, so the user is not asked to
 re-enter the password just typed. The setup SHALL also request an immediate
-poll. Setup SHALL require a password of 8 to 32 characters and a confirmation
+poll. The app password SHALL NOT be trimmed, since whitespace is part of the
+secret, but a password of only whitespace SHALL be rejected: the unlock screen
+refuses one, so accepting it would set a password that can never be entered.
+Setup SHALL require a password of 8 to 32 characters and a confirmation
 field whose value matches it; the system SHALL suggest mixed case, digits, and
 symbols without requiring them. A rejected password SHALL NOT be sent to the
 vault.

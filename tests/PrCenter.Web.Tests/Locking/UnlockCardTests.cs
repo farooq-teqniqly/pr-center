@@ -78,6 +78,25 @@ public sealed class UnlockCardTests : BunitContext
     }
 
     [Theory]
+    [InlineData(" RESET")]
+    [InlineData("RESET ")]
+    [InlineData("  RESET\n")]
+    public void UnlockCard_WithTheConfirmationWordAndSurroundingWhitespace_ResetsTheVault(
+        string typed
+    )
+    {
+        // Arrange
+        var vault = Substitute.For<ITokenVault>();
+        var cut = RenderCard(Substitute.For<IAppLock>(), vault);
+
+        // Act
+        ConfirmReset(cut, typed);
+
+        // Assert
+        vault.Received(1).ResetVaultAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("reset")]
     [InlineData("RESE")]

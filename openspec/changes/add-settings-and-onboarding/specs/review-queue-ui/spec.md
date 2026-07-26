@@ -38,7 +38,8 @@ successful unlock the gate SHALL re-evaluate to Unlocked; on a failed unlock the
 card SHALL show a wrong-password message and remain on the unlock screen. The
 card SHALL offer a reset action that states it destroys the app password as well
 as every stored token, and that requires the user to type a fixed confirmation
-word before the wipe runs. A reset that is cancelled, or confirmed with a value
+word before the wipe runs. The typed word SHALL be matched exactly, ignoring
+only surrounding whitespace. A reset that is cancelled, or confirmed with a value
 that does not match the required word, SHALL wipe nothing. A confirmed reset
 SHALL clear the stored tokens and the app password and return the app to the
 Uninitialized state. The card SHALL NOT itself poll or trigger a poll -- the

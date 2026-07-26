@@ -120,6 +120,9 @@
         _wrongPassword = false;
         _unlockFailed = false;
 
+        // Never trimmed: whitespace inside or around a passphrase is part of the
+        // secret, and trimming on one side of set-and-unlock but not the other
+        // would lock the user out with no recovery short of destroying the vault.
         if (string.IsNullOrWhiteSpace(_password))
         {
             _wrongPassword = true;
@@ -161,8 +164,10 @@
     {
         // Ordinal and case-sensitive: the typed word is a deliberate act, not a
         // value to be helpfully interpreted, and this is the one action with no
-        // recovery.
-        if (!string.Equals(_confirmationWord, ConfirmationWord, StringComparison.Ordinal))
+        // recovery. Surrounding whitespace is trimmed even so -- a stray space
+        // from a paste says nothing about intent, and rejecting it would show a
+        // "type RESET exactly" message to someone who did.
+        if (!string.Equals(_confirmationWord.Trim(), ConfirmationWord, StringComparison.Ordinal))
         {
             _confirmationMismatched = true;
             return;
