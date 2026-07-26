@@ -62,9 +62,11 @@ public sealed class AppSettingsStoreTests : IDisposable
         var store = CreateStore(context);
 
         // Act / Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             store.SetPollIntervalAsync(default, CancellationToken.None)
         );
+
+        Assert.Equal("interval", exception.ParamName);
 
         await using var readContext = _database.CreateContext();
         Assert.Equal(

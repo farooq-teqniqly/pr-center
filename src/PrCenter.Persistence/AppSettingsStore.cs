@@ -69,8 +69,17 @@ internal sealed partial class AppSettingsStore : IAppSettingsStore
         // hole: default(PollInterval) skips the constructor and is a zero
         // interval. Re-check here so the port's promise that an out-of-range
         // value cannot reach storage is actually true of every caller.
-        ArgumentOutOfRangeException.ThrowIfLessThan(interval.Value, PollInterval.Min);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(interval.Value, PollInterval.Max);
+        // Thrown by hand rather than through ThrowIfLessThan/ThrowIfGreaterThan:
+        // those would name the expression `interval.Value`, while the port
+        // documents the exception against the `interval` parameter.
+        if (interval.Value < PollInterval.Min || interval.Value > PollInterval.Max)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(interval),
+                interval.Value,
+                $"The poll interval must be between {PollInterval.Min} and {PollInterval.Max}."
+            );
+        }
 
         var seconds = (long)interval.Value.TotalSeconds;
 
