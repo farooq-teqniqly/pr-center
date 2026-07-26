@@ -75,7 +75,7 @@ it drives, and the implementation task is done when that test passes.
 
 ## 11. Close-out
 
-- [ ] 11.1 Run the full solution build and every test project; fix any analyzer or `TreatWarningsAsErrors` fallout without suppressing rules.
-- [ ] 11.2 Run CSharpier `check` and the architecture tests -- confirm no Web type leaked into Core and the new Core types carry no infrastructure dependency.
-- [ ] 11.3 Collect coverage per the repo procedure and confirm the new Core and Persistence types are covered; delete `TestResults/`.
-- [ ] 11.4 Re-read `design.md` against what shipped; update any decision the implementation simplified away, then stop and wait for explicit approval before committing.
+- [x] 11.1 Run the full solution build and every test project; fix any analyzer or `TreatWarningsAsErrors` fallout without suppressing rules.
+- [x] 11.2 Run CSharpier `check` and the architecture tests -- confirm no Web type leaked into Core and the new Core types carry no infrastructure dependency.
+- [x] 11.3 Collect coverage per the repo procedure and confirm the new Core and Persistence types are covered; delete `TestResults/`.
+- [x] 11.4 Re-read `design.md` against what shipped; update any decision the implementation simplified away, then stop and wait for explicit approval before committing.

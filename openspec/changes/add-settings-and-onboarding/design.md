@@ -82,6 +82,11 @@ the nearest in-range value. It satisfies the baseline's `readonly record struct`
 exception: one wrapped primitive, a range-only invariant, structural equality
 correct.
 
+As shipped it also exposes `Default` (`Min`), so the "absent row" answer is named
+once on the type rather than restated as a literal by the adapter and the tests.
+The struct's `default` does not satisfy the range invariant, which its `remarks`
+documents -- an accepted cost of the `readonly record struct` form.
+
 The settings port takes and returns `PollInterval`, never a raw `TimeSpan`, so
 an out-of-range interval is unrepresentable past the boundary. The settings page
 range-checks the user's input against `PollInterval.Min`/`Max` before
@@ -158,11 +163,18 @@ token, and a wrong timestamp there actively misleads.
 
 ### 8. `LockGate` generalizes; it is not copied
 
-`LockGate` gains optional `Locked` and `Uninitialized` `RenderFragment`
-parameters that default to today's `UnlockCard` and `UninitializedPlaceholder`,
-so `Inbox.razor` is unchanged. `/settings` supplies its own two: a setup card
-for `Uninitialized`, and a short "unlock first" message linking back to `/` for
-`Locked`.
+`LockGate` gains optional `Locked` and `Uninitialized` fragment parameters that
+default to today's `UnlockCard` and `UninitializedPlaceholder`, so `Inbox.razor`
+is unchanged. `/settings` supplies its own two: a setup card for `Uninitialized`,
+and a short "unlock first" message linking back to `/` for `Locked`.
+
+As shipped both parameters are `RenderFragment<EventCallback>`, not bare
+`RenderFragment`. The context is the gate's own re-read callback -- the same one
+the default `UnlockCard` receives as `OnUnlocked`/`OnReset`. Without it, supplied
+content that changes the lock state (the setup card completing) would have no way
+to move the gate on, and the settings page would sit on the setup card until a
+reload. Handing the callback down as context keeps the state re-read in the gate,
+which is the whole point of decision 8.
 
 Why: state-reading and re-evaluation-after-transition is the part that is easy
 to get subtly wrong (the `OnUnlocked`/`OnReset` callbacks re-read state), and it
@@ -172,10 +184,16 @@ shared test.
 ### 9. The poll timer re-arms per cycle from stored settings
 
 `QueuePollingService` stops taking `IOptions<PollingOptions>`. Its `ITimer`
-becomes one-shot: armed in `StartAsync` and re-armed after each wake with the
+becomes one-shot: armed in `StartAsync` and re-armed on each wake with the
 interval read inside that wake's DI scope. The trigger-and-single-loop model is
 untouched -- the timer remains just another poker of the one trigger, so
 coalescing and non-overlap still hold.
+
+Two ordering details settled in implementation. `StartAsync` opens its own scope
+to read the first interval before arming, since no wake has happened yet to
+provide one. And within a wake the re-arm happens *before* the poll runs, not
+after: a poll that faults must still leave the next tick scheduled, or one bad
+fetch would stop the loop until a manual refresh.
 
 Consequence, intended: because the timer re-arms after every wake, an on-demand
 refresh (unlock, manual, a settings save) restarts the interval clock. The
@@ -199,8 +217,11 @@ the locked-out user actually reaches.
 ### 11. The tokens table shows status and `SavedAt`, never `LastFreshAt`
 
 `OwnerStatus.LastFreshAt` is read by the inbox and stays there. Settings shows
-the owner, the status chip, and when the token was saved -- the three facts that
-bear on "is this token good". Staleness of the *rows* is an inbox concern;
+the owner, the fetch status, and when the token was saved -- the three facts that
+bear on "is this token good". The status renders as plain text in a table cell
+rather than as a chip: the inbox chips exist to be scannable at a glance across a
+row of owners, while this table already gives each owner its own row and needs
+room for a failure detail beside the label. Staleness of the *rows* is an inbox concern;
 repeating it here would be a second place to maintain the same reading with no
 new decision attached to it.
 
