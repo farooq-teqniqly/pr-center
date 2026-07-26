@@ -30,12 +30,59 @@
                 <td data-testid="owner-saved-at">@SavedAtText(summary.SavedAt)</td>
                 <td data-testid="owner-status">@StatusText(statuses, summary.Owner)</td>
                 <td class="text-end">
-                    <button type="button"
-                            class="btn btn-outline-danger btn-sm"
-                            data-testid="delete-owner"
-                            @onclick="() => DeleteAsync(summary.Owner)">
-                        Delete
-                    </button>
+                    @if (IsConfirming(summary.Owner))
+                    {
+                        <div class="border border-danger rounded p-2 text-start"
+                             data-testid="delete-confirmation">
+                            <p class="mb-2 small">
+                                Deleting removes the stored token for
+                                <strong>@summary.Owner</strong> and stops polling it. Type
+                                <strong>@summary.Owner</strong> to confirm.
+                            </p>
+
+                            <label for="delete-confirm-name" class="form-label visually-hidden">
+                                Type @summary.Owner to confirm
+                            </label>
+
+                            <input id="delete-confirm-name"
+                                   type="text"
+                                   class="form-control form-control-sm mb-2"
+                                   data-testid="delete-confirm-input"
+                                   @bind="_typedOwner"
+                                   @bind:event="onchange" />
+
+                            @if (_confirmationMismatched)
+                            {
+                                <div class="alert alert-danger py-1 px-2 mb-2 small"
+                                     role="alert"
+                                     data-testid="delete-mismatch">
+                                    Type @summary.Owner exactly to confirm the deletion.
+                                </div>
+                            }
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    data-testid="delete-cancel"
+                                    @onclick="CancelDelete">
+                                Cancel
+                            </button>
+                            <button type="button"
+                                    class="btn btn-danger btn-sm"
+                                    data-testid="delete-confirm"
+                                    @onclick="() => ConfirmDeleteAsync(summary.Owner)">
+                                Delete @summary.Owner
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                data-testid="delete-owner"
+                                @onclick="() => BeginDelete(summary.Owner)">
+                            Delete
+                        </button>
+                    }
                 </td>
             </tr>
         }
@@ -92,6 +139,9 @@
     private string _owner = string.Empty;
     private string _token = string.Empty;
     private string? _message;
+    private string? _pendingDeleteOwner;
+    private string _typedOwner = string.Empty;
+    private bool _confirmationMismatched;
 
     /// <inheritdoc />
     public void Dispose() => Holder.Changed -= OnSnapshotChanged;
@@ -157,9 +207,38 @@
             _ => null,
         };
 
-    private async Task DeleteAsync(string owner)
+    private bool IsConfirming(string owner) =>
+        string.Equals(_pendingDeleteOwner, owner, StringComparison.Ordinal);
+
+    // Only one row confirms at a time, and starting on a new row abandons any
+    // half-typed confirmation on the old one -- carrying the typed text across
+    // rows is how a click on the wrong row gets confirmed by accident.
+    private void BeginDelete(string owner)
     {
         _message = null;
+        _pendingDeleteOwner = owner;
+        _typedOwner = string.Empty;
+        _confirmationMismatched = false;
+    }
+
+    private void CancelDelete()
+    {
+        _pendingDeleteOwner = null;
+        _typedOwner = string.Empty;
+        _confirmationMismatched = false;
+    }
+
+    // The typed name must match the row being confirmed, not merely name some
+    // stored owner: an exact match is what proves the user meant this row.
+    private async Task ConfirmDeleteAsync(string owner)
+    {
+        if (!string.Equals(_typedOwner.Trim(), owner, StringComparison.Ordinal))
+        {
+            _confirmationMismatched = true;
+            return;
+        }
+
+        CancelDelete();
         await RemoveOwner.RemoveAsync(owner);
         await ReloadOwnersAsync();
     }

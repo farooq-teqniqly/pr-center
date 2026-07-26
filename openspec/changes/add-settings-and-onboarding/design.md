@@ -214,6 +214,26 @@ Kept on the unlock card rather than moved into settings, per the proposal: the
 one unrecoverable action lives in exactly one place, and that place is the one
 the locked-out user actually reaches.
 
+### 10a. Deleting an owner requires typing that owner's name
+
+Added after review, which asked whether an unconfirmed single-click delete beside
+a typed-word vault reset was an intentional asymmetry. It was not. Deleting an
+owner destroys a working credential with no undo, so it now expands the row into
+a confirmation and deletes only on an exact match.
+
+The typed word is the **owner's name**, not the fixed `RESET` the vault reset
+uses. A fixed word proves only that the user read a prompt; the owner's name also
+proves *which row* they meant, which is the mistake actually available here --
+the reset card has one target, the tokens table has one per owner. This follows
+GitHub's own repo-deletion convention, so the interaction is already familiar.
+
+The match is `Ordinal`: owner names are identifiers, and per the repo's comparison
+rule an identifier match is exact. Typing a *different* stored owner's name does
+not delete anything either -- the comparison is against the row being confirmed,
+not against the set of owners. At most one row confirms at a time, and moving to
+another row clears the typed text rather than carrying it, since carried text is
+exactly how a misaimed click gets confirmed by muscle memory.
+
 ### 11. The tokens table shows status and `SavedAt`, never `LastFreshAt`
 
 `OwnerStatus.LastFreshAt` is read by the inbox and stays there. Settings shows

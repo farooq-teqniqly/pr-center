@@ -143,18 +143,114 @@ public sealed class OwnerTokensTests : BunitContext
     }
 
     [Fact]
-    public void OwnerTokens_WhenAnOwnerIsDeleted_RemovesThatOwner()
+    public void OwnerTokens_WhenTheOwnerNameIsTypedExactly_RemovesThatOwner()
     {
         // Arrange
         StoredOwners(new OwnerTokenSummary("ps-unite", SavedAt));
         var cut = RenderTable();
 
         // Act
-        cut.Find("[data-testid=owner-row][data-owner=ps-unite] [data-testid=delete-owner]")
-            .Click();
+        BeginDelete(cut, "ps-unite");
+        ConfirmDelete(cut, "ps-unite");
 
         // Assert
         _vault.Received(1).DeleteTokenAsync("ps-unite", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenDeleteIsClicked_AsksForTheOwnerNameAndDeletesNothingYet()
+    {
+        // Arrange
+        StoredOwners(new OwnerTokenSummary("ps-unite", SavedAt));
+        var cut = RenderTable();
+
+        // Act
+        BeginDelete(cut, "ps-unite");
+
+        // Assert
+        var confirmation = cut.Find(
+            "[data-testid=owner-row][data-owner=ps-unite] [data-testid=delete-confirmation]"
+        );
+        Assert.Contains("ps-unite", confirmation.TextContent, StringComparison.Ordinal);
+        _vault.DidNotReceive().DeleteTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("ps-unit")]
+    [InlineData("PS-UNITE")]
+    [InlineData("")]
+    [InlineData("perfectserve")]
+    public void OwnerTokens_WhenTheTypedNameDoesNotMatch_DeletesNothingAndStaysOnTheConfirmation(
+        string typed
+    )
+    {
+        // Arrange
+        StoredOwners(new OwnerTokenSummary("ps-unite", SavedAt));
+        var cut = RenderTable();
+
+        // Act
+        BeginDelete(cut, "ps-unite");
+        ConfirmDelete(cut, typed);
+
+        // Assert
+        Assert.NotNull(
+            cut.Find("[data-testid=owner-row][data-owner=ps-unite] [data-testid=delete-mismatch]")
+        );
+        _vault.DidNotReceive().DeleteTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenTheDeleteIsCancelled_DeletesNothingAndLeavesTheConfirmation()
+    {
+        // Arrange
+        StoredOwners(new OwnerTokenSummary("ps-unite", SavedAt));
+        var cut = RenderTable();
+        BeginDelete(cut, "ps-unite");
+
+        // Act
+        cut.Find("[data-testid=owner-row][data-owner=ps-unite] [data-testid=delete-cancel]")
+            .Click();
+
+        // Assert
+        Assert.Empty(cut.FindAll("[data-testid=delete-confirmation]"));
+        _vault.DidNotReceive().DeleteTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenAnotherRowStartsDeleting_ConfirmsOnlyTheNewRow()
+    {
+        // Arrange
+        StoredOwners(
+            new OwnerTokenSummary("ps-unite", SavedAt),
+            new OwnerTokenSummary("perfectserve", SavedAt)
+        );
+        var cut = RenderTable();
+        BeginDelete(cut, "ps-unite");
+
+        // Act
+        BeginDelete(cut, "perfectserve");
+
+        // Assert
+        var confirmation = Assert.Single(cut.FindAll("[data-testid=delete-confirmation]"));
+        Assert.Contains("perfectserve", confirmation.TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenTheTypedNameMatchesADifferentRow_DeletesTheConfirmedRowOnly()
+    {
+        // Arrange
+        StoredOwners(
+            new OwnerTokenSummary("ps-unite", SavedAt),
+            new OwnerTokenSummary("perfectserve", SavedAt)
+        );
+        var cut = RenderTable();
+
+        // Act
+        BeginDelete(cut, "ps-unite");
+        ConfirmDelete(cut, "perfectserve");
+
+        // Assert
+        _vault.DidNotReceive().DeleteTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -186,7 +282,8 @@ public sealed class OwnerTokensTests : BunitContext
 
         // Act
         Submit(cut, "perfectserve", "github_pat_value");
-        cut.Find("[data-testid=owner-row][data-owner=ps-unite] [data-testid=delete-owner]").Click();
+        BeginDelete(cut, "ps-unite");
+        ConfirmDelete(cut, "ps-unite");
 
         // Assert
         Assert.Empty(_gitHub.ReceivedCalls());
@@ -202,6 +299,15 @@ public sealed class OwnerTokensTests : BunitContext
             { "perfectserve", "   " },
             { "perfectserve", new string('t', 513) },
         };
+
+    private static void BeginDelete(IRenderedComponent<OwnerTokens> cut, string owner) =>
+        cut.Find($"[data-testid=owner-row][data-owner={owner}] [data-testid=delete-owner]").Click();
+
+    private static void ConfirmDelete(IRenderedComponent<OwnerTokens> cut, string typed)
+    {
+        cut.Find("[data-testid=delete-confirm-input]").Change(typed);
+        cut.Find("[data-testid=delete-confirm]").Click();
+    }
 
     private static void Submit(IRenderedComponent<OwnerTokens> cut, string owner, string token)
     {

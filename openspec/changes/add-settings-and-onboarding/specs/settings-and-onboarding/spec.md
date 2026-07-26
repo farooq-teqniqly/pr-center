@@ -100,8 +100,31 @@ settings screen for any of these actions.
 - **THEN** the stored token for that owner is replaced, its saved instant is updated, and an immediate poll is requested
 
 #### Scenario: Delete an owner
-- **WHEN** the user deletes an owner from the table
+- **WHEN** the user deletes an owner from the table and confirms by typing that owner's name exactly
 - **THEN** that owner's token row is removed, an immediate poll is requested, and the owner is no longer polled
+
+### Requirement: Deleting an owner requires typing that owner's name
+The system SHALL NOT delete an owner's token on a single click. Choosing delete
+SHALL open a confirmation on that row naming the owner and stating that deletion
+stops polling it, and SHALL delete only once the user types that owner's name
+exactly. A name that does not match SHALL delete nothing and leave the
+confirmation open. At most one row SHALL be confirming at a time.
+
+#### Scenario: Choosing delete asks for the name and deletes nothing
+- **WHEN** the user chooses delete on a row
+- **THEN** that row shows a confirmation naming the owner, and no token is deleted
+
+#### Scenario: A name that does not match deletes nothing
+- **WHEN** the user confirms with a name that is not an exact match for the row's owner, including the name of a different stored owner
+- **THEN** no token is deleted and the confirmation stays open with a message
+
+#### Scenario: Cancelling abandons the deletion
+- **WHEN** the user cancels the confirmation
+- **THEN** no token is deleted and the row returns to its normal state
+
+#### Scenario: Starting a second deletion abandons the first
+- **WHEN** the user chooses delete on one row and then on another
+- **THEN** only the second row is confirming, with nothing carried over from the first
 
 #### Scenario: Settings never calls GitHub
 - **WHEN** the user adds, replaces, or deletes an owner token

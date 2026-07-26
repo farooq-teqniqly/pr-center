@@ -73,9 +73,18 @@ it drives, and the implementation task is done when that test passes.
 - [x] 10.1 Write failing bUnit tests on `UnlockCard`: invoking reset shows the confirmation step naming both the app password and the tokens, and calls nothing yet; a mismatched word calls nothing and stays on the confirmation step; cancelling calls nothing and returns to the unlock state; the exact word calls `ResetVaultAsync` once and raises `OnReset`.
 - [x] 10.2 Implement the in-place confirmation step and rewrite the action's copy so it states the app password is destroyed too.
 
-## 11. Close-out
+## 11. Typed confirmation on owner deletion
 
-- [x] 11.1 Run the full solution build and every test project; fix any analyzer or `TreatWarningsAsErrors` fallout without suppressing rules.
-- [x] 11.2 Run CSharpier `check` and the architecture tests -- confirm no Web type leaked into Core and the new Core types carry no infrastructure dependency.
-- [x] 11.3 Collect coverage per the repo procedure and confirm the new Core and Persistence types are covered; delete `TestResults/`.
-- [x] 11.4 Re-read `design.md` against what shipped; update any decision the implementation simplified away, then stop and wait for explicit approval before committing.
+Added after the PR review flagged the asymmetry between a single-click owner
+delete and the typed-word vault reset. See design decision 10a.
+
+- [x] 11.1 Write failing bUnit tests on `OwnerTokens`: choosing delete opens a confirmation naming the owner and deletes nothing; the exact owner name deletes once; a near-miss, a case-different name, an empty entry, and a *different stored owner's* name each delete nothing and leave the confirmation open; cancelling deletes nothing and closes it; starting a second row's deletion leaves only that row confirming.
+- [x] 11.2 Implement the per-row confirmation: `Ordinal` match against the row's own owner, one pending row at a time, typed text cleared when the pending row changes.
+- [x] 11.3 Update the `settings-and-onboarding` spec with the confirmation requirement and its scenarios, and record design decision 10a.
+
+## 12. Close-out
+
+- [x] 12.1 Run the full solution build and every test project; fix any analyzer or `TreatWarningsAsErrors` fallout without suppressing rules.
+- [x] 12.2 Run CSharpier `check` and the architecture tests -- confirm no Web type leaked into Core and the new Core types carry no infrastructure dependency.
+- [x] 12.3 Collect coverage per the repo procedure and confirm the new Core and Persistence types are covered; delete `TestResults/`.
+- [x] 12.4 Re-read `design.md` against what shipped; update any decision the implementation simplified away, then stop and wait for explicit approval before committing.
