@@ -52,9 +52,9 @@ it drives, and the implementation task is done when that test passes.
 
 ## 7. First-run setup card
 
-- [ ] 7.1 Write failing bUnit `SetupCardTests`: a valid password and matching confirmation calls `InitializeVault` once and raises the completed callback; under 8, over 32, and mismatched confirmation each show a message and call nothing; an in-range password with no digits or symbols is accepted.
-- [ ] 7.2 Implement the setup card component: password + confirm fields, the 8-32 rule, the strength suggestion text, and the `InitializeVault` call.
-- [ ] 7.3 Verify the settings page re-evaluates lock state after setup completes and lands on the Unlocked view (bUnit).
+- [x] 7.1 Write failing bUnit `SetupCardTests`: a valid password and matching confirmation calls `InitializeVault` once and raises the completed callback; under 8, over 32, and mismatched confirmation each show a message and call nothing; an in-range password with no digits or symbols is accepted.
+- [x] 7.2 Implement the setup card component: password + confirm fields, the 8-32 rule, the strength suggestion text, and the `InitializeVault` call.
+- [x] 7.3 Verify the settings page re-evaluates lock state after setup completes and lands on the Unlocked view (bUnit).
 
 ## 8. Tokens table and owner editing
 

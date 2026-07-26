@@ -6,9 +6,7 @@
 
 <LockGate>
     <Uninitialized Context="onSetupCompleted">
-        <div class="mx-auto" style="max-width: 24rem;" data-testid="setup-card">
-            <h1 class="h4 mb-3">Set up PR-Center</h1>
-        </div>
+        <SetupCard OnCompleted="onSetupCompleted" />
     </Uninitialized>
     <Locked Context="onUnlocked">
         <div class="text-center mx-auto py-5" style="max-width: 32rem;" data-testid="unlock-first">

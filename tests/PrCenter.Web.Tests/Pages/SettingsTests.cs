@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
+using PrCenter.Core.Queue;
+using PrCenter.Core.Settings;
 using PrCenter.Web.Components.Pages;
 
 namespace PrCenter.Web.Tests.Pages;
@@ -54,6 +56,29 @@ public sealed class SettingsTests : BunitContext
     }
 
     [Fact]
+    public void Settings_WhenSetupCompletes_ReevaluatesTheLockStateAndShowsTheUnlockedView()
+    {
+        // Arrange
+        const string password = "Str0ng-pass!";
+        var appLock = Substitute.For<IAppLock>();
+        appLock
+            .GetStateAsync(Arg.Any<CancellationToken>())
+            .Returns(AppLockState.Uninitialized, AppLockState.Unlocked);
+        appLock.UnlockAsync(password, Arg.Any<CancellationToken>()).Returns(true);
+        Register(appLock);
+        var cut = Render<Settings>();
+
+        // Act
+        cut.Find("[data-testid=setup-password]").Change(password);
+        cut.Find("[data-testid=setup-confirm]").Change(password);
+        cut.Find("[data-testid=setup-submit]").Click();
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=owner-tokens]"));
+        Assert.Empty(cut.FindAll("[data-testid=setup-card]"));
+    }
+
+    [Fact]
     public void Settings_WhenLocked_LinksBackToTheInbox()
     {
         // Arrange
@@ -70,6 +95,19 @@ public sealed class SettingsTests : BunitContext
     {
         var appLock = Substitute.For<IAppLock>();
         appLock.GetStateAsync(Arg.Any<CancellationToken>()).Returns(state);
+        Register(appLock);
+    }
+
+    private void Register(IAppLock appLock)
+    {
+        Services.AddLogging();
         Services.AddSingleton(appLock);
+        Services.AddSingleton(
+            new InitializeVault(
+                Substitute.For<ITokenVault>(),
+                appLock,
+                Substitute.For<IRefreshTrigger>()
+            )
+        );
     }
 }

@@ -1,0 +1,108 @@
+@using Microsoft.Extensions.Logging
+@using PrCenter.Core.Settings
+@inject InitializeVault InitializeVault
+@inject ILogger<SetupCard> Logger
+
+<div class="card shadow-sm mx-auto" style="max-width: 24rem;" data-testid="setup-card">
+    <div class="card-body">
+        <h1 class="card-title h4 mb-3">Set up PR-Center</h1>
+
+        <p class="text-body-secondary small">
+            Choose an app password of @MinLength to @MaxLength characters. It
+            encrypts your stored tokens and cannot be recovered or changed later.
+            Mixing upper and lower case, digits, and symbols is suggested but not
+            required.
+        </p>
+
+        <label for="setup-password" class="form-label">App password</label>
+        <input id="setup-password"
+               type="password"
+               class="form-control"
+               data-testid="setup-password"
+               @bind="_password"
+               @bind:event="onchange" />
+
+        <label for="setup-confirm" class="form-label mt-3">Confirm app password</label>
+        <input id="setup-confirm"
+               type="password"
+               class="form-control"
+               data-testid="setup-confirm"
+               @bind="_confirmation"
+               @bind:event="onchange" />
+
+        @if (_message is not null)
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="setup-error">
+                @_message
+            </div>
+        }
+
+        @if (_setupFailed)
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="setup-failure">
+                Unable to complete setup: the app password could not be stored.
+            </div>
+        }
+
+        <div class="d-grid mt-3">
+            <button type="button"
+                    class="btn btn-primary"
+                    data-testid="setup-submit"
+                    @onclick="SubmitAsync">
+                Set password
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const int MinLength = 8;
+    private const int MaxLength = 32;
+
+    private string _password = string.Empty;
+    private string _confirmation = string.Empty;
+    private string? _message;
+    private bool _setupFailed;
+
+    /// <summary>
+    /// Invoked once setup has run against the vault, so the gate can re-evaluate
+    /// the lock state. Raised even when the unlock did not take, because the
+    /// vault is initialized either way and the gate should move off this screen.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnCompleted { get; set; }
+
+    private async Task SubmitAsync()
+    {
+        _message = null;
+        _setupFailed = false;
+
+        if (_password.Length is < MinLength or > MaxLength)
+        {
+            _message = $"The app password must be {MinLength} to {MaxLength} characters.";
+            return;
+        }
+
+        if (!string.Equals(_password, _confirmation, StringComparison.Ordinal))
+        {
+            _message = "The two passwords do not match.";
+            return;
+        }
+
+        try
+        {
+            await InitializeVault.InitializeAsync(_password);
+        }
+        // The vault rejects a second initialization, and unreadable stored data
+        // surfaces the same way. Left unhandled it faults the circuit and the
+        // card stops responding, so it is surfaced on the card.
+        catch (InvalidOperationException ex)
+        {
+            LogSetupFailed(Logger, ex);
+            _setupFailed = true;
+            return;
+        }
+
+        await OnCompleted.InvokeAsync();
+    }
+}
