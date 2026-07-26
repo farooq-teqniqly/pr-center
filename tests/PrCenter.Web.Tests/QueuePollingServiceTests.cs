@@ -268,6 +268,45 @@ public sealed class QueuePollingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenAPollTimesOut_StillPollsOnTheNextInterval()
+    {
+        // Arrange
+        Unlocked();
+        var timedOut = new TaskCompletionSource();
+        var recovered = new TaskCompletionSource();
+        var calls = 0;
+        _refreshQueue
+            .ExecuteAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                if (Interlocked.Increment(ref calls) == 1)
+                {
+                    timedOut.TrySetResult();
+
+                    // A request timeout surfaces as TaskCanceledException even though
+                    // the service is not stopping -- the shape that must not be read
+                    // as shutdown.
+                    throw new TaskCanceledException("the GitHub request timed out");
+                }
+
+                recovered.TrySetResult();
+                return Task.CompletedTask;
+            });
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+        _time.Advance(PollInterval.Default.Value);
+        await timedOut.Task.WaitAsync(Timeout, Ct);
+
+        // Act
+        _time.Advance(PollInterval.Default.Value);
+
+        // Assert
+        await recovered.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenTheIntervalReadFaults_FallsBackToTheDefaultAndKeepsPolling()
     {
         // Arrange

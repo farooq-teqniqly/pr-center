@@ -1,8 +1,10 @@
 @using System.Globalization
+@using PrCenter.Core.Locking
 @using PrCenter.Core.Ports
 @using PrCenter.Core.Queue
 @using PrCenter.Core.Settings
 @implements IDisposable
+@inject ILogger<OwnerTokens> Logger
 @inject ITokenVault TokenVault
 @inject GetQueue GetQueue
 @inject QueueSnapshotHolder Holder
@@ -183,13 +185,29 @@
 
     private async Task SaveAsync()
     {
-        _message = Rejection(_owner.Trim(), _token);
+        // Trim both fields once and use the trimmed values for validation and for
+        // storage alike: a token pasted with a trailing newline is valid-looking
+        // whitespace that GitHub would reject a poll later, with no clue why.
+        var owner = _owner.Trim();
+        var token = _token.Trim();
+
+        _message = Rejection(owner, token);
         if (_message is not null)
         {
             return;
         }
 
-        await SaveOwnerToken.SaveAsync(_owner.Trim(), _token);
+        try
+        {
+            await SaveOwnerToken.SaveAsync(owner, token);
+        }
+        catch (VaultLockedException ex)
+        {
+            LogOwnerTokenWriteFailed(Logger, ex);
+            _message = "The vault is locked. Unlock PR-Center and try again.";
+            return;
+        }
+
         _owner = string.Empty;
         _token = string.Empty;
         await ReloadOwnersAsync();
@@ -238,8 +256,21 @@
             return;
         }
 
+        // The confirmation stays open until the delete actually succeeds. Clearing
+        // it first would dismiss the only UI that explains what was being attempted
+        // while the token is in fact still stored.
+        try
+        {
+            await RemoveOwner.RemoveAsync(owner);
+        }
+        catch (VaultLockedException ex)
+        {
+            LogOwnerTokenWriteFailed(Logger, ex);
+            _message = "The vault is locked. Unlock PR-Center and try again.";
+            return;
+        }
+
         CancelDelete();
-        await RemoveOwner.RemoveAsync(owner);
         await ReloadOwnersAsync();
     }
 

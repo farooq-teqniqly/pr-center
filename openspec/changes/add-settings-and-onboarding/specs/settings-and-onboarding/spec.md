@@ -126,6 +126,10 @@ confirmation open. At most one row SHALL be confirming at a time.
 - **WHEN** the user chooses delete on one row and then on another
 - **THEN** only the second row is confirming, with nothing carried over from the first
 
+#### Scenario: A failed write is reported without dismissing the confirmation
+- **WHEN** storing or deleting a token fails because the vault is locked
+- **THEN** a message says so, the confirmation stays open, and nothing the user typed is discarded
+
 #### Scenario: Settings never calls GitHub
 - **WHEN** the user adds, replaces, or deletes an owner token
 - **THEN** no GitHub call is made from the settings screen, and the owner's fetch outcome arrives with the next published snapshot
@@ -137,7 +141,12 @@ longer than 512 characters, showing a message and storing nothing. The system
 SHALL NOT validate the owner name against GitHub's login rules, SHALL NOT
 validate the token's prefix or format, and SHALL NOT call GitHub to check
 either. Whether an owner and token actually work is reported by the next poll's
-owner status.
+owner status. Both the owner name and the token SHALL be trimmed of surrounding
+whitespace before they are validated and stored.
+
+#### Scenario: A pasted token is trimmed
+- **WHEN** the user submits a token with leading or trailing whitespace
+- **THEN** the token is stored without that whitespace, so it is not rejected by GitHub on the next poll
 
 #### Scenario: Empty owner or token is rejected
 - **WHEN** the user submits an empty or whitespace-only owner name or token

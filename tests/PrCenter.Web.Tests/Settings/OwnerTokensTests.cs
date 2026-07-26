@@ -2,6 +2,8 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
 using PrCenter.Core.Queue;
 using PrCenter.Core.Settings;
@@ -251,6 +253,61 @@ public sealed class OwnerTokensTests : BunitContext
 
         // Assert
         _vault.DidNotReceive().DeleteTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenTheTokenHasSurroundingWhitespace_StoresItTrimmed()
+    {
+        // Arrange
+        var cut = RenderTable();
+
+        // Act
+        Submit(cut, "perfectserve", "  github_pat_value\n");
+
+        // Assert
+        _vault
+            .Received(1)
+            .StoreTokenAsync("perfectserve", "github_pat_value", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenTheDeleteFails_KeepsTheConfirmationAndShowsAMessage()
+    {
+        // Arrange
+        StoredOwners(new OwnerTokenSummary("ps-unite", SavedAt));
+        _vault
+            .DeleteTokenAsync("ps-unite", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new VaultLockedException("the vault is locked"));
+        var cut = RenderTable();
+
+        // Act
+        BeginDelete(cut, "ps-unite");
+        ConfirmDelete(cut, "ps-unite");
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=owner-token-error]"));
+        Assert.NotNull(
+            cut.Find(
+                "[data-testid=owner-row][data-owner=ps-unite] [data-testid=delete-confirmation]"
+            )
+        );
+    }
+
+    [Fact]
+    public void OwnerTokens_WhenTheSaveFails_ShowsAMessageAndKeepsTheEnteredOwner()
+    {
+        // Arrange
+        _vault
+            .StoreTokenAsync("perfectserve", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new VaultLockedException("the vault is locked"));
+        var cut = RenderTable();
+
+        // Act
+        Submit(cut, "perfectserve", "github_pat_value");
+
+        // Assert
+        Assert.NotNull(cut.Find("[data-testid=owner-token-error]"));
+        Assert.Equal("perfectserve", cut.Find("[data-testid=new-owner]").GetAttribute("value"));
     }
 
     [Theory]

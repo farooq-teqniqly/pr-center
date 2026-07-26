@@ -98,12 +98,16 @@ internal sealed partial class QueuePollingService : BackgroundService
         // there ends the BackgroundService for the life of the process, and the
         // still-armed timer would go on poking a trigger nobody awaits. Polling is
         // a repeating best-effort read, so one bad cycle is logged and skipped.
+        // Only a cancellation of this service's own token means shutdown. A request
+        // timeout also arrives as OperationCanceledException, so treating the type
+        // alone as "we are stopping" would end the loop on a slow GitHub call --
+        // matching RefreshQueue, which reads cancellation the same way.
         try
         {
             await PollWhenUnlockedAsync(scope.ServiceProvider, cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             LogPollCycleFailed(ex);
         }
@@ -124,7 +128,7 @@ internal sealed partial class QueuePollingService : BackgroundService
                 .GetPollIntervalAsync(cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             LogIntervalReadFailed(ex, PollInterval.Default.Value);
             return PollInterval.Default;

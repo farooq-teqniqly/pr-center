@@ -81,6 +81,9 @@ delete and the typed-word vault reset. See design decision 10a.
 - [x] 11.1 Write failing bUnit tests on `OwnerTokens`: choosing delete opens a confirmation naming the owner and deletes nothing; the exact owner name deletes once; a near-miss, a case-different name, an empty entry, and a *different stored owner's* name each delete nothing and leave the confirmation open; cancelling deletes nothing and closes it; starting a second row's deletion leaves only that row confirming.
 - [x] 11.2 Implement the per-row confirmation: `Ordinal` match against the row's own owner, one pending row at a time, typed text cleared when the pending row changes.
 - [x] 11.3 Update the `settings-and-onboarding` spec with the confirmation requirement and its scenarios, and record design decision 10a.
+- [x] 11.4 Trim the token as well as the owner before validating and storing; add the failing test first. A pasted trailing newline otherwise stores fine and fails the next poll with no visible cause.
+- [x] 11.5 Keep the confirmation open and show a message when a store or delete fails on a locked vault, rather than dismissing the UI over a token that is still there. Log the suppressed exception.
+- [x] 11.6 Read cancellation the way `RefreshQueue` does in `QueuePollingService` -- only this service's own cancelled token means shutdown, so a request timeout arriving as `OperationCanceledException` degrades instead of ending the loop.
 
 ## 12. Close-out
 
