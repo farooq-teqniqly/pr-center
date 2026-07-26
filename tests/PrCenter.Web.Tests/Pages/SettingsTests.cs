@@ -103,6 +103,10 @@ public sealed class SettingsTests : BunitContext
     {
         var vault = Substitute.For<ITokenVault>();
         var trigger = Substitute.For<IRefreshTrigger>();
+        var settingsStore = Substitute.For<IAppSettingsStore>();
+        settingsStore
+            .GetPollIntervalAsync(Arg.Any<CancellationToken>())
+            .Returns(PollInterval.Default);
         var holder = new QueueSnapshotHolder(
             TimeProvider.System,
             NullLogger<QueueSnapshotHolder>.Instance
@@ -116,5 +120,7 @@ public sealed class SettingsTests : BunitContext
         Services.AddSingleton(new InitializeVault(vault, appLock, trigger));
         Services.AddSingleton(new SaveOwnerToken(vault, trigger));
         Services.AddSingleton(new RemoveOwner(vault, trigger));
+        Services.AddSingleton(settingsStore);
+        Services.AddSingleton(new SavePollInterval(settingsStore, trigger));
     }
 }

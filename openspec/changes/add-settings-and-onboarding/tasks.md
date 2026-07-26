@@ -65,8 +65,8 @@ it drives, and the implementation task is done when that test passes.
 
 ## 9. Poll interval control
 
-- [ ] 9.1 Write failing bUnit `PollIntervalControlTests`: the current interval and the allowed range render; an in-range save calls `SavePollInterval` once; a below-minimum and an above-maximum entry each show the range message and call nothing.
-- [ ] 9.2 Implement the interval control, range-checking input before constructing a `PollInterval`.
+- [x] 9.1 Write failing bUnit `PollIntervalControlTests`: the current interval and the allowed range render; an in-range save calls `SavePollInterval` once; a below-minimum and an above-maximum entry each show the range message and call nothing.
+- [x] 9.2 Implement the interval control, range-checking input before constructing a `PollInterval`.
 
 ## 10. Reset confirmation on the unlock card
 
