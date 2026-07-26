@@ -23,8 +23,10 @@ public interface IAppSettingsStore
 
     /// <summary>
     /// Stores the poll interval, replacing any previously stored value. The
-    /// parameter type constrains the value to the allowed range, so an
-    /// out-of-range interval cannot reach storage through this port. The
+    /// parameter type constrains the value to the allowed range everywhere
+    /// except the struct default, which skips the constructor; implementations
+    /// re-check the range so an out-of-range interval cannot reach storage
+    /// through this port from any caller. The
     /// interval is stored at whole-second resolution: any sub-second component
     /// is dropped and does not round-trip. This is a deliberate property of the
     /// contract rather than an implementation detail -- a poll cadence measured
@@ -34,5 +36,9 @@ public interface IAppSettingsStore
     /// <param name="interval">The interval between scheduled polls.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that completes when the interval is stored.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="interval"/> falls outside the allowed range, which the
+    /// struct default does.
+    /// </exception>
     Task SetPollIntervalAsync(PollInterval interval, CancellationToken cancellationToken = default);
 }

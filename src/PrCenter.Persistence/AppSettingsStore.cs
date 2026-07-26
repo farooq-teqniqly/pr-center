@@ -65,6 +65,13 @@ internal sealed partial class AppSettingsStore : IAppSettingsStore
         CancellationToken cancellationToken = default
     )
     {
+        // The parameter type carries the range invariant everywhere except one
+        // hole: default(PollInterval) skips the constructor and is a zero
+        // interval. Re-check here so the port's promise that an out-of-range
+        // value cannot reach storage is actually true of every caller.
+        ArgumentOutOfRangeException.ThrowIfLessThan(interval.Value, PollInterval.Min);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(interval.Value, PollInterval.Max);
+
         var seconds = (long)interval.Value.TotalSeconds;
 
         // Tracked read: this row is about to be written, so the change tracker is

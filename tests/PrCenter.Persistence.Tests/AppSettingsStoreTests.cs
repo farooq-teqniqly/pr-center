@@ -55,6 +55,27 @@ public sealed class AppSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SetPollIntervalAsync_TheStructDefault_ThrowsAndStoresNothing()
+    {
+        // Arrange
+        await using var context = _database.CreateContext();
+        var store = CreateStore(context);
+
+        // Act / Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            store.SetPollIntervalAsync(default, CancellationToken.None)
+        );
+
+        await using var readContext = _database.CreateContext();
+        Assert.Equal(
+            0,
+            await readContext
+                .AppSettings.AsNoTracking()
+                .CountAsync(TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
     public async Task SetPollIntervalAsync_CalledTwice_ReplacesRatherThanInserting()
     {
         // Arrange
