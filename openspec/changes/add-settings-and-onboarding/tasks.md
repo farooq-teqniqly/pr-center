@@ -5,8 +5,8 @@ it drives, and the implementation task is done when that test passes.
 
 ## 1. Poll interval value object (Core)
 
-- [ ] 1.1 Write failing `PollIntervalTests`: in-range construction round-trips the `TimeSpan`; below 5 minutes and above 24 hours throw; the boundaries (exactly 5 minutes, exactly 24 hours) are accepted; `Clamp` returns `Min` for a low value, `Max` for a high value, and the input unchanged for an in-range one.
-- [ ] 1.2 Add `PrCenter.Core/Settings/PollInterval.cs` -- `readonly record struct` over a `TimeSpan` with `Min` (5 min), `Max` (24 h), a range-checking constructor, and `static Clamp(TimeSpan)`. XML docs on the type and every member.
+- [x] 1.1 Write failing `PollIntervalTests`: in-range construction round-trips the `TimeSpan`; below 5 minutes and above 24 hours throw; the boundaries (exactly 5 minutes, exactly 24 hours) are accepted; `Clamp` returns `Min` for a low value, `Max` for a high value, and the input unchanged for an in-range one.
+- [x] 1.2 Add `PrCenter.Core/Settings/PollInterval.cs` -- `readonly record struct` over a `TimeSpan` with `Min` (5 min), `Max` (24 h), a range-checking constructor, and `static Clamp(TimeSpan)`. XML docs on the type and every member.
 
 ## 2. Settings port and adapter (Core + Persistence)
 
