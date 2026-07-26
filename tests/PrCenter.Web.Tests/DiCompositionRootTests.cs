@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using PrCenter.Core.Ports;
 using PrCenter.Core.Queue;
+using PrCenter.Core.Settings;
 using PrCenter.Web.Polling;
 
 namespace PrCenter.Web.Tests;
@@ -99,13 +99,33 @@ public sealed class DiCompositionRootTests : IClassFixture<WebApplicationFactory
     }
 
     [Fact]
-    public void Host_WhenBuilt_BindsPollIntervalFromConfiguration()
+    public void Host_WhenBuilt_ResolvesAppSettingsStoreToPersistenceAdapter()
     {
-        // Arrange / Act
-        var options = _factory.Services.GetRequiredService<IOptions<PollingOptions>>();
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+
+        // Act
+        var resolved = scope.ServiceProvider.GetRequiredService<IAppSettingsStore>();
 
         // Assert
-        Assert.Equal(TimeSpan.FromMinutes(5), options.Value.Interval);
+        Assert.Equal("PrCenter.Persistence", resolved.GetType().Assembly.GetName().Name);
+    }
+
+    [Theory]
+    [InlineData(typeof(InitializeVault))]
+    [InlineData(typeof(SaveOwnerToken))]
+    [InlineData(typeof(RemoveOwner))]
+    [InlineData(typeof(SavePollInterval))]
+    public void Host_WhenBuilt_ResolvesSettingsUseCase(Type useCase)
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+
+        // Act
+        var resolved = scope.ServiceProvider.GetRequiredService(useCase);
+
+        // Assert
+        Assert.IsType(useCase, resolved);
     }
 
     [Fact]

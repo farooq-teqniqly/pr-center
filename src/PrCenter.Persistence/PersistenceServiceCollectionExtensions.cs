@@ -13,8 +13,8 @@ public static class PersistenceServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the SQLite context and the persistence adapter's
-    /// implementations of <see cref="ITokenVault"/> and <see cref="IAppLock"/>
-    /// (with its singleton key holder).
+    /// implementations of <see cref="ITokenVault"/>, <see cref="IAppLock"/>
+    /// (with its singleton key holder), and <see cref="IAppSettingsStore"/>.
     /// </summary>
     /// <param name="services">The service collection to add the adapter to.</param>
     /// <param name="connectionString">The SQLite connection string.</param>
@@ -53,6 +53,10 @@ public static class PersistenceServiceCollectionExtensions
         // scoped context, so it is scoped.
         services.AddSingleton<VaultKeyHolder>();
         services.AddScoped<IAppLock, AppLock>();
+
+        // Settings touch no vault key, so this one is scoped only because it
+        // reads the scoped context.
+        services.AddScoped<IAppSettingsStore, AppSettingsStore>();
         return services;
     }
 }

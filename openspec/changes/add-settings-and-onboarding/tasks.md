@@ -37,10 +37,10 @@ it drives, and the implementation task is done when that test passes.
 
 ## 5. Poll loop reads the stored interval
 
-- [ ] 5.1 Write failing `QueuePollingServiceTests` with a fake `TimeProvider`: the first arm uses the stored interval; after a wake the timer re-arms with the value read in that cycle, so an interval changed mid-run is honored on the next wake; a poke from the trigger also re-arms (interval means time since last poll); no stored row uses the 5-minute default.
-- [ ] 5.2 Rework `QueuePollingService`: drop `IOptions<PollingOptions>`, read `IAppSettingsStore` inside each wake's DI scope, and make the `ITimer` one-shot re-armed after every wake. Keep the single-trigger/no-overlap model intact.
-- [ ] 5.3 Delete `Polling/PollingOptions.cs`, `Polling/PollingOptionsValidator.cs`, their tests, and the `Polling` section in `appsettings.json`; drop the options registration and `ValidateOnStart` from `AddQueueServices`.
-- [ ] 5.4 Register `IAppSettingsStore` and the four new use cases in the DI extensions (scoped for the store and the use cases, matching `UnlockApp`).
+- [x] 5.1 Write failing `QueuePollingServiceTests` with a fake `TimeProvider`: the first arm uses the stored interval; after a wake the timer re-arms with the value read in that cycle, so an interval changed mid-run is honored on the next wake; a poke from the trigger also re-arms (interval means time since last poll); no stored row uses the 5-minute default.
+- [x] 5.2 Rework `QueuePollingService`: drop `IOptions<PollingOptions>`, read `IAppSettingsStore` inside each wake's DI scope, and make the `ITimer` one-shot re-armed after every wake. Keep the single-trigger/no-overlap model intact.
+- [x] 5.3 Delete `Polling/PollingOptions.cs`, `Polling/PollingOptionsValidator.cs`, their tests, and the `Polling` section in `appsettings.json`; drop the options registration and `ValidateOnStart` from `AddQueueServices`.
+- [x] 5.4 Register `IAppSettingsStore` and the four new use cases in the DI extensions (scoped for the store and the use cases, matching `UnlockApp`).
 
 ## 6. Lock gate generalization and the settings route
 
