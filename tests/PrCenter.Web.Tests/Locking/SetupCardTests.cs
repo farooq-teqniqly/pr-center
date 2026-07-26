@@ -24,7 +24,7 @@ public sealed class SetupCardTests : BunitContext
         {
             { "short7c", "short7c" },
             { new string('x', 33), new string('x', 33) },
-            { ValidPassword, "example-pass-9" },
+            { ValidPassword, ValidPassword + "x" },
             { string.Empty, string.Empty },
         };
 
