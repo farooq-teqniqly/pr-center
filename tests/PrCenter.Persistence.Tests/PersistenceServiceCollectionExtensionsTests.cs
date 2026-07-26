@@ -68,10 +68,13 @@ public sealed class PersistenceServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddPersistenceAdapter_OnItsOwn_ResolvesTheVaultWithoutAnyOtherRegistration()
+    public void AddPersistenceAdapter_WithOnlyHostLogging_ResolvesTheVault()
     {
         // Arrange
         var services = new ServiceCollection();
+
+        // Logging is the one thing every host registers before any adapter; the
+        // point of this test is that the adapter needs nothing beyond it.
         services.AddLogging();
         services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
         using var provider = services.BuildServiceProvider();

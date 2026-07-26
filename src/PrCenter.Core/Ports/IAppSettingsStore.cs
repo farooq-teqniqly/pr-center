@@ -24,7 +24,12 @@ public interface IAppSettingsStore
     /// <summary>
     /// Stores the poll interval, replacing any previously stored value. The
     /// parameter type constrains the value to the allowed range, so an
-    /// out-of-range interval cannot reach storage through this port.
+    /// out-of-range interval cannot reach storage through this port. The
+    /// interval is stored at whole-second resolution: any sub-second component
+    /// is dropped and does not round-trip. This is a deliberate property of the
+    /// contract rather than an implementation detail -- a poll cadence measured
+    /// in minutes has no use for finer precision, and whole seconds keep the
+    /// stored value readable and repairable in a SQLite client.
     /// </summary>
     /// <param name="interval">The interval between scheduled polls.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
