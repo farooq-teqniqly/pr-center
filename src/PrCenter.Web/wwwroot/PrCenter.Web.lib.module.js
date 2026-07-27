@@ -6,5 +6,12 @@
 // light until a full refresh. Reapplying the OS-preferred theme on every
 // enhancedload keeps the scheme stable across client-side navigation (#35).
 export function afterWebStarted(blazor) {
-    blazor.addEventListener("enhancedload", () => window.applyPreferredTheme());
+    blazor.addEventListener("enhancedload", () => {
+        // Defined by the inline auto-dark script in App.razor. Guard in case
+        // that script was blocked or failed, so a missing global does not throw
+        // a TypeError on every enhanced navigation.
+        if (typeof window.applyPreferredTheme === "function") {
+            window.applyPreferredTheme();
+        }
+    });
 }
