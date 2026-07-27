@@ -12,11 +12,20 @@
         stylesheets apply, so Bootstrap and the semantic tokens (app.css) render
         in the same scheme with no flash. There is no in-app toggle yet (#7); a
         later toggle flips this same attribute.
+
+        This runs on every full document load. Enhanced navigation does not
+        reload the document -- it DOM-diffs the fetched page (whose <html> has
+        no data-bs-theme) against the live one and strips the attribute, so the
+        Blazor JS initializer (PrCenter.Web.lib.module.js) reapplies the theme
+        on each enhancedload to keep the scheme from flashing to light (#35).
     -->
     <script>
-        document.documentElement.setAttribute(
-            "data-bs-theme",
-            window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        window.applyPreferredTheme = function () {
+            document.documentElement.setAttribute(
+                "data-bs-theme",
+                window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        };
+        window.applyPreferredTheme();
     </script>
 
     <!-- Bootstrap from CDN, pinned to an exact version with SRI. No bundled copy under wwwroot. -->
