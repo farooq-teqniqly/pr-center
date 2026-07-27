@@ -14,9 +14,11 @@ internal static class GitHubGraphQlQueries
     // reviewThreads x its comments dominates this fragment. Current cost per PR
     // is 50 + 100 + 100 + 100 + 25 * (1 + 10) = 625; ReviewQueue multiplies that
     // by 50 hits x 2 searches = ~62,500. Recompute before widening any page size.
-    // Connections read newest-first (`last:`) wherever only recent activity
+    // Connections take the newest slice (`last:`) wherever only recent activity
     // matters, so truncation drops stale rows rather than the ones that decide
-    // whether a PR has an update.
+    // whether a PR has an update. `last:` selects which rows come back, not the
+    // order they arrive in -- the nodes keep the connection's default ordering,
+    // so no consumer may rely on node position; the mapper sorts by timestamp.
     private const string PrFactsFragment = """
         fragment prFacts on PullRequest {
           id
