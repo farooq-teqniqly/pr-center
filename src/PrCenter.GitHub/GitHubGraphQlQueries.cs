@@ -8,6 +8,15 @@ namespace PrCenter.GitHub;
 /// </summary>
 internal static class GitHubGraphQlQueries
 {
+    // Node-budget note: GitHub rejects a query whose *possible* node count
+    // exceeds 500,000 (MAX_NODE_LIMIT_EXCEEDED), counting the declared page
+    // sizes, not the rows actually returned. Nested connections multiply, so
+    // reviewThreads x its comments dominates this fragment. Current cost per PR
+    // is 50 + 100 + 100 + 100 + 25 * (1 + 10) = 625; ReviewQueue multiplies that
+    // by 50 hits x 2 searches = ~62,500. Recompute before widening any page size.
+    // Connections read newest-first (`last:`) wherever only recent activity
+    // matters, so truncation drops stale rows rather than the ones that decide
+    // whether a PR has an update.
     private const string PrFactsFragment = """
         fragment prFacts on PullRequest {
           id
@@ -22,7 +31,7 @@ internal static class GitHubGraphQlQueries
           reviewRequests(first: 50) {
             nodes { requestedReviewer { __typename ... on User { login } } }
           }
-          reviews(first: 100) {
+          reviews(last: 100) {
             nodes { author { __typename login } state submittedAt }
           }
           commits(last: 100) {
@@ -31,8 +40,8 @@ internal static class GitHubGraphQlQueries
           comments(last: 100) {
             nodes { author { __typename login } createdAt }
           }
-          reviewThreads(first: 100) {
-            nodes { comments(first: 100) { nodes { author { __typename login } createdAt } } }
+          reviewThreads(last: 25) {
+            nodes { comments(last: 10) { nodes { author { __typename login } createdAt } } }
           }
         }
         """;
