@@ -92,6 +92,8 @@ a, .btn-link {
     vertical-align: -0.15rem;
     background-color: currentColor;
     mask-size: cover;
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .icon-save {
