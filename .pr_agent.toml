@@ -21,6 +21,9 @@ Respect these deliberate PR-Center decisions and do not flag them as defects:
   the model snapshot) are public partial by generator design; their accessibility
   is the tooling's and regeneration reverts hand-edits, so do not flag their
   public surface or suggest making them internal/sealed.
+- xUnit test classes under tests/ are public sealed on purpose. The baseline
+  convention defaults types to internal sealed but names this exact exception:
+  a type a framework must discover. Do not suggest making test classes internal.
 - *.Logging.cs partial void Log... methods are [LoggerMessage] source-generated;
   the generator supplies the bodies, so they are not unimplemented.
 - EF Core read-only queries use AsNoTracking by convention, but write/upsert
