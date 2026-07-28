@@ -61,9 +61,25 @@ relative to the user. The refresh SHALL NOT read or write any stored last-seen
 marker. The refresh SHALL then publish a new queue snapshot containing the
 derived queue items and each owner's fetch status.
 
+Owner-queue discovery is not scoped to the owner, so one owner's token can return
+pull requests belonging to another configured owner. The published snapshot SHALL
+therefore contain at most one item per pull request id across all owners: a
+freshly fetched item SHALL win over an item carried over from a failed owner, and
+between two items of the same freshness the first owner in enumeration order
+SHALL win. Deduplication SHALL NOT affect owner statuses -- every enumerated owner
+still has a status, including one whose every item was deduplicated away.
+
 #### Scenario: Successful multi-owner refresh
 - **WHEN** a refresh runs with multiple owners having stored tokens and all fetches succeed
 - **THEN** the published snapshot contains the derived queue items of every owner and an ok status per owner
+
+#### Scenario: A pull request two owners both return appears once
+- **WHEN** two owners' fetches both return the same pull request
+- **THEN** the published snapshot contains one item for it, and an ok status for each of the two owners
+
+#### Scenario: A fresh item wins over a colliding stale carry-over
+- **WHEN** an owner's fetch fails and its carried-over items include a pull request another owner returned fresh in the same refresh
+- **THEN** the published snapshot contains only the freshly fetched item for that pull request, alongside the failing owner's status
 
 #### Scenario: Login resolved per owner per poll
 - **WHEN** a refresh runs

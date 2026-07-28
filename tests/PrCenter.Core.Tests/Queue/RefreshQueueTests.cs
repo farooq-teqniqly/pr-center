@@ -100,6 +100,64 @@ public sealed class RefreshQueueTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenTwoOwnersReturnTheSamePullRequest_PublishesOneItem()
+    {
+        // Arrange -- one PAT can see another configured owner's repositories, so
+        // the same pull request comes back under both owners
+        _vault
+            .ListOwnersAsync(Arg.Any<CancellationToken>())
+            .Returns(["PerfectServe", "ps-unite"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+        StubOwner("ps-unite", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var snapshot = _holder.Current;
+        Assert.NotNull(snapshot);
+        Assert.Equal("PerfectServe/repo#1", Assert.Single(snapshot.Items).Identity.Id);
+        Assert.Equal(
+            ["PerfectServe", "ps-unite"],
+            snapshot.OwnerStatuses.Select(status => status.Owner)
+        );
+        Assert.All(
+            snapshot.OwnerStatuses,
+            status => Assert.Equal(OwnerFetchStatus.Ok, status.Status)
+        );
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAStaleCarryOverCollidesWithAFreshItem_KeepsTheFreshItem()
+    {
+        // Arrange -- the failing owner is enumerated first, so its carried-over row
+        // reaches the accumulator before the healthy owner's fresh copy
+        var clock = new AdvanceableTimeProvider(Instant);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe", "ps-unite"]);
+        StubOwner("PerfectServe", TitledFact("PerfectServe", "PerfectServe/repo#1", "stale title"));
+        StubOwner("ps-unite", TitledFact("PerfectServe", "PerfectServe/repo#1", "stale title"));
+        await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
+        clock.Now = Instant.AddMinutes(5);
+        StubOwnerError("PerfectServe", "boom");
+        StubOwner("ps-unite", TitledFact("PerfectServe", "PerfectServe/repo#1", "fresh title"));
+
+        // Act
+        await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var snapshot = holder.Current;
+        Assert.NotNull(snapshot);
+        Assert.Equal("fresh title", Assert.Single(snapshot.Items).Identity.Title);
+        var staleStatus = Assert.Single(
+            snapshot.OwnerStatuses,
+            status => status.Owner == "PerfectServe"
+        );
+        Assert.Equal(OwnerFetchStatus.Error, staleStatus.Status);
+        Assert.Equal(Instant, staleStatus.LastFreshAt);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithNoOwners_PublishesEmptySnapshotWithoutCallingGitHub()
     {
         // Arrange
@@ -327,15 +385,6 @@ public sealed class RefreshQueueTests
             .Returns(new OwnerFactsResult(OwnerFetchStatus.Error, [], detail));
     }
 
-    private sealed class AdvanceableTimeProvider : TimeProvider
-    {
-        public AdvanceableTimeProvider(DateTimeOffset now) => Now = now;
-
-        public DateTimeOffset Now { get; set; }
-
-        public override DateTimeOffset GetUtcNow() => Now;
-    }
-
     private void StubOwner(string owner, PullRequestFacts facts)
     {
         _facts
@@ -347,13 +396,16 @@ public sealed class RefreshQueueTests
     }
 
     private static PullRequestFacts ShownFact(string owner, string id) =>
+        TitledFact(owner, id, "title");
+
+    private static PullRequestFacts TitledFact(string owner, string id, string title) =>
         new(
             new PullRequestIdentity(
                 id,
                 owner,
                 "repo",
                 1,
-                "title",
+                title,
                 $"https://github.com/{owner}/repo/pull/1",
                 TestLogins.Author
             ),
@@ -365,4 +417,13 @@ public sealed class RefreshQueueTests
             ),
             new PullRequestActivity([TestLogins.Me], [], [], [])
         );
+
+    private sealed class AdvanceableTimeProvider : TimeProvider
+    {
+        public AdvanceableTimeProvider(DateTimeOffset now) => Now = now;
+
+        public DateTimeOffset Now { get; set; }
+
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
 }
