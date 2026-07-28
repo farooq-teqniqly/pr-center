@@ -1,0 +1,6 @@
+/* The settings forms are short fields, not data -- letting the table and inputs
+   run the full width of a wide monitor puts the delete button an inch from the
+   owner it belongs to. */
+.settings {
+    max-width: 56rem;
+}

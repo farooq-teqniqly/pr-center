@@ -33,6 +33,22 @@ public sealed class PollIntervalControlTests : BunitContext
         Assert.Contains("24 hours", range, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PollIntervalControl_NamesItsIconOnlySaveForAssistiveTech()
+    {
+        // Arrange
+        StoredInterval(TimeSpan.FromMinutes(30));
+
+        // Act
+        var cut = RenderControl();
+
+        // Assert
+        Assert.Equal(
+            "Save poll interval",
+            cut.Find("[data-testid=save-interval]").GetAttribute("aria-label")
+        );
+    }
+
     [Theory]
     [InlineData(30, "30 minutes")]
     [InlineData(60, "1 hour")]

@@ -42,6 +42,27 @@ public sealed class OwnerTokensTests : BunitContext
     }
 
     [Fact]
+    public void OwnerTokens_NamesItsIconOnlyActionsForAssistiveTech()
+    {
+        // Arrange
+        StoredOwners(new OwnerTokenSummary("perfectserve", SavedAt));
+
+        // Act
+        var cut = RenderTable();
+
+        // Assert
+        Assert.Equal(
+            "Delete perfectserve",
+            cut.Find("[data-testid=owner-row][data-owner=perfectserve] [data-testid=delete-owner]")
+                .GetAttribute("aria-label")
+        );
+        Assert.Equal(
+            "Save owner token",
+            cut.Find("[data-testid=save-owner]").GetAttribute("aria-label")
+        );
+    }
+
+    [Fact]
     public void OwnerTokens_ForATokenWithNoSavedInstant_RendersAnExplicitUnknown()
     {
         // Arrange

@@ -4,8 +4,10 @@
     flex-wrap: wrap;
     align-items: center;
     padding: 10px 20px;
-    border-bottom: 1px solid var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
     background: var(--surface-2);
+    margin-bottom: 1.5rem;
 }
 
 .owners .lbl {
