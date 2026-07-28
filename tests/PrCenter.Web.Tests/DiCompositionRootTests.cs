@@ -95,6 +95,21 @@ public sealed class DiCompositionRootTests : IClassFixture<WebApplicationFactory
     }
 
     [Fact]
+    public void Host_WhenBuilt_ResolvesRefreshStateHolderAsSingleton()
+    {
+        // Arrange
+        using var first = _factory.Services.CreateScope();
+        using var second = _factory.Services.CreateScope();
+
+        // Act
+        var fromFirst = first.ServiceProvider.GetRequiredService<RefreshStateHolder>();
+        var fromSecond = second.ServiceProvider.GetRequiredService<RefreshStateHolder>();
+
+        // Assert
+        Assert.Same(fromFirst, fromSecond);
+    }
+
+    [Fact]
     public void Host_WhenBuilt_ResolvesRefreshTriggerAndInterfaceToTheSameSingleton()
     {
         // Arrange

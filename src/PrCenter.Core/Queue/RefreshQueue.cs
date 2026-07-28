@@ -45,7 +45,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
     }
 
     /// <inheritdoc />
-    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
+    public async Task<RefreshOutcome> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var owners = await _vault.ListOwnersAsync(cancellationToken).ConfigureAwait(false);
 
@@ -64,14 +64,17 @@ public sealed partial class RefreshQueue : IRefreshQueue
             }
 
             _holder.Publish(items.DistinctPullRequests(), statuses);
+            return RefreshSucceeded.Instance;
         }
         // A locked vault is a global precondition failure, not a per-owner one:
         // abandon the whole refresh (no publish, so the last good snapshot
-        // survives) and log it -- the one owner of the mid-poll-lock warning, so
-        // the poll loop that calls this needs no lock-specific handling of its own.
+        // survives) and log it. The outcome is returned rather than thrown so the
+        // poll loop can report a stale queue to the user without lock-specific
+        // handling of its own.
         catch (VaultLockedException ex)
         {
             LogVaultLockedDuringRefresh(ex);
+            return RefreshAbortedByLock.Instance;
         }
     }
 

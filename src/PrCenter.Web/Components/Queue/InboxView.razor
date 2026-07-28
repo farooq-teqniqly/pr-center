@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject GetQueue GetQueue
 @inject QueueSnapshotHolder Holder
+@inject RefreshStateHolder RefreshState
 @inject IRefreshTrigger RefreshTrigger
 
 <div class="d-flex align-items-center gap-3 mb-3" data-testid="inbox-header">
@@ -11,9 +12,21 @@
             data-testid="refresh"
             aria-label="Refresh the queue"
             title="Refresh the queue"
+            disabled="@Refreshing"
+            aria-busy="@(Refreshing ? "true" : "false")"
             @onclick="Refresh">
-        <span class="icon icon-refresh" aria-hidden="true"></span>
+        <span class="icon icon-refresh @(Refreshing ? "icon-spin" : null)" aria-hidden="true"></span>
     </button>
+    <div class="small text-body-secondary" aria-live="polite">
+        @if (RefreshState.Current.LastCompletedAt is { } lastCompletedAt)
+        {
+            <span data-testid="last-refresh">Last refreshed @lastCompletedAt.ToLocalTime().ToString("g")</span>
+        }
+        @if (RefreshState.Current.Failure is { } failure)
+        {
+            <span class="text-danger ms-2" data-testid="refresh-failure">@failure</span>
+        }
+    </div>
 </div>
 
 @{
@@ -50,12 +63,60 @@ else
 }
 
 @code {
-    protected override void OnInitialized() => Holder.Changed += OnSnapshotChanged;
+    // The poll loop needs a moment to mark the refresh started, and Blazor Server
+    // round-trips the disabled attribute, so several clicks can land before either
+    // lands back here. This local latch closes that window: it holds from the click
+    // until the loop next reports that no refresh is running, so a burst of clicks
+    // costs one poke and one poll cycle rather than one per click.
+    //
+    // The latch is not tied to the identity of the wake the click caused -- the loop
+    // publishes no such identity -- and it does not need to be: it is only ever set
+    // while nothing is in flight (Refresh returns early otherwise), and the loop
+    // reports a wake in flight from the moment it takes a request up, not from the
+    // moment it starts polling. So a click can never be admitted alongside a wake
+    // that will not serve it, and the next ending is always the wake this click
+    // asked for.
+    private bool _pokeSent;
 
-    private void Refresh() => RefreshTrigger.RequestRefresh();
+    private bool Refreshing => _pokeSent || RefreshState.Current.InProgress;
+
+    protected override void OnInitialized()
+    {
+        Holder.Changed += OnSnapshotChanged;
+        RefreshState.Changed += OnRefreshStateChanged;
+    }
+
+    private void Refresh()
+    {
+        if (Refreshing)
+        {
+            return;
+        }
+
+        _pokeSent = true;
+        RefreshTrigger.RequestRefresh();
+    }
 
     private void OnSnapshotChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
+    private void OnRefreshStateChanged(object? sender, EventArgs e) =>
+        InvokeAsync(() =>
+        {
+            // Released on any transition reporting nothing in flight -- a completion
+            // or a skipped wake. Releasing on every transition would reopen the window
+            // on the wake-begun transition that the click itself caused.
+            if (!RefreshState.Current.InProgress)
+            {
+                _pokeSent = false;
+            }
+
+            StateHasChanged();
+        });
+
     /// <inheritdoc />
-    public void Dispose() => Holder.Changed -= OnSnapshotChanged;
+    public void Dispose()
+    {
+        Holder.Changed -= OnSnapshotChanged;
+        RefreshState.Changed -= OnRefreshStateChanged;
+    }
 }

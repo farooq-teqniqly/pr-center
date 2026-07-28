@@ -14,6 +14,10 @@ public interface IRefreshQueue
     /// previous snapshot untouched when the vault locks mid-poll.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A task that completes when the refresh has finished.</returns>
-    Task ExecuteAsync(CancellationToken cancellationToken = default);
+    /// <returns>
+    /// A task producing how the refresh ended: <see cref="RefreshSucceeded"/> when a
+    /// snapshot was published, or <see cref="RefreshAbortedByLock"/> when the vault
+    /// locked mid-poll. A per-owner fetch failure still succeeds.
+    /// </returns>
+    Task<RefreshOutcome> ExecuteAsync(CancellationToken cancellationToken = default);
 }
