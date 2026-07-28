@@ -66,8 +66,17 @@ else
     // The poll loop needs a moment to mark the refresh started, and Blazor Server
     // round-trips the disabled attribute, so several clicks can land before either
     // lands back here. This local latch closes that window: it holds from the click
-    // until the loop reports a refresh that is no longer running, so a burst of
-    // clicks costs one poke and one poll cycle rather than one per click.
+    // until the loop next reports that no refresh is running, so a burst of clicks
+    // costs one poke and one poll cycle rather than one per click.
+    //
+    // The latch is not tied to the identity of the poll the click caused -- the loop
+    // publishes no such identity. It is only ever set while idle (Refresh returns
+    // early otherwise), so in practice the next completion is the poll this click
+    // asked for. The exception is a wake already sitting in the lock gate when the
+    // click lands: its SkipRefresh releases the latch even though it is not serving
+    // this click, so the control can re-enable a moment before the requested poll
+    // begins. Accepted -- when the app really is Locked, re-enabling is correct, and
+    // the alternative is a poll-identity token for a one-frame cosmetic gain.
     private bool _pokeSent;
 
     private bool Refreshing => _pokeSent || RefreshState.Current.InProgress;
@@ -94,8 +103,9 @@ else
     private void OnRefreshStateChanged(object? sender, EventArgs e) =>
         InvokeAsync(() =>
         {
-            // Released only on a completed refresh: releasing on any transition would
-            // reopen the window while the poll the click asked for is still running.
+            // Released on any transition reporting no refresh running -- a completion
+            // or a skipped wake. Releasing on every transition would reopen the window
+            // on the BeginRefresh that the click itself caused.
             if (!RefreshState.Current.InProgress)
             {
                 _pokeSent = false;

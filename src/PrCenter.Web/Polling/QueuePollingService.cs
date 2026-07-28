@@ -144,12 +144,12 @@ internal sealed partial class QueuePollingService : BackgroundService
         {
             var outcome = await PollAsync(scope.ServiceProvider, cancellationToken)
                 .ConfigureAwait(false);
-            failure = FailureFor(outcome);
+            failure = FailureForOutcome(outcome);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             LogPollCycleFailed(ex);
-            failure = FailureFor(ex);
+            failure = FailureForException(ex);
         }
         finally
         {
@@ -161,7 +161,7 @@ internal sealed partial class QueuePollingService : BackgroundService
         }
     }
 
-    private static string? FailureFor(RefreshOutcome outcome) =>
+    private static string? FailureForOutcome(RefreshOutcome outcome) =>
         outcome is RefreshAbortedByLock
             ? "The vault locked during the refresh, so the queue below is stale."
             : null;
@@ -169,7 +169,7 @@ internal sealed partial class QueuePollingService : BackgroundService
     // Transport-neutral wording, matching how RefreshQueue words a per-owner
     // failure: the user sees a timeout as a timeout and everything else as a
     // generic failure, with the exception itself left to the log.
-    private static string FailureFor(Exception exception) =>
+    private static string FailureForException(Exception exception) =>
         exception is OperationCanceledException ? "The refresh timed out." : "The refresh failed.";
 
     private async Task<PollInterval> ReadIntervalAsync(
