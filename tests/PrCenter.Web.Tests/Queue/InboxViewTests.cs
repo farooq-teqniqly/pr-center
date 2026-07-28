@@ -165,6 +165,22 @@ public sealed class InboxViewTests : BunitContext
     }
 
     [Fact]
+    public void InboxView_NamesItsIconOnlyRefreshForAssistiveTech()
+    {
+        // Arrange
+        _holder.Publish([], []);
+
+        // Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        Assert.Equal(
+            "Refresh the queue",
+            cut.Find("[data-testid=refresh]").GetAttribute("aria-label")
+        );
+    }
+
+    [Fact]
     public void InboxView_WhenRefreshClicked_PokesTheRefreshTrigger()
     {
         // Arrange
