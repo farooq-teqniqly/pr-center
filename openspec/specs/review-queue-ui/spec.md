@@ -217,20 +217,25 @@ a refresh is reported no longer running.
 - **WHEN** a refresh completes
 - **THEN** the refresh action is enabled again and its icon stops spinning
 
-### Requirement: The inbox reports the last refresh attempt
-The inbox SHALL show, beside the refresh action, when the last refresh attempt
-was made, and SHALL show the failure alongside it when that attempt failed. A
-single owner's fetch failure is not a refresh failure -- it stays on that owner's
-status chip and banner. Before any refresh has been attempted, no time is shown.
+### Requirement: The inbox reports the last completed refresh
+The inbox SHALL show, beside the refresh action, when the last refresh finished,
+and SHALL show the failure alongside it when that refresh failed. A single
+owner's fetch failure is not a refresh failure -- it stays on that owner's status
+chip and banner. Before any refresh has finished, no time is shown, and a refresh
+still running leaves the previously shown time in place.
 
-#### Scenario: No refresh attempted yet
-- **WHEN** no refresh has been attempted since process start
+#### Scenario: No refresh finished yet
+- **WHEN** no refresh has finished since process start
 - **THEN** no last-refresh time is shown
 
 #### Scenario: The last refresh succeeded
-- **WHEN** the last refresh attempt succeeded
-- **THEN** its time is shown and no refresh failure is shown
+- **WHEN** the last refresh finished successfully
+- **THEN** the instant it finished is shown and no refresh failure is shown
 
 #### Scenario: The last refresh failed
-- **WHEN** the last refresh attempt failed
-- **THEN** its time is shown together with the failure
+- **WHEN** the last refresh finished with a failure
+- **THEN** the instant it finished is shown together with the failure
+
+#### Scenario: A wake that polls nothing releases the refresh action
+- **WHEN** the wake the refresh action requested polls nothing, because the app is Locked or its lock state could not be read
+- **THEN** the refresh action becomes available again and the shown time is unchanged

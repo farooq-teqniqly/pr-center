@@ -43,9 +43,9 @@ public sealed partial class RefreshStateHolder
     public event EventHandler? Changed;
 
     /// <summary>
-    /// Marks a refresh as started. The previous attempt's instant and failure stay
-    /// visible while the new one runs, so the inbox keeps showing the last known
-    /// outcome rather than blanking for the duration of the poll.
+    /// Marks a refresh as started. The previous refresh's completion instant and
+    /// failure stay visible while the new one runs, so the inbox keeps showing the
+    /// last known outcome rather than blanking for the duration of the poll.
     /// </summary>
     public void BeginRefresh()
     {
@@ -64,10 +64,19 @@ public sealed partial class RefreshStateHolder
         Publish(
             new RefreshState(
                 InProgress: false,
-                LastAttemptAt: _timeProvider.GetUtcNow(),
+                LastCompletedAt: _timeProvider.GetUtcNow(),
                 Failure: failure
             )
         );
+
+    /// <summary>
+    /// Reports a wake that consumed a refresh request but polled nothing, so no
+    /// refresh ran. The last completion and its failure are left untouched -- a
+    /// skipped wake is not a refresh -- but observers are still notified, so a UI
+    /// holding a control closed against the request it made is released rather than
+    /// waiting for a transition that will never come.
+    /// </summary>
+    public void SkipRefresh() => Publish(Current with { InProgress = false });
 
     private void Publish(RefreshState state)
     {

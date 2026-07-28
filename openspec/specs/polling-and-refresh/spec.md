@@ -213,13 +213,21 @@ poke the trigger.
 
 ### Requirement: The poll loop publishes its refresh activity
 The poll loop SHALL publish, for observers, whether a refresh is running right
-now, the instant the last refresh attempt started, and how that attempt failed
-when it did. A refresh SHALL be marked running before the poll begins and marked
-finished once it ends, including when it faults, so the state can never stay
-running after the poll has stopped. A wake while the app is Locked polls nothing
-and SHALL NOT count as an attempt. A single owner's fetch failure SHALL NOT be
-reported as a refresh failure -- it stays that owner's status -- whereas a vault
-that locks mid-poll and a faulted cycle SHALL each be reported as one.
+now, the instant the last refresh finished, and how it failed when it did. The
+published instant is a completion instant, not a start one: a refresh still
+running has not refreshed anything, so the previous completion stays published
+until the running one lands. A refresh SHALL be marked running before the poll
+begins and marked finished once it ends, including when it faults, so the state
+can never stay running after the poll has stopped. A single owner's fetch failure
+SHALL NOT be reported as a refresh failure -- it stays that owner's status --
+whereas a vault that locks mid-poll and a faulted cycle SHALL each be reported as
+one.
+
+A wake that consumed a refresh request but polled nothing -- the app was Locked,
+or its lock state could not be read -- SHALL NOT change the published completion
+instant or failure, but SHALL still notify observers that it is over, so a caller
+holding a control closed against its own request is released rather than waiting
+for a notification that never comes.
 
 #### Scenario: A running refresh is observable
 - **WHEN** a poll is in flight
@@ -227,7 +235,7 @@ that locks mid-poll and a faulted cycle SHALL each be reported as one.
 
 #### Scenario: A finished refresh records its instant
 - **WHEN** a poll completes successfully
-- **THEN** the published state reports no refresh running, stamps the attempt instant, and reports no failure
+- **THEN** the published state reports no refresh running, stamps the instant the poll finished, and reports no failure
 
 #### Scenario: A faulted cycle still finishes the refresh
 - **WHEN** a poll cycle throws
@@ -237,13 +245,17 @@ that locks mid-poll and a faulted cycle SHALL each be reported as one.
 - **WHEN** a refresh is abandoned because the vault locked mid-poll
 - **THEN** the published state records a failure
 
-#### Scenario: A wake while locked is not an attempt
+#### Scenario: A wake while locked is not a refresh
 - **WHEN** the loop wakes while the app is Locked
-- **THEN** no poll runs and the last attempt instant is unchanged
+- **THEN** no poll runs and the last completion instant is unchanged
 
 #### Scenario: An unreadable lock state does not end the loop
 - **WHEN** reading the app-lock state throws
 - **THEN** the failure is logged, no poll runs, and the loop still serves the next poke
+
+#### Scenario: A wake that polls nothing still notifies observers
+- **WHEN** a wake consumes a refresh request but polls nothing, whether because the app is Locked or because its lock state could not be read
+- **THEN** observers are notified that no refresh is running, and the last completion instant and failure are unchanged
 
 #### Scenario: Unlock triggers an immediate poll
 - **WHEN** the user unlocks the app successfully

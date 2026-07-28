@@ -18,8 +18,10 @@ namespace PrCenter.Web.Polling;
 /// wake -- timer or on-demand -- restarts the interval clock. DI scoping for the
 /// scoped ports is created per wake; the refresh use case is scope-agnostic. The
 /// loop is the sole writer of the shared refresh state, marking each poll it
-/// actually runs as started and then finished, so the inbox can hold its refresh
-/// action closed for the duration and report how the last attempt ended.
+/// actually runs as started and then finished, and reporting a wake that polled
+/// nothing as skipped, so the inbox can hold its refresh action closed for the
+/// duration of a real poll, release it either way, and report how the last
+/// refresh ended.
 /// </summary>
 internal sealed partial class QueuePollingService : BackgroundService
 {
@@ -101,11 +103,14 @@ internal sealed partial class QueuePollingService : BackgroundService
             .ConfigureAwait(false);
         _timer?.Change(interval.Value, System.Threading.Timeout.InfiniteTimeSpan);
 
-        // A wake while the app is Locked polls nothing, so it is not a refresh
-        // attempt: gating before the state is marked keeps the inbox's last-refresh
-        // instant pointing at the last real poll rather than at a no-op wake. The
-        // gate reads storage, so it gets the same guard as the poll -- an exception
-        // escaping here would end the loop for the life of the process.
+        // A wake while the app is Locked polls nothing, so it is not a refresh:
+        // gating before the state is marked keeps the inbox's last-refresh instant
+        // pointing at the last real poll rather than at a no-op wake. The gate reads
+        // storage, so it gets the same guard as the poll -- an exception escaping
+        // here would end the loop for the life of the process. Either way the wake
+        // is reported as skipped: it consumed a refresh request, and a caller
+        // holding its own control closed against that request needs to hear that
+        // nothing is coming.
         bool unlocked;
         try
         {
@@ -115,11 +120,13 @@ internal sealed partial class QueuePollingService : BackgroundService
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             LogPollCycleFailed(ex);
+            _refreshState.SkipRefresh();
             return;
         }
 
         if (!unlocked)
         {
+            _refreshState.SkipRefresh();
             return;
         }
 

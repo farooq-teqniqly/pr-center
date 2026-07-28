@@ -18,9 +18,9 @@
         <span class="icon icon-refresh @(Refreshing ? "icon-spin" : null)" aria-hidden="true"></span>
     </button>
     <div class="small text-body-secondary" aria-live="polite">
-        @if (RefreshState.Current.LastAttemptAt is { } lastAttemptAt)
+        @if (RefreshState.Current.LastCompletedAt is { } lastCompletedAt)
         {
-            <span data-testid="last-refresh">Last refreshed @lastAttemptAt.ToLocalTime().ToString("g")</span>
+            <span data-testid="last-refresh">Last refreshed @lastCompletedAt.ToLocalTime().ToString("g")</span>
         }
         @if (RefreshState.Current.Failure is { } failure)
         {

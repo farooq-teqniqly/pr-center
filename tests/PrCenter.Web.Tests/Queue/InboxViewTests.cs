@@ -272,6 +272,55 @@ public sealed class InboxViewTests : BunitContext
     }
 
     [Fact]
+    public void InboxView_WhenTheRequestedWakePollsNothing_ReEnablesRefresh()
+    {
+        // Arrange
+        _holder.Publish([], []);
+        var cut = Render<InboxView>();
+        cut.Find("[data-testid=refresh]").Click();
+
+        // Act
+        _refreshState.SkipRefresh();
+
+        // Assert
+        cut.WaitForAssertion(() =>
+            Assert.False(cut.Find("[data-testid=refresh]").HasAttribute("disabled"))
+        );
+    }
+
+    [Fact]
+    public void InboxView_AfterASkippedWake_AcceptsTheNextClick()
+    {
+        // Arrange
+        _holder.Publish([], []);
+        var cut = Render<InboxView>();
+        cut.Find("[data-testid=refresh]").Click();
+
+        // Act
+        _refreshState.SkipRefresh();
+        cut.Find("[data-testid=refresh]").Click();
+
+        // Assert
+        _trigger.Received(2).RequestRefresh();
+    }
+
+    [Fact]
+    public void InboxView_WhenAWakeIsSkipped_KeepsTheLastRefreshTimeUnchanged()
+    {
+        // Arrange
+        _holder.Publish([], []);
+        var cut = Render<InboxView>();
+        _refreshState.BeginRefresh();
+        _refreshState.CompleteRefresh(failure: null);
+
+        // Act
+        _refreshState.SkipRefresh();
+
+        // Assert
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid=last-refresh]")));
+    }
+
+    [Fact]
     public void InboxView_BeforeAnyRefresh_ShowsNoLastRefreshTime()
     {
         // Arrange

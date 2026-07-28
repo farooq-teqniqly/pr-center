@@ -173,22 +173,33 @@ public sealed class QueuePollingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenAPollSucceeds_CompletesTheRefreshWithNoFailure()
+    public async Task ExecuteAsync_WhenAPollSucceeds_StampsTheInstantThePollFinished()
     {
-        // Arrange
+        // Arrange: the clock moves while the poll runs, so a start-stamp and a
+        // completion-stamp are distinguishable rather than coincidentally equal.
         Unlocked();
-        var polled = SignalOnRefresh();
+        var pollDuration = TimeSpan.FromSeconds(30);
+        var startedAt = _time.GetUtcNow();
+        var completed = new TaskCompletionSource();
+        _refreshQueue
+            .ExecuteAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                _time.Advance(pollDuration);
+                completed.TrySetResult();
+                return Task.FromResult<RefreshOutcome>(RefreshSucceeded.Instance);
+            });
         using var service = CreateService();
         await service.StartAsync(Ct);
 
         // Act
         _trigger.RequestRefresh();
-        await polled.Task.WaitAsync(Timeout, Ct);
+        await completed.Task.WaitAsync(Timeout, Ct);
         await service.StopAsync(Ct);
 
         // Assert
         Assert.False(_refreshState.Current.InProgress);
-        Assert.Equal(_time.GetUtcNow(), _refreshState.Current.LastAttemptAt);
+        Assert.Equal(startedAt + pollDuration, _refreshState.Current.LastCompletedAt);
         Assert.Null(_refreshState.Current.Failure);
     }
 
@@ -247,7 +258,7 @@ public sealed class QueuePollingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenWakingWhileLocked_LeavesTheRefreshNeverAttempted()
+    public async Task ExecuteAsync_WhenWakingWhileLocked_LeavesTheRefreshNeverCompleted()
     {
         // Arrange
         var lockChecked = new TaskCompletionSource();
@@ -268,7 +279,32 @@ public sealed class QueuePollingServiceTests : IDisposable
 
         // Assert
         Assert.False(_refreshState.Current.InProgress);
-        Assert.Null(_refreshState.Current.LastAttemptAt);
+        Assert.Null(_refreshState.Current.LastCompletedAt);
+    }
+
+    [Theory]
+    [InlineData("locked")]
+    [InlineData("lock-read-throws")]
+    public async Task ExecuteAsync_WhenAWakePollsNothing_StillNotifiesObserversItIsOver(string gate)
+    {
+        // Arrange: a consumed request that polls nothing must still publish, or a
+        // caller holding a control closed against it waits for a signal that never
+        // comes. Waited on the notification itself rather than on the gate, so
+        // stopping the service cannot race the publish.
+        var notified = new TaskCompletionSource();
+        StubLockGate(gate);
+        _refreshState.Changed += (_, _) => notified.TrySetResult();
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await notified.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+
+        // Assert
+        Assert.False(_refreshState.Current.InProgress);
+        Assert.Null(_refreshState.Current.LastCompletedAt);
     }
 
     [Fact]
@@ -509,6 +545,15 @@ public sealed class QueuePollingServiceTests : IDisposable
 
     private void Unlocked() =>
         _appLock.GetStateAsync(Arg.Any<CancellationToken>()).Returns(AppLockState.Unlocked);
+
+    private void StubLockGate(string gate) =>
+        _appLock
+            .GetStateAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+                gate is "lock-read-throws"
+                    ? throw new InvalidOperationException("lock state unreadable")
+                    : AppLockState.Locked
+            );
 
     private TaskCompletionSource SignalOnRefresh(RefreshOutcome? outcome = null)
     {

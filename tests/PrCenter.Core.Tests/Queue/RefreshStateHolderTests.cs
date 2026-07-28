@@ -5,7 +5,7 @@ using PrCenter.Core.Queue;
 
 public sealed class RefreshStateHolderTests
 {
-    private static readonly DateTimeOffset AttemptInstant = new(
+    private static readonly DateTimeOffset CompletionInstant = new(
         2026,
         7,
         14,
@@ -16,7 +16,7 @@ public sealed class RefreshStateHolderTests
     );
 
     [Fact]
-    public void Current_BeforeAnyRefresh_IsIdleAndNeverAttempted()
+    public void Current_BeforeAnyRefresh_IsIdleAndNeverCompleted()
     {
         // Arrange
         var holder = Holder();
@@ -26,7 +26,7 @@ public sealed class RefreshStateHolderTests
 
         // Assert
         Assert.False(current.InProgress);
-        Assert.Null(current.LastAttemptAt);
+        Assert.Null(current.LastCompletedAt);
         Assert.Null(current.Failure);
     }
 
@@ -44,7 +44,7 @@ public sealed class RefreshStateHolderTests
     }
 
     [Fact]
-    public void BeginRefresh_KeepsThePreviousAttemptVisibleWhileTheNewOneRuns()
+    public void BeginRefresh_KeepsThePreviousCompletionVisibleWhileTheNewOneRuns()
     {
         // Arrange
         var holder = Holder();
@@ -55,12 +55,12 @@ public sealed class RefreshStateHolderTests
         holder.BeginRefresh();
 
         // Assert
-        Assert.Equal(AttemptInstant, holder.Current.LastAttemptAt);
+        Assert.Equal(CompletionInstant, holder.Current.LastCompletedAt);
         Assert.Equal("the earlier refresh failed", holder.Current.Failure);
     }
 
     [Fact]
-    public void CompleteRefresh_WithNoFailure_StampsTheAttemptAndClearsTheFailure()
+    public void CompleteRefresh_WithNoFailure_StampsTheCompletionAndClearsTheFailure()
     {
         // Arrange
         var holder = Holder();
@@ -73,12 +73,12 @@ public sealed class RefreshStateHolderTests
 
         // Assert
         Assert.False(holder.Current.InProgress);
-        Assert.Equal(AttemptInstant, holder.Current.LastAttemptAt);
+        Assert.Equal(CompletionInstant, holder.Current.LastCompletedAt);
         Assert.Null(holder.Current.Failure);
     }
 
     [Fact]
-    public void CompleteRefresh_WithAFailure_StampsTheAttemptAndRecordsTheFailure()
+    public void CompleteRefresh_WithAFailure_StampsTheCompletionAndRecordsTheFailure()
     {
         // Arrange
         var holder = Holder();
@@ -89,8 +89,54 @@ public sealed class RefreshStateHolderTests
 
         // Assert
         Assert.False(holder.Current.InProgress);
-        Assert.Equal(AttemptInstant, holder.Current.LastAttemptAt);
+        Assert.Equal(CompletionInstant, holder.Current.LastCompletedAt);
         Assert.Equal("The vault locked during the refresh.", holder.Current.Failure);
+    }
+
+    [Fact]
+    public void SkipRefresh_LeavesTheLastCompletedRefreshUntouched()
+    {
+        // Arrange
+        var holder = Holder();
+        holder.BeginRefresh();
+        holder.CompleteRefresh("an earlier failure");
+
+        // Act
+        holder.SkipRefresh();
+
+        // Assert
+        Assert.False(holder.Current.InProgress);
+        Assert.Equal(CompletionInstant, holder.Current.LastCompletedAt);
+        Assert.Equal("an earlier failure", holder.Current.Failure);
+    }
+
+    [Fact]
+    public void SkipRefresh_BeforeAnyRefresh_StaysNeverRefreshed()
+    {
+        // Arrange
+        var holder = Holder();
+
+        // Act
+        holder.SkipRefresh();
+
+        // Assert
+        Assert.False(holder.Current.InProgress);
+        Assert.Null(holder.Current.LastCompletedAt);
+    }
+
+    [Fact]
+    public void SkipRefresh_RaisesChangedSoAWaitingObserverIsReleased()
+    {
+        // Arrange
+        var holder = Holder();
+        var notified = false;
+        holder.Changed += (_, _) => notified = true;
+
+        // Act
+        holder.SkipRefresh();
+
+        // Assert
+        Assert.True(notified);
     }
 
     [Theory]
@@ -129,7 +175,7 @@ public sealed class RefreshStateHolderTests
         holder.CompleteRefresh(failure: null);
 
         // Assert
-        Assert.Equal(AttemptInstant, holder.Current.LastAttemptAt);
+        Assert.Equal(CompletionInstant, holder.Current.LastCompletedAt);
     }
 
     [Fact]
@@ -164,7 +210,7 @@ public sealed class RefreshStateHolderTests
 
     private static RefreshStateHolder Holder(ILogger<RefreshStateHolder>? logger = null) =>
         new(
-            new FixedTimeProvider(AttemptInstant),
+            new FixedTimeProvider(CompletionInstant),
             logger ?? new CapturingLogger<RefreshStateHolder>()
         );
 }
