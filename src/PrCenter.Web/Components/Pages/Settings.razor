@@ -19,16 +19,18 @@
         </div>
     </Locked>
     <ChildContent>
-        <h1 class="h4 mb-4">Settings</h1>
+        <div class="settings">
+            <h1 class="h4 mb-4">Settings</h1>
 
-        <section class="mb-5" data-testid="owner-tokens">
-            <h2 class="h5 mb-3">Owner tokens</h2>
-            <OwnerTokens />
-        </section>
+            <section class="mb-5" data-testid="owner-tokens">
+                <h2 class="h5 mb-3">Owner tokens</h2>
+                <OwnerTokens />
+            </section>
 
-        <section data-testid="poll-interval">
-            <h2 class="h5 mb-3">Poll interval</h2>
-            <PollIntervalControl />
-        </section>
+            <section data-testid="poll-interval">
+                <h2 class="h5 mb-3">Poll interval</h2>
+                <PollIntervalControl />
+            </section>
+        </div>
     </ChildContent>
 </LockGate>

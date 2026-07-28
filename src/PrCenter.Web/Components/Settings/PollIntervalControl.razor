@@ -8,7 +8,7 @@
 </p>
 
 <div class="row g-2 align-items-end">
-    <div class="col-sm-4">
+    <div class="col-sm-2">
         <label for="interval-minutes" class="form-label">Minutes between polls</label>
         <input id="interval-minutes"
                type="number"
@@ -17,12 +17,14 @@
                @bind="_minutes"
                @bind:event="onchange" />
     </div>
-    <div class="col-sm-2 d-grid">
+    <div class="col-sm-auto">
         <button type="button"
                 class="btn btn-primary"
                 data-testid="save-interval"
+                aria-label="Save poll interval"
+                title="Save poll interval"
                 @onclick="SaveAsync">
-            Save
+            <span class="icon icon-save" aria-hidden="true"></span>
         </button>
     </div>
 </div>

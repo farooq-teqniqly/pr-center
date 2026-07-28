@@ -150,6 +150,21 @@ public sealed class InboxViewTests : BunitContext
     }
 
     [Fact]
+    public void InboxView_PlacesRefreshImmediatelyAfterTheReviewInboxHeading()
+    {
+        // Arrange
+        _holder.Publish([], []);
+
+        // Act
+        var cut = Render<InboxView>();
+
+        // Assert
+        var header = cut.Find("[data-testid=inbox-header]");
+        Assert.Equal(["H1", "BUTTON"], header.Children.Select(c => c.TagName).ToArray());
+        Assert.Equal("Review Inbox", header.Children[0].TextContent.Trim());
+    }
+
+    [Fact]
     public void InboxView_WhenRefreshClicked_PokesTheRefreshTrigger()
     {
         // Arrange

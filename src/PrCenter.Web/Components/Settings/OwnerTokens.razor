@@ -81,8 +81,10 @@
                         <button type="button"
                                 class="btn btn-outline-danger btn-sm"
                                 data-testid="delete-owner"
+                                aria-label="Delete @summary.Owner"
+                                title="Delete @summary.Owner"
                                 @onclick="() => BeginDelete(summary.Owner)">
-                            Delete
+                            <span class="icon icon-delete" aria-hidden="true"></span>
                         </button>
                     }
                 </td>
@@ -92,7 +94,7 @@
 </table>
 
 <div class="row g-2 align-items-end">
-    <div class="col-sm-4">
+    <div class="col-sm-3">
         <label for="new-owner" class="form-label">Owner</label>
         <input id="new-owner"
                type="text"
@@ -110,12 +112,14 @@
                @bind="_token"
                @bind:event="onchange" />
     </div>
-    <div class="col-sm-2 d-grid">
+    <div class="col-sm-auto">
         <button type="button"
                 class="btn btn-primary"
                 data-testid="save-owner"
+                aria-label="Save owner token"
+                title="Save owner token"
                 @onclick="SaveAsync">
-            Save
+            <span class="icon icon-save" aria-hidden="true"></span>
         </button>
     </div>
 </div>
