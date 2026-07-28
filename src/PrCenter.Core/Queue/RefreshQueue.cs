@@ -12,7 +12,8 @@ namespace PrCenter.Core.Queue;
 /// that owner's review-queue facts, and derives the shown queue items -- deriving
 /// each pull request's update baseline from its own facts (the user's latest
 /// review instant), everything evaluated relative to the user. It then publishes
-/// a new snapshot of the derived items and each owner's fetch status. A per-owner
+/// a new snapshot of the derived items and each owner's fetch status, with a pull
+/// request more than one owner returned published once. A per-owner
 /// fetch failure degrades only that owner; a locked vault mid-poll aborts the
 /// whole refresh without touching the previously published snapshot.
 /// </summary>
@@ -52,7 +53,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
         // rows over as stale; an owner no longer listed is simply not iterated, so
         // its rows drop out -- correct, it is no longer polled.
         var previous = _holder.Current;
-        var items = new List<QueueItem>();
+        var items = new QueueItemAccumulator();
         var statuses = new List<OwnerStatus>();
         try
         {
@@ -62,7 +63,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
                     .ConfigureAwait(false);
             }
 
-            _holder.Publish(items, statuses);
+            _holder.Publish(items.DistinctPullRequests(), statuses);
         }
         // A locked vault is a global precondition failure, not a per-owner one:
         // abandon the whole refresh (no publish, so the last good snapshot
@@ -77,7 +78,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
     private async Task RefreshOwnerAsync(
         string owner,
         QueueSnapshot? previous,
-        List<QueueItem> items,
+        QueueItemAccumulator items,
         List<OwnerStatus> statuses,
         CancellationToken cancellationToken
     )
@@ -114,7 +115,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
                 }
             }
 
-            items.AddRange(ownerItems);
+            items.AddFresh(ownerItems);
             statuses.Add(new OwnerStatus(owner, OwnerFetchStatus.Ok));
         }
         // The vault crypto lock is a global abort -- rethrown to ExecuteAsync -- and a
@@ -148,7 +149,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
     private static void CarryOverStaleOwner(
         string owner,
         QueueSnapshot? previous,
-        List<QueueItem> items,
+        QueueItemAccumulator items,
         List<OwnerStatus> statuses,
         OwnerFetchStatus status,
         string? detail
@@ -158,7 +159,7 @@ public sealed partial class RefreshQueue : IRefreshQueue
 
         if (previous is not null)
         {
-            items.AddRange(
+            items.CarryOver(
                 previous.Items.Where(item =>
                     string.Equals(item.Identity.Owner, owner, StringComparison.OrdinalIgnoreCase)
                 )
