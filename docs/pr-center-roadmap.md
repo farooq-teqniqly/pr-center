@@ -21,7 +21,7 @@ remains [pr-center-idea.md](./pr-center-idea.md) and
 | 6 | `add-review-queue-ui` | 5c | The review inbox list itself (presentation-only) |
 | 7 | `add-settings-and-onboarding` | 4 | PAT entry, owner list, poll interval UI |
 | 8 | `add-containerization` | 6, 7 | Podman/Docker image + volume |
-| 9 | `add-observability` | 8 | OpenTelemetry wiring |
+| 9 | `add-observability` | 8 | OpenTelemetry sink over the poll diagnostics record |
 
 ## Change summaries
 
@@ -149,6 +149,15 @@ container start = Locked state verified end to end.
 
 OpenTelemetry traces/metrics/logs wired in the host across poll cycles,
 GitHub calls, and persistence.
+
+The poll diagnostics record produced in `RefreshQueue` is the instrumentation
+point, not a second one: this change adds an OpenTelemetry sink over the same
+record the SQLite diagnostics sink already consumes -- a span per refresh with a
+child span per owner, plus fetch counters and a duration histogram. Field names
+are already chosen to read as span attributes (`pr_center.poll.id`,
+`pr_center.owner`, `pr_center.search.requested.count`). The SQLite sink stays:
+with no collector configured, it is the only record that survives a restart.
+Spans leave the machine, so the no-response-body redaction rule holds here too.
 
 ## Deliberately unscheduled
 
