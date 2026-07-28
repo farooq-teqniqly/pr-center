@@ -212,13 +212,18 @@ poke the trigger.
 - **THEN** at most one additional refresh runs after the current one completes
 
 ### Requirement: The poll loop publishes its refresh activity
-The poll loop SHALL publish, for observers, whether a refresh is running right
-now, the instant the last refresh finished, and how it failed when it did. The
-published instant is a completion instant, not a start one: a refresh still
-running has not refreshed anything, so the previous completion stays published
-until the running one lands. A refresh SHALL be marked running before the poll
-begins and marked finished once it ends, including when it faults, so the state
-can never stay running after the poll has stopped. A single owner's fetch failure
+The poll loop SHALL publish, for observers, whether it is servicing a refresh
+request right now, the instant the last refresh finished, and how it failed when
+it did. The published instant is a completion instant, not a start one: a refresh
+still running has not refreshed anything, so the previous completion stays
+published until the running one lands. A wake SHALL be marked in flight from the
+moment it takes a refresh request up -- before the gate that decides whether to
+poll, which reads storage -- and SHALL be ended exactly once when the wake is
+over, including when it faults, so the state can never stay in flight after the
+wake has stopped. Marking only from the start of the poll would leave the loop
+looking idle for the length of that gate, so a caller could admit a second
+request that this wake will not serve and then release its control when this wake
+ends, costing an extra poll cycle. A single owner's fetch failure
 SHALL NOT be reported as a refresh failure -- it stays that owner's status --
 whereas a vault that locks mid-poll and a faulted cycle SHALL each be reported as
 one.
@@ -232,6 +237,10 @@ for a notification that never comes.
 #### Scenario: A running refresh is observable
 - **WHEN** a poll is in flight
 - **THEN** the published refresh state reports a refresh running
+
+#### Scenario: A wake is observable before it knows whether it will poll
+- **WHEN** a wake has taken a refresh request up and is still reading the app-lock state
+- **THEN** the published refresh state already reports a refresh running
 
 #### Scenario: A finished refresh records its instant
 - **WHEN** a poll completes successfully

@@ -15,4 +15,11 @@ internal sealed partial class QueuePollingService
         Message = "Reading the stored poll interval failed; falling back to {Fallback} for this cycle."
     )]
     private partial void LogIntervalReadFailed(Exception exception, TimeSpan fallback);
+
+    [LoggerMessage(
+        EventId = 3,
+        Level = LogLevel.Error,
+        Message = "Reading the app-lock state failed, so this wake polled nothing. Polling continues on the next interval."
+    )]
+    private partial void LogLockStateReadFailed(Exception exception);
 }

@@ -173,6 +173,37 @@ public sealed class QueuePollingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhileAWakeIsStillDecidingWhetherToPoll_AlreadyPublishesItAsInProgress()
+    {
+        // Arrange: the gate deciding whether to poll is storage I/O, so a click
+        // landing during it must already see a wake in flight. If it does not, the
+        // inbox admits a request that this wake will not serve, and releases its
+        // control when this wake ends -- leaving that request to run a second cycle.
+        Unlocked();
+        var atTheGate = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        _appLock
+            .GetStateAsync(Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                atTheGate.TrySetResult();
+                await release.Task;
+                return AppLockState.Unlocked;
+            });
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await atTheGate.Task.WaitAsync(Timeout, Ct);
+
+        // Assert
+        Assert.True(_refreshState.Current.InProgress);
+        release.SetResult();
+        await service.StopAsync(Ct);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenAPollSucceeds_StampsTheInstantThePollFinished()
     {
         // Arrange: the clock moves while the poll runs, so a start-stamp and a

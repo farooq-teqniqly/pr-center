@@ -31,28 +31,28 @@ public sealed class RefreshStateHolderTests
     }
 
     [Fact]
-    public void BeginRefresh_ThenCurrent_IsInProgress()
+    public void BeginWake_ThenCurrent_IsInProgress()
     {
         // Arrange
         var holder = Holder();
 
         // Act
-        holder.BeginRefresh();
+        holder.BeginWake();
 
         // Assert
         Assert.True(holder.Current.InProgress);
     }
 
     [Fact]
-    public void BeginRefresh_KeepsThePreviousCompletionVisibleWhileTheNewOneRuns()
+    public void BeginWake_KeepsThePreviousCompletionVisibleWhileTheNewOneRuns()
     {
         // Arrange
         var holder = Holder();
-        holder.BeginRefresh();
+        holder.BeginWake();
         holder.CompleteRefresh("the earlier refresh failed");
 
         // Act
-        holder.BeginRefresh();
+        holder.BeginWake();
 
         // Assert
         Assert.Equal(CompletionInstant, holder.Current.LastCompletedAt);
@@ -64,9 +64,9 @@ public sealed class RefreshStateHolderTests
     {
         // Arrange
         var holder = Holder();
-        holder.BeginRefresh();
+        holder.BeginWake();
         holder.CompleteRefresh("an earlier failure");
-        holder.BeginRefresh();
+        holder.BeginWake();
 
         // Act
         holder.CompleteRefresh(failure: null);
@@ -82,7 +82,7 @@ public sealed class RefreshStateHolderTests
     {
         // Arrange
         var holder = Holder();
-        holder.BeginRefresh();
+        holder.BeginWake();
 
         // Act
         holder.CompleteRefresh("The vault locked during the refresh.");
@@ -98,7 +98,7 @@ public sealed class RefreshStateHolderTests
     {
         // Arrange
         var holder = Holder();
-        holder.BeginRefresh();
+        holder.BeginWake();
         holder.CompleteRefresh("an earlier failure");
 
         // Act
@@ -150,7 +150,7 @@ public sealed class RefreshStateHolderTests
         var holder = Holder();
         if (transition is "complete")
         {
-            holder.BeginRefresh();
+            holder.BeginWake();
         }
 
         RefreshState? observed = null;
@@ -171,7 +171,7 @@ public sealed class RefreshStateHolderTests
         var holder = Holder();
 
         // Act
-        holder.BeginRefresh();
+        holder.BeginWake();
         holder.CompleteRefresh(failure: null);
 
         // Assert
@@ -189,7 +189,7 @@ public sealed class RefreshStateHolderTests
         holder.Changed += (_, _) => reachedSecondSubscriber = true;
 
         // Act
-        holder.BeginRefresh();
+        holder.BeginWake();
 
         // Assert
         Assert.True(reachedSecondSubscriber);
@@ -201,7 +201,7 @@ public sealed class RefreshStateHolderTests
     {
         if (transition is "begin")
         {
-            holder.BeginRefresh();
+            holder.BeginWake();
             return;
         }
 

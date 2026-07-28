@@ -5,9 +5,10 @@ namespace PrCenter.Core.Queue;
 /// <summary>
 /// Process-wide holder for the poll loop's current <see cref="RefreshState"/>. Each
 /// transition swaps in a new immutable state atomically; observers read the current
-/// one. The poll loop is the sole writer, marking a refresh begun before it polls
-/// and completed once it has finished, so the inbox can disable its refresh action
-/// for the life of a poll and report how the last one ended.
+/// one. The poll loop is the sole writer, marking each wake in flight the moment it
+/// takes a refresh request up and ending it once the wake has polled or skipped, so
+/// the inbox can disable its refresh action for the life of that wake and report how
+/// the last refresh ended.
 /// </summary>
 public sealed partial class RefreshStateHolder
 {
@@ -43,11 +44,15 @@ public sealed partial class RefreshStateHolder
     public event EventHandler? Changed;
 
     /// <summary>
-    /// Marks a refresh as started. The previous refresh's completion instant and
-    /// failure stay visible while the new one runs, so the inbox keeps showing the
-    /// last known outcome rather than blanking for the duration of the poll.
+    /// Marks a wake as in flight, from the moment the loop takes a refresh request
+    /// up rather than from the moment it starts polling: the gate that decides
+    /// whether to poll reads storage, and a caller that admits a second request
+    /// during that gate would have it served by a cycle after this one. The
+    /// previous refresh's completion instant and failure stay visible while the
+    /// wake runs, so the inbox keeps showing the last known outcome rather than
+    /// blanking for the duration of the poll.
     /// </summary>
-    public void BeginRefresh()
+    public void BeginWake()
     {
         var current = Current;
         Publish(current with { InProgress = true });

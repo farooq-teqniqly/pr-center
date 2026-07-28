@@ -10,7 +10,11 @@ namespace PrCenter.Core.Queue;
 /// single owner's fetch failure degrades that owner's <see cref="OwnerStatus"/>
 /// instead, and the refresh still counts as succeeded.
 /// </summary>
-/// <param name="InProgress">Whether a refresh is running right now.</param>
+/// <param name="InProgress">
+/// Whether the loop is servicing a refresh request right now. Set from the moment
+/// a wake takes the request up -- before it knows whether the app is unlocked
+/// enough to poll -- and cleared when that wake ends, whether it polled or skipped.
+/// </param>
 /// <param name="LastCompletedAt">
 /// The instant the last refresh finished, or <see langword="null"/> when none has
 /// finished since process start. This is a completion instant, not a start one:

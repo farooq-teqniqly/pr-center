@@ -18,13 +18,13 @@ public sealed class InboxViewTests : BunitContext
     private readonly QueueSnapshotHolder _holder;
     private readonly RefreshStateHolder _refreshState;
     private readonly IRefreshTrigger _trigger = Substitute.For<IRefreshTrigger>();
+    private readonly FakeTimeProvider _clock = new();
 
     public InboxViewTests()
     {
         _holder = new QueueSnapshotHolder(TimeProvider.System, _logger);
-        var clock = new FakeTimeProvider();
-        clock.SetUtcNow(BaseInstant);
-        _refreshState = new RefreshStateHolder(clock, new CapturingLogger<RefreshStateHolder>());
+        _clock.SetUtcNow(BaseInstant);
+        _refreshState = new RefreshStateHolder(_clock, new CapturingLogger<RefreshStateHolder>());
         Services.AddSingleton(_holder);
         Services.AddSingleton(_refreshState);
         Services.AddSingleton(new GetQueue(_holder));
@@ -208,7 +208,7 @@ public sealed class InboxViewTests : BunitContext
         var cut = Render<InboxView>();
 
         // Act
-        _refreshState.BeginRefresh();
+        _refreshState.BeginWake();
 
         // Assert
         cut.WaitForAssertion(() =>
@@ -224,7 +224,7 @@ public sealed class InboxViewTests : BunitContext
         // Arrange
         _holder.Publish([], []);
         var cut = Render<InboxView>();
-        _refreshState.BeginRefresh();
+        _refreshState.BeginWake();
 
         // Act
         _refreshState.CompleteRefresh(failure: null);
@@ -263,7 +263,7 @@ public sealed class InboxViewTests : BunitContext
         cut.Find("[data-testid=refresh]").Click();
 
         // Act
-        _refreshState.BeginRefresh();
+        _refreshState.BeginWake();
         _refreshState.CompleteRefresh(failure: null);
         cut.Find("[data-testid=refresh]").Click();
 
@@ -310,14 +310,23 @@ public sealed class InboxViewTests : BunitContext
         // Arrange
         _holder.Publish([], []);
         var cut = Render<InboxView>();
-        _refreshState.BeginRefresh();
+        _refreshState.BeginWake();
         _refreshState.CompleteRefresh(failure: null);
+        var shownBefore = cut.WaitForElement("[data-testid=last-refresh]").TextContent;
 
         // Act
+        _clock.Advance(TimeSpan.FromHours(1));
         _refreshState.SkipRefresh();
+        _refreshState.BeginWake();
 
+        // The wake begun after the skip is the barrier: once its disabled state has
+        // rendered, the skip's render has landed too, so an unchanged time is a real
+        // observation rather than one taken before the skip was ever drawn.
         // Assert
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid=last-refresh]")));
+        cut.WaitForAssertion(() =>
+            Assert.True(cut.Find("[data-testid=refresh]").HasAttribute("disabled"))
+        );
+        Assert.Equal(shownBefore, cut.Find("[data-testid=last-refresh]").TextContent);
     }
 
     [Fact]
@@ -341,7 +350,7 @@ public sealed class InboxViewTests : BunitContext
         var cut = Render<InboxView>();
 
         // Act
-        _refreshState.BeginRefresh();
+        _refreshState.BeginWake();
         _refreshState.CompleteRefresh(failure: null);
 
         // Assert
@@ -360,7 +369,7 @@ public sealed class InboxViewTests : BunitContext
         var cut = Render<InboxView>();
 
         // Act
-        _refreshState.BeginRefresh();
+        _refreshState.BeginWake();
         _refreshState.CompleteRefresh("The refresh timed out.");
 
         // Assert
@@ -385,7 +394,7 @@ public sealed class InboxViewTests : BunitContext
         await DisposeComponentsAsync();
 
         // Assert
-        var exception = Record.Exception(() => _refreshState.BeginRefresh());
+        var exception = Record.Exception(() => _refreshState.BeginWake());
         Assert.Null(exception);
     }
 
