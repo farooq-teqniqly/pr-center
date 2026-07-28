@@ -24,6 +24,7 @@ public sealed class QueuePollingServiceTests : IDisposable
     private readonly IAppSettingsStore _settings = Substitute.For<IAppSettingsStore>();
     private readonly RefreshTrigger _trigger = new();
     private readonly FakeTimeProvider _time = new();
+    private readonly RefreshStateHolder _refreshState;
     private readonly ServiceProvider _provider;
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -31,6 +32,7 @@ public sealed class QueuePollingServiceTests : IDisposable
     public QueuePollingServiceTests()
     {
         StoredInterval(PollInterval.Default.Value);
+        _refreshState = new RefreshStateHolder(_time, NullLogger<RefreshStateHolder>.Instance);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => _appLock);
@@ -122,6 +124,8 @@ public sealed class QueuePollingServiceTests : IDisposable
                         secondStarted.SetResult();
                         break;
                 }
+
+                return (RefreshOutcome)RefreshSucceeded.Instance;
             });
         using var service = CreateService();
         await service.StartAsync(Ct);
@@ -138,6 +142,166 @@ public sealed class QueuePollingServiceTests : IDisposable
         await secondStarted.Task.WaitAsync(Timeout, Ct);
         await service.StopAsync(Ct);
         Assert.Equal(2, calls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhileAPollIsRunning_PublishesTheRefreshAsInProgress()
+    {
+        // Arrange
+        Unlocked();
+        var polling = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        _refreshQueue
+            .ExecuteAsync(Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                polling.TrySetResult();
+                await release.Task;
+                return (RefreshOutcome)RefreshSucceeded.Instance;
+            });
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await polling.Task.WaitAsync(Timeout, Ct);
+
+        // Assert
+        Assert.True(_refreshState.Current.InProgress);
+        release.SetResult();
+        await service.StopAsync(Ct);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAPollSucceeds_CompletesTheRefreshWithNoFailure()
+    {
+        // Arrange
+        Unlocked();
+        var polled = SignalOnRefresh();
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await polled.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+
+        // Assert
+        Assert.False(_refreshState.Current.InProgress);
+        Assert.Equal(_time.GetUtcNow(), _refreshState.Current.LastAttemptAt);
+        Assert.Null(_refreshState.Current.Failure);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheVaultLocksMidPoll_CompletesTheRefreshWithAFailure()
+    {
+        // Arrange
+        Unlocked();
+        var polled = SignalOnRefresh(RefreshAbortedByLock.Instance);
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await polled.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+
+        // Assert
+        Assert.False(_refreshState.Current.InProgress);
+        Assert.NotNull(_refreshState.Current.Failure);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAPollThrows_CompletesTheRefreshWithAFailureAndKeepsPolling()
+    {
+        // Arrange
+        Unlocked();
+        var calls = 0;
+        var faulted = new TaskCompletionSource();
+        var polledAgain = new TaskCompletionSource();
+        _refreshQueue
+            .ExecuteAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                if (Interlocked.Increment(ref calls) is 1)
+                {
+                    faulted.TrySetResult();
+                    throw new InvalidOperationException("poll blew up");
+                }
+
+                polledAgain.TrySetResult();
+                return Task.FromResult<RefreshOutcome>(RefreshSucceeded.Instance);
+            });
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await faulted.Task.WaitAsync(Timeout, Ct);
+
+        // Assert
+        _trigger.RequestRefresh();
+        await polledAgain.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+        Assert.False(_refreshState.Current.InProgress);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenWakingWhileLocked_LeavesTheRefreshNeverAttempted()
+    {
+        // Arrange
+        var lockChecked = new TaskCompletionSource();
+        _appLock
+            .GetStateAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                lockChecked.TrySetResult();
+                return AppLockState.Locked;
+            });
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _time.Advance(PollInterval.Default.Value);
+        await lockChecked.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+
+        // Assert
+        Assert.False(_refreshState.Current.InProgress);
+        Assert.Null(_refreshState.Current.LastAttemptAt);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheLockStateReadThrows_KeepsTheLoopAliveForTheNextPoke()
+    {
+        // Arrange
+        var calls = 0;
+        var threw = new TaskCompletionSource();
+        _appLock
+            .GetStateAsync(Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                if (Interlocked.Increment(ref calls) is 1)
+                {
+                    threw.TrySetResult();
+                    throw new InvalidOperationException("lock state unreadable");
+                }
+
+                return AppLockState.Unlocked;
+            });
+        var polled = SignalOnRefresh();
+        using var service = CreateService();
+        await service.StartAsync(Ct);
+
+        // Act
+        _trigger.RequestRefresh();
+        await threw.Task.WaitAsync(Timeout, Ct);
+
+        // Assert
+        _trigger.RequestRefresh();
+        await polled.Task.WaitAsync(Timeout, Ct);
+        await service.StopAsync(Ct);
+        Assert.Null(_refreshState.Current.Failure);
     }
 
     [Fact]
@@ -346,7 +510,7 @@ public sealed class QueuePollingServiceTests : IDisposable
     private void Unlocked() =>
         _appLock.GetStateAsync(Arg.Any<CancellationToken>()).Returns(AppLockState.Unlocked);
 
-    private TaskCompletionSource SignalOnRefresh()
+    private TaskCompletionSource SignalOnRefresh(RefreshOutcome? outcome = null)
     {
         var polled = new TaskCompletionSource();
         _refreshQueue
@@ -354,7 +518,7 @@ public sealed class QueuePollingServiceTests : IDisposable
             .Returns(_ =>
             {
                 polled.TrySetResult();
-                return Task.CompletedTask;
+                return Task.FromResult(outcome ?? RefreshSucceeded.Instance);
             });
         return polled;
     }
@@ -363,6 +527,7 @@ public sealed class QueuePollingServiceTests : IDisposable
         new(
             _provider.GetRequiredService<IServiceScopeFactory>(),
             _trigger,
+            _refreshState,
             _time,
             NullLogger<QueuePollingService>.Instance
         );

@@ -29,12 +29,18 @@ internal static class QueueServiceCollectionExtensions
         // extension the host calls second must not add a second registration.
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<QueueSnapshotHolder>();
+        services.AddSingleton<RefreshStateHolder>();
+        // The trigger is registered twice on purpose and does not collapse into
+        // AddSingleton<IRefreshTrigger, RefreshTrigger>(): the poll loop injects the
+        // concrete type for WaitForRequestAsync, which IRefreshTrigger deliberately
+        // withholds so a use case can only poke, never consume. Registering the
+        // interface separately rather than forwarding would build a second instance,
+        // leaving the loop awaiting a channel nobody pokes.
         services.AddSingleton<RefreshTrigger>();
         services.AddSingleton<IRefreshTrigger>(sp => sp.GetRequiredService<RefreshTrigger>());
 
         // Use cases run inside a request/poll scope so they see the scoped ports.
-        services.AddScoped<RefreshQueue>();
-        services.AddScoped<IRefreshQueue>(sp => sp.GetRequiredService<RefreshQueue>());
+        services.AddScoped<IRefreshQueue, RefreshQueue>();
         services.AddScoped<GetQueue>();
         services.AddScoped<UnlockApp>();
         services.AddScoped<InitializeVault>();

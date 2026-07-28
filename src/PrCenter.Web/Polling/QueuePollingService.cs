@@ -16,12 +16,16 @@ namespace PrCenter.Web.Polling;
 /// one-shot and re-armed on every wake from the stored interval, so an interval
 /// edited in the app takes effect on the next cycle without a restart, and every
 /// wake -- timer or on-demand -- restarts the interval clock. DI scoping for the
-/// scoped ports is created per wake; the refresh use case is scope-agnostic.
+/// scoped ports is created per wake; the refresh use case is scope-agnostic. The
+/// loop is the sole writer of the shared refresh state, marking each poll it
+/// actually runs as started and then finished, so the inbox can hold its refresh
+/// action closed for the duration and report how the last attempt ended.
 /// </summary>
 internal sealed partial class QueuePollingService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RefreshTrigger _trigger;
+    private readonly RefreshStateHolder _refreshState;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<QueuePollingService> _logger;
     private ITimer? _timer;
@@ -31,17 +35,20 @@ internal sealed partial class QueuePollingService : BackgroundService
     /// </summary>
     /// <param name="scopeFactory">The factory creating a DI scope per wake.</param>
     /// <param name="trigger">The refresh trigger the loop awaits and the timer pokes.</param>
+    /// <param name="refreshState">The holder this loop publishes its refresh activity into.</param>
     /// <param name="timeProvider">The clock backing the interval timer.</param>
     /// <param name="logger">The logger for a cycle that faults.</param>
     public QueuePollingService(
         IServiceScopeFactory scopeFactory,
         RefreshTrigger trigger,
+        RefreshStateHolder refreshState,
         TimeProvider timeProvider,
         ILogger<QueuePollingService> logger
     )
     {
         _scopeFactory = scopeFactory;
         _trigger = trigger;
+        _refreshState = refreshState;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -94,6 +101,28 @@ internal sealed partial class QueuePollingService : BackgroundService
             .ConfigureAwait(false);
         _timer?.Change(interval.Value, System.Threading.Timeout.InfiniteTimeSpan);
 
+        // A wake while the app is Locked polls nothing, so it is not a refresh
+        // attempt: gating before the state is marked keeps the inbox's last-refresh
+        // instant pointing at the last real poll rather than at a no-op wake. The
+        // gate reads storage, so it gets the same guard as the poll -- an exception
+        // escaping here would end the loop for the life of the process.
+        bool unlocked;
+        try
+        {
+            unlocked = await IsUnlockedAsync(scope.ServiceProvider, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            LogPollCycleFailed(ex);
+            return;
+        }
+
+        if (!unlocked)
+        {
+            return;
+        }
+
         // A faulting poll must not escape into ExecuteAsync's loop: an exception
         // there ends the BackgroundService for the life of the process, and the
         // still-armed timer would go on poking a trigger nobody awaits. Polling is
@@ -102,16 +131,39 @@ internal sealed partial class QueuePollingService : BackgroundService
         // timeout also arrives as OperationCanceledException, so treating the type
         // alone as "we are stopping" would end the loop on a slow GitHub call --
         // matching RefreshQueue, which reads cancellation the same way.
+        _refreshState.BeginRefresh();
+        string? failure = null;
         try
         {
-            await PollWhenUnlockedAsync(scope.ServiceProvider, cancellationToken)
+            var outcome = await PollAsync(scope.ServiceProvider, cancellationToken)
                 .ConfigureAwait(false);
+            failure = FailureFor(outcome);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             LogPollCycleFailed(ex);
+            failure = FailureFor(ex);
+        }
+        finally
+        {
+            // In a finally so the state can never stick at in-progress -- a stuck
+            // flag would leave the inbox's refresh action disabled for the life of
+            // the process, including on the shutdown-cancellation path that
+            // deliberately rethrows past the catch above.
+            _refreshState.CompleteRefresh(failure);
         }
     }
+
+    private static string? FailureFor(RefreshOutcome outcome) =>
+        outcome is RefreshAbortedByLock
+            ? "The vault locked during the refresh, so the queue below is stale."
+            : null;
+
+    // Transport-neutral wording, matching how RefreshQueue words a per-owner
+    // failure: the user sees a timeout as a timeout and everything else as a
+    // generic failure, with the exception itself left to the log.
+    private static string FailureFor(Exception exception) =>
+        exception is OperationCanceledException ? "The refresh timed out." : "The refresh failed.";
 
     private async Task<PollInterval> ReadIntervalAsync(
         IServiceProvider services,
@@ -135,23 +187,24 @@ internal sealed partial class QueuePollingService : BackgroundService
         }
     }
 
-    private static async Task PollWhenUnlockedAsync(
+    // Gate on the app-lock state (the unlock UI gate), distinct from the vault
+    // crypto lock that RefreshQueue guards against mid-poll.
+    private static async Task<bool> IsUnlockedAsync(
         IServiceProvider services,
         CancellationToken cancellationToken
     )
     {
-        // Gate on the app-lock state (the unlock UI gate), distinct from the vault
-        // crypto lock that RefreshQueue guards against mid-poll.
         var appLock = services.GetRequiredService<IAppLock>();
-        if (
-            await appLock.GetStateAsync(cancellationToken).ConfigureAwait(false)
-            is not AppLockState.Unlocked
-        )
-        {
-            return;
-        }
+        return await appLock.GetStateAsync(cancellationToken).ConfigureAwait(false)
+            is AppLockState.Unlocked;
+    }
 
+    private static async Task<RefreshOutcome> PollAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken
+    )
+    {
         var refreshQueue = services.GetRequiredService<IRefreshQueue>();
-        await refreshQueue.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        return await refreshQueue.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 }

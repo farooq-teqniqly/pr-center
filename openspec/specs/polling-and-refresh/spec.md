@@ -211,6 +211,40 @@ poke the trigger.
 - **WHEN** the trigger is poked multiple times while a poll is in flight
 - **THEN** at most one additional refresh runs after the current one completes
 
+### Requirement: The poll loop publishes its refresh activity
+The poll loop SHALL publish, for observers, whether a refresh is running right
+now, the instant the last refresh attempt started, and how that attempt failed
+when it did. A refresh SHALL be marked running before the poll begins and marked
+finished once it ends, including when it faults, so the state can never stay
+running after the poll has stopped. A wake while the app is Locked polls nothing
+and SHALL NOT count as an attempt. A single owner's fetch failure SHALL NOT be
+reported as a refresh failure -- it stays that owner's status -- whereas a vault
+that locks mid-poll and a faulted cycle SHALL each be reported as one.
+
+#### Scenario: A running refresh is observable
+- **WHEN** a poll is in flight
+- **THEN** the published refresh state reports a refresh running
+
+#### Scenario: A finished refresh records its instant
+- **WHEN** a poll completes successfully
+- **THEN** the published state reports no refresh running, stamps the attempt instant, and reports no failure
+
+#### Scenario: A faulted cycle still finishes the refresh
+- **WHEN** a poll cycle throws
+- **THEN** the failure is logged, the published state reports no refresh running with a failure recorded, and the loop keeps serving later pokes
+
+#### Scenario: A vault that locks mid-poll is a refresh failure
+- **WHEN** a refresh is abandoned because the vault locked mid-poll
+- **THEN** the published state records a failure
+
+#### Scenario: A wake while locked is not an attempt
+- **WHEN** the loop wakes while the app is Locked
+- **THEN** no poll runs and the last attempt instant is unchanged
+
+#### Scenario: An unreadable lock state does not end the loop
+- **WHEN** reading the app-lock state throws
+- **THEN** the failure is logged, no poll runs, and the loop still serves the next poke
+
 #### Scenario: Unlock triggers an immediate poll
 - **WHEN** the user unlocks the app successfully
 - **THEN** the trigger is poked and a refresh starts promptly

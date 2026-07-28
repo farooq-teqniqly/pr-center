@@ -194,6 +194,43 @@ The inbox SHALL provide a refresh action that pokes the refresh trigger to
 request an immediate poll. The action SHALL NOT poll GitHub directly -- it only
 requests a poll through the trigger the background loop owns.
 
+The action SHALL be unavailable while a refresh is running, whichever poke
+started it, so repeated invocations cannot cost more than one poll: the control
+is disabled, marked busy for assistive tech, and its icon spins for the duration.
+Because the disabled state is only observable after a server round trip, the
+inbox SHALL also suppress its own repeat invocations locally, from the poke until
+a refresh is reported no longer running.
+
 #### Scenario: Manual refresh requests a poll
 - **WHEN** the user invokes the inbox refresh action
 - **THEN** the refresh trigger is poked to request an immediate poll
+
+#### Scenario: The refresh action is unavailable while a refresh runs
+- **WHEN** a refresh is running
+- **THEN** the refresh action is disabled, marked busy, and its icon spins
+
+#### Scenario: Repeated invocations before the refresh starts poke once
+- **WHEN** the user invokes the refresh action several times before the poll loop reports the refresh started
+- **THEN** the refresh trigger is poked exactly once
+
+#### Scenario: The refresh action returns after the refresh completes
+- **WHEN** a refresh completes
+- **THEN** the refresh action is enabled again and its icon stops spinning
+
+### Requirement: The inbox reports the last refresh attempt
+The inbox SHALL show, beside the refresh action, when the last refresh attempt
+was made, and SHALL show the failure alongside it when that attempt failed. A
+single owner's fetch failure is not a refresh failure -- it stays on that owner's
+status chip and banner. Before any refresh has been attempted, no time is shown.
+
+#### Scenario: No refresh attempted yet
+- **WHEN** no refresh has been attempted since process start
+- **THEN** no last-refresh time is shown
+
+#### Scenario: The last refresh succeeded
+- **WHEN** the last refresh attempt succeeded
+- **THEN** its time is shown and no refresh failure is shown
+
+#### Scenario: The last refresh failed
+- **WHEN** the last refresh attempt failed
+- **THEN** its time is shown together with the failure

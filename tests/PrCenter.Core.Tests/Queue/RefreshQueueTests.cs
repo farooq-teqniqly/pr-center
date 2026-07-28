@@ -202,6 +202,52 @@ public sealed class RefreshQueueTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenVaultLocksMidPoll_ReturnsAbortedByLock()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        _facts
+            .GetAuthenticatedUserLoginAsync("PerfectServe", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new VaultLockedException());
+
+        // Act
+        var outcome = await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        Assert.IsType<RefreshAbortedByLock>(outcome);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenASnapshotIsPublished_ReturnsSucceeded()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "pr-1"));
+
+        // Act
+        var outcome = await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        Assert.IsType<RefreshSucceeded>(outcome);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenOneOwnerFetchFails_StillReturnsSucceeded()
+    {
+        // Arrange: a per-owner failure degrades that owner, it does not fail the refresh.
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        _facts
+            .GetAuthenticatedUserLoginAsync("PerfectServe", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("no token"));
+
+        // Act
+        var outcome = await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        Assert.IsType<RefreshSucceeded>(outcome);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenOwnerFetchFails_CarriesPreviousItemsMarkedStale()
     {
         // Arrange -- first poll fresh, second poll the owner errors
