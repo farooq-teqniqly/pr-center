@@ -50,9 +50,13 @@ coveredBy` (6 params, with headroom).
   rather than a flat list, exactly as `PullRequestFacts` groups into
   `PullRequestStatus` etc. `State` and `HasUpdate` are already derived per-row
   outputs, so they belong with `AuthoredByMe`.
-- **Trade-off:** callers move from `QueueItem.State` / `.HasUpdate` to
-  `.Status.State` / `.Status.HasUpdate` (razor + tests). Bounded churn; the
-  alternative of a flat 8th param is disallowed by S107.
+- **Read surface stays flat:** `QueueItem` keeps exposing `State` and
+  `HasUpdate` as flat properties (fed from `status`) and adds `AuthoredByMe`
+  alongside them, so read-side consumers (razor, tests) are unchanged and the
+  solution keeps building. Only code that *constructs* a `QueueItem` (the
+  deriver and test builders) moves to the grouped `QueueItemStatus` argument.
+- **Trade-off:** the alternative of a flat 8th constructor param is disallowed
+  by S107; grouping is the project-mandated fix.
 - **Alternative (rejected):** add `AuthoredByMe` to `PullRequestIdentity` -- it
   is also already at 7 fields, and authored-by-me is a me-relative derivation,
   not pure PR identity data.

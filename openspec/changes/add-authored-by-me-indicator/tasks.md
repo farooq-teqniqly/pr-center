@@ -1,8 +1,8 @@
 ## 1. Core: group the derived flags and add authored-by-me
 
-- [ ] 1.1 Add a `QueueItemStatus` sub-record `{ MembershipState State, bool HasUpdate, bool AuthoredByMe }` in `PrCenter.Core`, one type per file, `internal sealed record`, XML-documented.
-- [ ] 1.2 Refactor `QueueItem` to take `QueueItemStatus` in place of the standalone `state` and `hasUpdate` constructor params (constructor lands at 6 params), keeping `State`, `HasUpdate`, and adding `AuthoredByMe` reachable from `QueueItem` (via `Status` or pass-through, whichever the existing style favors). Update XML docs.
-- [ ] 1.3 In `QueueItemDeriver`, set `AuthoredByMe` via `GitHubLogin.IsMe(identity.AuthorLogin, myLogin)`; confirm no membership/`MembershipDeriver` change.
+- [x] 1.1 Add a `QueueItemStatus` sub-record `{ MembershipState State, bool HasUpdate, bool AuthoredByMe }` in `PrCenter.Core`, one type per file, `public sealed record` (part of `QueueItem`'s public constructor), XML-documented.
+- [x] 1.2 Refactor `QueueItem` to take `QueueItemStatus` in place of the standalone `state` and `hasUpdate` constructor params (constructor lands at 6 params); keep `State`/`HasUpdate` as flat properties and add flat `AuthoredByMe`, so read-side consumers are unchanged. Update XML docs.
+- [x] 1.3 In `QueueItemDeriver`, set `AuthoredByMe` via `GitHubLogin.IsMe(facts.Identity.AuthorLogin, myLogin)`; confirm no membership/`MembershipDeriver` change.
 
 ## 2. Core tests
 
@@ -14,7 +14,7 @@
 
 - [ ] 3.1 In `QueueRow.razor`, render a distinct text badge (e.g. "mine") in the title line when the authored-by-me flag is set, with a `data-testid`, consistent with the existing "Updated"/"covered" badges.
 - [ ] 3.2 Add styling for the badge; meaning carried by text, not color alone (satisfies the color-alone prohibition).
-- [ ] 3.3 Update `QueueRow`/`InboxView` call sites for the `QueueItemStatus` grouping (`Item.State`/`Item.HasUpdate` access path).
+- [ ] 3.3 No read-path change needed (`Item.State`/`Item.HasUpdate` stay flat); verify `QueueRow`/`InboxView` still compile against the refactored `QueueItem`.
 
 ## 4. Web tests
 

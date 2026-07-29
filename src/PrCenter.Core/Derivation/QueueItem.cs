@@ -17,21 +17,19 @@ public sealed record QueueItem
     /// </summary>
     /// <param name="identity">Where the pull request lives and how to display and link to it.</param>
     /// <param name="lastUpdate">The last-updated display stamp.</param>
-    /// <param name="state">The shown membership state.</param>
-    /// <param name="hasUpdate">Whether the pull request has an update the user has not seen.</param>
+    /// <param name="status">The per-row derived status: membership state, has-update, and authored-by-me.</param>
     /// <param name="roster">The reviewer roster: requested reviewers unioned with those who reviewed.</param>
     /// <param name="myEngagement">When the user last looked at and last reviewed the pull request.</param>
     /// <param name="coveredBy">The distinct other-human reviewers who already cover the pull request.</param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="identity"/>, <paramref name="lastUpdate"/>,
-    /// <paramref name="roster"/>, <paramref name="myEngagement"/>, or
-    /// <paramref name="coveredBy"/> is null.
+    /// <paramref name="status"/>, <paramref name="roster"/>,
+    /// <paramref name="myEngagement"/>, or <paramref name="coveredBy"/> is null.
     /// </exception>
     public QueueItem(
         PullRequestIdentity identity,
         LastUpdate lastUpdate,
-        MembershipState state,
-        bool hasUpdate,
+        QueueItemStatus status,
         IReadOnlyList<ReviewerRosterEntry> roster,
         MyEngagement myEngagement,
         IReadOnlyList<string> coveredBy
@@ -39,14 +37,16 @@ public sealed record QueueItem
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(lastUpdate);
+        ArgumentNullException.ThrowIfNull(status);
         ArgumentNullException.ThrowIfNull(roster);
         ArgumentNullException.ThrowIfNull(myEngagement);
         ArgumentNullException.ThrowIfNull(coveredBy);
 
         Identity = identity;
         LastUpdate = lastUpdate;
-        State = state;
-        HasUpdate = hasUpdate;
+        State = status.State;
+        HasUpdate = status.HasUpdate;
+        AuthoredByMe = status.AuthoredByMe;
         Roster = Seal(roster);
         MyEngagement = myEngagement;
         CoveredBy = Seal(coveredBy);
@@ -63,6 +63,9 @@ public sealed record QueueItem
 
     /// <summary>Gets a value indicating whether the pull request has an update the user has not seen.</summary>
     public bool HasUpdate { get; }
+
+    /// <summary>Gets a value indicating whether the pull request was authored by the user.</summary>
+    public bool AuthoredByMe { get; }
 
     /// <summary>Gets the reviewer roster: requested reviewers unioned with those who reviewed.</summary>
     public IReadOnlyList<ReviewerRosterEntry> Roster { get; }
