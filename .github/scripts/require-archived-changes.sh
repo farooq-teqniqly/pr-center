@@ -31,8 +31,11 @@ for change in "$changes_dir"/*/; do
   [ -f "$tasks" ] || continue
 
   # Count checked and unchecked task checkboxes at the start of a list item.
-  unchecked=$(grep -cE '^[[:space:]]*- \[ \]' "$tasks" || true)
-  checked=$(grep -cE '^[[:space:]]*- \[[xX]\]' "$tasks" || true)
+  # Accept any Markdown list marker GitHub renders as a task: -, *, + or an
+  # ordered "N." marker, with any leading indent and any spacing before the box.
+  marker='^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\['
+  unchecked=$(grep -cE "${marker} \]" "$tasks" || true)
+  checked=$(grep -cE "${marker}[xX]\]" "$tasks" || true)
 
   # In progress (has open tasks) or has no tasks at all: not yet completable.
   if [ "$unchecked" -ne 0 ] || [ "$checked" -eq 0 ]; then
