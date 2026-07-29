@@ -4,9 +4,10 @@ using PrCenter.Core.Facts;
 
 /// <summary>
 /// A shown pull request in the user's review queue: its identity (including the
-/// author), the last-updated display stamp, the derived membership state and
-/// unseen-update flag, the reviewer roster, the user's own engagement, and the
-/// other reviewers who already cover it. Hidden pull requests do not produce a
+/// author), the last-updated display stamp, the derived membership state,
+/// unseen-update flag, and authored-by-me flag, the reviewer roster, the user's
+/// own engagement, and the other reviewers who already cover it. Hidden pull
+/// requests do not produce a
 /// <see cref="QueueItem"/>. Ordering and grouping of items are a presentation
 /// concern, not carried here.
 /// </summary>
