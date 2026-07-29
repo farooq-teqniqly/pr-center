@@ -24,6 +24,6 @@
 
 ## 5. Verify and close
 
-- [ ] 5.1 `dotnet build` clean (no new analyzer/CA warnings; param limit respected); CSharpier check passes.
-- [ ] 5.2 Run affected test projects (Core + Web) green; coverage per CLAUDE.md workflow.
-- [ ] 5.3 `openspec validate add-authored-by-me-indicator --strict` passes; run the app and confirm the indicator on a self-authored inbox row.
+- [x] 5.1 `dotnet build` clean (0 warn / 0 err; param limit respected); CSharpier check passes (179 files).
+- [x] 5.2 Full suite green (568 tests); changed Core classes (`QueueItem`, `QueueItemDeriver`, `QueueItemStatus`) at 100% line coverage.
+- [x] 5.3 `openspec validate add-authored-by-me-indicator --strict` passes; app confirmed showing the "MINE" badge on self-authored rows and none on others.
