@@ -12,9 +12,9 @@
 
 ## 3. Web: render the indicator
 
-- [ ] 3.1 In `QueueRow.razor`, render a distinct text badge (e.g. "mine") in the title line when the authored-by-me flag is set, with a `data-testid`, consistent with the existing "Updated"/"covered" badges.
-- [ ] 3.2 Add styling for the badge; meaning carried by text, not color alone (satisfies the color-alone prohibition).
-- [ ] 3.3 No read-path change needed (`Item.State`/`Item.HasUpdate` stay flat); verify `QueueRow`/`InboxView` still compile against the refactored `QueueItem`.
+- [x] 3.1 In `QueueRow.razor`, render a distinct text badge ("mine") in the title line when the authored-by-me flag is set, with `data-testid="mine-badge"`, consistent with the existing "Updated"/"covered" badges.
+- [x] 3.2 Add styling for the badge; meaning carried by text, not color alone (satisfies the color-alone prohibition).
+- [x] 3.3 No read-path change needed (`Item.State`/`Item.HasUpdate` stay flat); `QueueRow`/`InboxView` compile against the refactored `QueueItem` (Web build clean).
 
 ## 4. Web tests
 
