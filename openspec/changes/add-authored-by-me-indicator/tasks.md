@@ -18,9 +18,9 @@
 
 ## 4. Web tests
 
-- [ ] 4.1 bUnit: a self-authored row renders the indicator (covers `review-queue-ui` self-authored scenario).
-- [ ] 4.2 bUnit: a row authored by another renders no indicator.
-- [ ] 4.3 Update existing `QueueRow` bUnit tests for the `QueueItemStatus` grouping.
+- [x] 4.1 bUnit: a self-authored row renders the indicator (covers `review-queue-ui` self-authored scenario).
+- [x] 4.2 bUnit: a row authored by another renders no indicator.
+- [x] 4.3 Update existing `QueueRow`/`InboxView` bUnit test builders for the `QueueItemStatus` grouping.
 
 ## 5. Verify and close
 
