@@ -103,7 +103,8 @@ and re-deriving them for diagnostics would be the worse trade.
 ### Two tables, because two facts have nowhere else to live
 
 ```
-PollRun (Id, PollId, StartedAt, CompletedAt, Outcome, OwnerCount, PublishedCount)
+PollRun (Id, PollId, StartedAt, CompletedAt, Outcome, ConfiguredOwners?,
+         OwnerCount?, PublishedCount?)
    |
    +-- PollOwnerDiagnostic (PollRunId, Owner, ResolvedLogin, StartedAt,
          CompletedAt, Status, Detail, counts..., exclusions..., rate limit...,
@@ -118,6 +119,38 @@ only visible as `sum(DerivedCount) > PublishedCount`, or by intersecting the
 
 The second force is a poll that fails inside `ListOwnersAsync`: zero owners are
 known, so a rows-only schema records nothing about the poll that failed hardest.
+
+`ConfiguredOwners` is captured from `ListOwnersAsync` directly, not assembled
+from the owner rows, and `OwnerCount` is derived from it. The duplication is
+deliberate. The owner rows come out of `PollDiagnosticsAccumulator` -- the code a
+reader consults this table to debug -- so a record whose only account of the
+configured owners is those rows cannot expose a fault in producing them:
+
+```
+_vault.ListOwnersAsync() ──► ConfiguredOwners        (independent witness)
+          │
+          └─► RefreshOwnerAsync ──► accumulator ──► owner rows
+                                        ▲
+                              the machinery under suspicion
+```
+
+`rows != ConfiguredOwners` is then a detectable defect. Without the independent
+capture it is invisible, because the invariant would be checked against itself.
+
+`OwnerCount` is nullable for exactly that path. Zero is a real configuration --
+`polling-and-refresh` already specifies that a refresh with no stored tokens
+publishes an empty snapshot -- so writing zero when the owner list could not be
+read would render a broken vault as an empty one on the summary line. Null means
+"never enumerated", the same null-versus-zero rule the owner rows follow.
+
+Paired with `PublishedCount` and the count of owner rows, this makes the summary
+line answer "did anything go wrong?" without expanding the poll:
+
+```
+14:05:12   ok        3/3 owners   published 12
+13:55:10   aborted   1/3 owners   published --
+13:50:09   faulted   -/- owners   published --     <- owner list unreadable
+```
 
 The parent also makes retention a plain `DELETE` with a cascade rather than a
 subquery over a denormalized column.
@@ -201,20 +234,30 @@ into sub-records that name real concepts:
 
 ```
 PollDiagnostics
-  |- PollRun        { PollId, StartedAt, CompletedAt, Outcome, PublishedCount }
+  |- PollRun        { PollId, StartedAt, CompletedAt, Outcome,
+                      ConfiguredOwners, PublishedCount }
   |- IReadOnlyList<OwnerPollDiagnostics>
 
 OwnerPollDiagnostics
-  |- OwnerPollWindow  { Owner, StartedAt, CompletedAt }
-  |- OwnerOutcome     { Status, Detail, ResolvedLogin }
-  |- FetchCounts      { Requested, Reviewed, Union, Derived, CarriedOver }
-  |- ExclusionCounts  { Draft, ClosedOrMerged, Approved, Untracked }
-  |- RateLimit        { Remaining, ResetAt, Cost }
-  |- PullRequestIds
+  |- OwnerPollWindow         { Owner, StartedAt, CompletedAt }
+  |- OwnerOutcome            { Status, Detail, ResolvedLogin }
+  |- FetchCounts             { Requested, Reviewed, Union, Derived, CarriedOver }
+  |- ExclusionCounts         { Draft, ClosedOrMerged, Approved, Untracked }
+  |- RateLimit               { Remaining, ResetAt, Cost }
+  |- ContributedPullRequests { Ids, ForeignCount }
 ```
 
-Six constructor parameters at the owner level, five and below inside each
+Six constructor parameters at the owner level, six and below inside each
 sub-record.
+
+`ContributedPullRequests` groups the identifiers with the count derived from
+them rather than adding a seventh owner-level parameter. The grouping is a real
+concept, not a parameter-budget dodge: the foreign count is meaningless apart
+from the list it counts, and computing one without the other is a bug.
+
+`OwnerCount` is not a field. It is `ConfiguredOwners?.Count`, so the two can
+never disagree; only the persistence row stores it separately, as a column the
+reader can order and filter on without deserializing the list.
 
 ### `RefreshPass` groups the three per-refresh collections
 
@@ -312,6 +355,29 @@ free time series -- it is already a stored `PollRun` field:
 14:00:11   ok   published 13   <- moved, and no pull request was opened
 13:55:10   ok   published 12
 ```
+
+### The foreign-item count names which token reaches across
+
+The poll-level overlap tell says a pull request arrived from more than one owner.
+It does not say which. Each identifier is already `owner/repo#number`, so
+comparing its owner against the row's owner costs one pass over data the row
+already holds:
+
+```
+perfectServe   derived 4   ids: perfectServe/api#12, perfectServe/api#19,
+                                ps-unite/tools#3,              <- foreign
+                                farooq-teqniqly/pr-center#42   <- foreign
+                           foreign 2
+```
+
+Like the overlap tell, a non-zero count is normal: a fine-grained PAT whose
+resource owner is one org can still see repositories in another configured
+owner, and `QueueItemAccumulator` resolves the result correctly. The value is in
+attribution -- it turns "two owners saw the same pull request" into "this token
+is the one reaching across".
+
+Stored rather than computed at read time so #9 can emit it as a counter without
+re-parsing identifiers.
 
 ### A duplicate tell, framed as a marker and not an error
 

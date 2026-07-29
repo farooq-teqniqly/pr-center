@@ -19,6 +19,21 @@ second time.
 The poll identifier SHALL be a value stable enough to correlate the record with
 a trace outside this process, independent of any local row identifier.
 
+The poll-level part SHALL also carry the configured owners themselves, captured
+from the owner enumeration directly rather than assembled from the owner rows.
+The count SHALL be derived from that same capture, and SHALL be absent when the
+refresh failed before enumerating the owners. Zero and absent are different
+claims: zero owners is a valid configuration that publishes an empty queue,
+while an absent count means the owner list could not be read at all. Recording
+the failure as zero would present a broken vault as an empty one.
+
+The capture point is load-bearing. The owner rows are produced by the same
+machinery a reader is using this record to diagnose, so a record whose only
+account of the configured owners comes from those rows cannot expose a fault in
+producing them. Taken from the enumeration itself, the list is an independent
+witness, and an owner present in one and absent from the other is a detectable
+defect rather than an invisible one.
+
 #### Scenario: A successful refresh produces one record
 
 - **WHEN** a refresh completes over any number of owners
@@ -28,6 +43,21 @@ a trace outside this process, independent of any local row identifier.
 
 - **WHEN** two owners both return the same pull request and the refresh publishes one item for it
 - **THEN** the record's published count is the number of items in the published snapshot, which is less than the sum of the owners' derived counts
+
+#### Scenario: No owners configured is recorded as zero
+
+- **WHEN** a refresh runs with no owner tokens stored and publishes an empty snapshot
+- **THEN** the record's configured-owner count is zero, not absent, and it carries no owner rows
+
+#### Scenario: An unreadable owner list is recorded as absent
+
+- **WHEN** a refresh fails while enumerating the configured owners
+- **THEN** the record's configured owners and their count are both absent, distinguishing it from a poll that found no owners
+
+#### Scenario: The configured owners come from the enumeration, not the rows
+
+- **WHEN** a refresh enumerates its configured owners and goes on to produce owner rows
+- **THEN** the record's configured owners are those the enumeration returned, so an owner missing from the rows still appears in the list
 
 ### Requirement: The record is written on every exit path of a refresh
 
@@ -56,7 +86,7 @@ poll-level row, with no owner rows.
 #### Scenario: A failure to enumerate owners is recorded
 
 - **WHEN** enumerating the configured owners throws before any owner is polled
-- **THEN** a record is written with the faulted outcome and no owner rows
+- **THEN** a record is written with the faulted outcome, an absent configured-owner count, and no owner rows
 
 #### Scenario: A publish failure is recorded
 
@@ -103,11 +133,18 @@ Each owner row SHALL carry:
 - the count of pull requests excluded by derivation, broken down by exclusion
   reason;
 - the rate-limit reading for that fetch;
-- the compact identifiers of the pull requests the owner contributed.
+- the compact identifiers of the pull requests the owner contributed;
+- how many of those pull requests belong to an owner other than this one.
 
 The resolved login SHALL be recorded per owner per poll, because two owners
 resolving to the same login is how one pull request reaches the queue twice, and
 that is not observable from the counts alone.
+
+The foreign-item count SHALL be the number of contributed identifiers whose
+owner is not the row's owner. Owner-queue discovery is not scoped to the owner,
+so a token that can see another configured owner's repositories contributes that
+owner's pull requests; the count names which token is reaching across, which the
+poll-level overlap total cannot. A non-zero count is expected and not a fault.
 
 To stay within the baseline parameter limit, these SHALL be grouped into
 cohesive sub-records rather than a flat parameter list.
@@ -121,6 +158,16 @@ cohesive sub-records rather than a flat parameter list.
 
 - **WHEN** an owner's union contains pull requests that derivation hides
 - **THEN** that owner's row records how many were hidden for each reason -- draft, closed or merged, approved, and untracked -- and those counts plus the derived count equal the union count
+
+#### Scenario: A token reaching into another owner is named
+
+- **WHEN** an owner's fetch contributes pull requests belonging to a different configured owner
+- **THEN** that owner's row records how many of its contributed identifiers belong to another owner
+
+#### Scenario: An owner contributing only its own pull requests
+
+- **WHEN** every pull request an owner contributed belongs to that owner
+- **THEN** its foreign-item count is zero
 
 #### Scenario: Login resolution failure yields a null login
 
@@ -229,6 +276,11 @@ number of items it published. The published count is on the summary line
 deliberately: scanning that one column down the list is how a reader sees what
 moved between polls, which is the question a single poll's rows cannot answer.
 
+The owner ratio SHALL make a shortfall legible without expanding the poll: a
+poll that polled fewer owners than it had configured is the at-a-glance signal
+that something went wrong, and it SHALL be distinguishable from a poll whose
+owner count could not be read at all.
+
 A poll recorded with the canceled outcome SHALL be presented as an incomplete
 poll rather than as a failure, since a host shutdown mid-poll is routine.
 
@@ -241,6 +293,16 @@ poll rather than as a failure, since a host shutdown mid-poll is routine.
 
 - **WHEN** the user expands a poll in the list
 - **THEN** that poll's owner rows are shown, and no additional read of the diagnostics store is issued
+
+#### Scenario: A shortfall is visible without expanding
+
+- **WHEN** a poll polled fewer owners than it had configured
+- **THEN** its summary line shows the shortfall in the owner ratio, without the owner rows being expanded
+
+#### Scenario: An absent owner count is not shown as zero
+
+- **WHEN** a poll's configured-owner count is absent because the owner list could not be read
+- **THEN** the summary line renders the ratio as unknown, not as zero out of zero
 
 #### Scenario: Owner rows start collapsed
 
@@ -256,6 +318,38 @@ poll rather than as a failure, since a host shutdown mid-poll is routine.
 
 - **WHEN** the diagnostics view renders and no poll has been recorded
 - **THEN** an explicit empty state is shown, distinguishable from a failure to read
+
+### Requirement: A poll whose owner rows disagree with its configured owners is surfaced as a defect
+
+The read surface SHALL compare each poll's owner rows against its recorded
+configured owners and SHALL surface any disagreement -- a configured owner with
+no row, or a row for an owner that was not configured. Unlike overlapping
+owners, this is not an expected condition: every configured owner is required to
+have a row, so a disagreement means the record was produced incorrectly and the
+rest of that poll's numbers cannot be trusted.
+
+A poll whose configured owners are absent SHALL NOT be surfaced as disagreeing,
+since there is nothing to compare against.
+
+#### Scenario: A missing owner row is surfaced
+
+- **WHEN** a poll's configured owners include an owner that has no owner row
+- **THEN** the poll is surfaced as disagreeing, naming that owner
+
+#### Scenario: An unexpected owner row is surfaced
+
+- **WHEN** a poll has an owner row for an owner absent from its configured owners
+- **THEN** the poll is surfaced as disagreeing, naming that owner
+
+#### Scenario: A consistent poll is not surfaced
+
+- **WHEN** a poll's owner rows correspond exactly to its configured owners
+- **THEN** the poll carries no disagreement indication
+
+#### Scenario: An absent owner list is not a disagreement
+
+- **WHEN** a poll's configured owners are absent because the enumeration failed
+- **THEN** the poll is not surfaced as disagreeing
 
 ### Requirement: A poll whose owners overlap is marked, not flagged as an error
 
