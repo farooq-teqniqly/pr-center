@@ -4,14 +4,14 @@ name: OpenSpec archive check
 # archives a change in the same PR that ships it, so a change whose tasks are all
 # complete must already live under openspec/changes/archive/ by merge time.
 
+# Runs on every PR (no path filter) so it always reports a status and can be a
+# required check -- a required check that is skipped by a path filter would leave
+# unrelated PRs blocked waiting for a status that never arrives. The script exits
+# immediately when there is nothing to check.
 on:
   pull_request:
-    paths:
-      - "openspec/**"
   push:
     branches: [main]
-    paths:
-      - "openspec/**"
 
 permissions:
   contents: read
