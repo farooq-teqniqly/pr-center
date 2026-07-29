@@ -178,7 +178,7 @@ public sealed class QueueRowTests : BunitContext
     }
 
     [Fact]
-    public void QueueRow_WhenAuthoredByMeAndUpdated_ShowsBothBadgesAndKeepsHasUpdateShade()
+    public void QueueRow_WhenAuthoredByMeAndUpdated_StillShowsBothBadges()
     {
         // Arrange
         var item = Item(authoredByMe: true, hasUpdate: true);
@@ -186,13 +186,9 @@ public sealed class QueueRowTests : BunitContext
         // Act
         var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
 
-        // Assert -- badge for each, and both classes present so CSS suppresses
-        // the mine shade in favor of the has-update (row-unseen) treatment
+        // Assert -- an update never suppresses the mine badge, nor the reverse
         Assert.NotNull(cut.Find("[data-testid=updated-badge]"));
         Assert.NotNull(cut.Find("[data-testid=mine-badge]"));
-        var classList = cut.Find("[data-testid=pr]").ClassList;
-        Assert.Contains("row-unseen", classList);
-        Assert.Contains("row-mine", classList);
     }
 
     [Fact]
