@@ -111,8 +111,8 @@ public sealed partial class RefreshQueue : IRefreshQueue
             {
                 // The update baseline is derived from each pull request's own
                 // facts (my latest review instant); no stored marker is read.
-                var item = QueueItemDeriver.Derive(facts, myLogin);
-                if (item is not null)
+                var derived = QueueItemDeriver.Derive(facts, myLogin);
+                if (derived.Item is { } item)
                 {
                     ownerItems.Add(item);
                 }

@@ -5,10 +5,10 @@ it drives, and the implementation task is done when that test passes.
 
 ## 1. Derivation reports why a pull request is hidden
 
-- [ ] 1.1 Write failing `QueueItemDeriverTests` changes: a shown pull request yields a shown result carrying the `QueueItem`; a draft, a closed/merged, an approved-and-unrequested, and a never-requested-never-reviewed pull request each yield a hidden result carrying the matching `MembershipExclusion`; the existing null/whitespace guard tests still hold.
-- [ ] 1.2 Add `PrCenter.Core/Derivation/QueueItemResult.cs` -- `sealed record` mirroring `MembershipResult`: private constructor, `IsShown`, nullable `Item`, nullable `Exclusion`, and `Shown(QueueItem)` / `Hidden(MembershipExclusion)` factories. XML docs on the type and every member.
-- [ ] 1.3 Change `QueueItemDeriver.Derive` to return `QueueItemResult`, passing through the exclusion `MembershipDeriver` already produced. Update its XML docs.
-- [ ] 1.4 Update `RefreshQueue.RefreshOwnerAsync` to the new return type; behavior is unchanged at this step (hidden results are still simply not added).
+- [x] 1.1 Write failing `QueueItemDeriverTests` changes: a shown pull request yields a shown result carrying the `QueueItem`; a draft, a closed/merged, an approved-and-unrequested, and a never-requested-never-reviewed pull request each yield a hidden result carrying the matching `MembershipExclusion`; the existing null/whitespace guard tests still hold.
+- [x] 1.2 Add `PrCenter.Core/Derivation/QueueItemResult.cs` -- `sealed record` mirroring `MembershipResult`: private constructor, `IsShown`, nullable `Item`, nullable `Exclusion`, and `Shown(QueueItem)` / `Hidden(MembershipExclusion)` factories. XML docs on the type and every member.
+- [x] 1.3 Change `QueueItemDeriver.Derive` to return `QueueItemResult`, passing through the exclusion `MembershipDeriver` already produced. Update its XML docs.
+- [x] 1.4 Update `RefreshQueue.RefreshOwnerAsync` to the new return type; behavior is unchanged at this step (hidden results are still simply not added).
 
 ## 2. Fetch diagnostics on the GitHub port
 
