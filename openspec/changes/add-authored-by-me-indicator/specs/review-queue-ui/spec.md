@@ -7,11 +7,15 @@ when the pull request has an update; a byline of who last touched it and when
 reviewer's state, with a distinct treatment for the user's own chip and for bot
 reviewers; a covered decoration naming the covering reviewers when the pull
 request is already covered; a distinct authored-by-me indicator when the pull
-request's author is the user; and two engagement/activity instants -- the user's
-last-reviewed instant and the last-update instant. A pull request the user has
-never reviewed has no update baseline, so it SHALL render without the update
-stripe and badge. A pull request the user did not author SHALL render without the
-authored-by-me indicator. State SHALL never be conveyed by color alone -- the
+request's author is the user, comprising a text badge and a row shade with a
+colored stripe in a hue distinct from the has-update treatment; and two
+engagement/activity instants -- the user's last-reviewed instant and the
+last-update instant. A pull request the user has never reviewed has no update
+baseline, so it SHALL render without the update stripe and badge. A pull request
+the user did not author SHALL render without the authored-by-me indicator. When a
+pull request is both authored by the user and has an update, the has-update row
+treatment SHALL take precedence for the shade and stripe while the authored-by-me
+badge SHALL still render. State SHALL never be conveyed by color alone -- the
 badge, chip, and authored-by-me indicator text carry the same meaning as text.
 
 #### Scenario: Updated pull request shows the stripe and badge
@@ -35,9 +39,13 @@ badge, chip, and authored-by-me indicator text carry the same meaning as text.
 - **THEN** the byline shows the last-update author and a relative time, with no activity-verb summary
 
 #### Scenario: Self-authored pull request shows the authored-by-me indicator
-- **WHEN** a row renders a pull request whose authored-by-me flag is set
-- **THEN** a distinct authored-by-me indicator is shown, carrying its meaning as text rather than by color alone
+- **WHEN** a row renders a pull request whose authored-by-me flag is set and which has no update
+- **THEN** the authored-by-me badge and the authored-by-me row shade and stripe are shown, the badge carrying its meaning as text rather than by color alone
 
 #### Scenario: Pull request authored by another shows no authored-by-me indicator
 - **WHEN** a row renders a pull request whose authored-by-me flag is not set
 - **THEN** no authored-by-me indicator is shown
+
+#### Scenario: Self-authored and updated pull request keeps the has-update shade
+- **WHEN** a row renders a pull request that is both authored by the user and has an update
+- **THEN** the has-update shade and stripe are shown rather than the authored-by-me shade, and the authored-by-me badge is still shown

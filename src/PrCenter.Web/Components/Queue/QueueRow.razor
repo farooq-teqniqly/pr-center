@@ -1,7 +1,7 @@
 @using PrCenter.Core.Derivation
 @inject TimeProvider TimeProvider
 
-<div class="row @(Item.HasUpdate ? "row-unseen" : null)" data-testid="pr" data-pr-id="@Item.Identity.Id">
+<div class="row @(Item.HasUpdate ? "row-unseen" : null) @(Item.AuthoredByMe ? "row-mine" : null)" data-testid="pr" data-pr-id="@Item.Identity.Id">
     <div class="stripe"></div>
     <div class="row-main">
         <div class="title-line">

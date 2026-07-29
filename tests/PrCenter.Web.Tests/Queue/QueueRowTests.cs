@@ -152,6 +152,32 @@ public sealed class QueueRowTests : BunitContext
     }
 
     [Fact]
+    public void QueueRow_WhenAuthoredByMe_ShadesTheRow()
+    {
+        // Arrange
+        var item = Item(authoredByMe: true);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.Contains("row-mine", cut.Find("[data-testid=pr]").ClassList);
+    }
+
+    [Fact]
+    public void QueueRow_WhenAuthoredByAnother_DoesNotShadeTheRow()
+    {
+        // Arrange
+        var item = Item(authoredByMe: false);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.DoesNotContain("row-mine", cut.Find("[data-testid=pr]").ClassList);
+    }
+
+    [Fact]
     public void QueueRow_Title_IsPlainAnchorToIdentityUrlWithNoSideEffect()
     {
         // Arrange

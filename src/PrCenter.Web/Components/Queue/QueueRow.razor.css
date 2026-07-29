@@ -23,6 +23,18 @@
     background: var(--signal);
 }
 
+/* Self-authored rows carry an informational blue wash, distinct from the amber
+   has-update wash. An updated row that is also mine keeps the amber treatment
+   (more actionable), so mine-shading only applies when the row is not unseen;
+   the MINE badge still marks it either way. */
+.row.row-mine:not(.row-unseen) {
+    background: color-mix(in srgb, var(--info-bg) 45%, var(--surface));
+}
+
+.row.row-mine:not(.row-unseen) .stripe {
+    background: var(--info);
+}
+
 .row-main {
     min-width: 0;
 }
