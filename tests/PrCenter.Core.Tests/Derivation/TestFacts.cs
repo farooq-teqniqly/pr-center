@@ -10,7 +10,8 @@ internal static class TestFacts
         IReadOnlyList<string>? requested = null,
         IReadOnlyList<ReviewFact>? reviews = null,
         IReadOnlyList<CommitFact>? commits = null,
-        IReadOnlyList<CommentFact>? comments = null
+        IReadOnlyList<CommentFact>? comments = null,
+        string authorLogin = TestLogins.Author
     ) =>
         new(
             new PullRequestIdentity(
@@ -20,7 +21,7 @@ internal static class TestFacts
                 number: 1,
                 title: "Add feature",
                 url: "https://github.com/owner/repo/pull/1",
-                authorLogin: TestLogins.Author
+                authorLogin: authorLogin
             ),
             new PullRequestStatus(
                 isDraft: isDraft,

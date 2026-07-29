@@ -6,9 +6,9 @@
 
 ## 2. Core tests
 
-- [ ] 2.1 TDD `QueueItemDeriver`: authored-by-me flag true when author login is the user's, false otherwise (covers both `queue-derivation` scenarios).
-- [ ] 2.2 Confirm the flag is display-only: a self-authored PR still shows/hides by the unchanged membership rules (no new membership behavior).
-- [ ] 2.3 Update existing `QueueItem`/deriver tests for the `QueueItemStatus` grouping.
+- [x] 2.1 TDD `QueueItemDeriver`: authored-by-me flag true when author login is the user's, false otherwise (covers both `queue-derivation` scenarios).
+- [x] 2.2 Confirm the flag is display-only: a self-authored PR still shows/hides by the unchanged membership rules (no new membership behavior).
+- [x] 2.3 Update existing `QueueItem`/deriver tests for the `QueueItemStatus` grouping.
 
 ## 3. Web: render the indicator
 
