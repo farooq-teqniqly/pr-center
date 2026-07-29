@@ -152,7 +152,7 @@ public sealed class QueueRowTests : BunitContext
     }
 
     [Fact]
-    public void QueueRow_WhenAuthoredByMe_ShadesTheRow()
+    public void QueueRow_WhenAuthoredByMe_AddsRowMineClass()
     {
         // Arrange
         var item = Item(authoredByMe: true);
@@ -165,7 +165,7 @@ public sealed class QueueRowTests : BunitContext
     }
 
     [Fact]
-    public void QueueRow_WhenAuthoredByAnother_DoesNotShadeTheRow()
+    public void QueueRow_WhenAuthoredByAnother_DoesNotAddRowMineClass()
     {
         // Arrange
         var item = Item(authoredByMe: false);
@@ -175,6 +175,24 @@ public sealed class QueueRowTests : BunitContext
 
         // Assert
         Assert.DoesNotContain("row-mine", cut.Find("[data-testid=pr]").ClassList);
+    }
+
+    [Fact]
+    public void QueueRow_WhenAuthoredByMeAndUpdated_ShowsBothBadgesAndKeepsHasUpdateShade()
+    {
+        // Arrange
+        var item = Item(authoredByMe: true, hasUpdate: true);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert -- badge for each, and both classes present so CSS suppresses
+        // the mine shade in favor of the has-update (row-unseen) treatment
+        Assert.NotNull(cut.Find("[data-testid=updated-badge]"));
+        Assert.NotNull(cut.Find("[data-testid=mine-badge]"));
+        var classList = cut.Find("[data-testid=pr]").ClassList;
+        Assert.Contains("row-unseen", classList);
+        Assert.Contains("row-mine", classList);
     }
 
     [Fact]
