@@ -13,8 +13,7 @@ public sealed class QueueItemTests
             new QueueItem(
                 null!,
                 ValidLastUpdate(),
-                MembershipState.AwaitingFirstReview,
-                hasUpdate: false,
+                ValidStatus(),
                 ValidRoster(),
                 ValidEngagement(),
                 ValidCoveredBy()
@@ -30,8 +29,23 @@ public sealed class QueueItemTests
             new QueueItem(
                 ValidIdentity(),
                 null!,
-                MembershipState.AwaitingFirstReview,
-                hasUpdate: false,
+                ValidStatus(),
+                ValidRoster(),
+                ValidEngagement(),
+                ValidCoveredBy()
+            )
+        );
+    }
+
+    [Fact]
+    public void Constructor_WithNullStatus_Throws()
+    {
+        // Act / Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new QueueItem(
+                ValidIdentity(),
+                ValidLastUpdate(),
+                null!,
                 ValidRoster(),
                 ValidEngagement(),
                 ValidCoveredBy()
@@ -47,8 +61,7 @@ public sealed class QueueItemTests
             new QueueItem(
                 ValidIdentity(),
                 ValidLastUpdate(),
-                MembershipState.AwaitingFirstReview,
-                hasUpdate: false,
+                ValidStatus(),
                 null!,
                 ValidEngagement(),
                 ValidCoveredBy()
@@ -64,8 +77,7 @@ public sealed class QueueItemTests
             new QueueItem(
                 ValidIdentity(),
                 ValidLastUpdate(),
-                MembershipState.AwaitingFirstReview,
-                hasUpdate: false,
+                ValidStatus(),
                 ValidRoster(),
                 null!,
                 ValidCoveredBy()
@@ -81,13 +93,61 @@ public sealed class QueueItemTests
             new QueueItem(
                 ValidIdentity(),
                 ValidLastUpdate(),
-                MembershipState.AwaitingFirstReview,
-                hasUpdate: false,
+                ValidStatus(),
                 ValidRoster(),
                 ValidEngagement(),
                 null!
             )
         );
+    }
+
+    [Fact]
+    public void State_AfterConstruction_ReflectsStatus()
+    {
+        // Act
+        var item = Build(
+            status: new QueueItemStatus(
+                MembershipState.AwaitingReReview,
+                hasUpdate: true,
+                authoredByMe: false
+            )
+        );
+
+        // Assert
+        Assert.Equal(MembershipState.AwaitingReReview, item.State);
+        Assert.True(item.HasUpdate);
+    }
+
+    [Fact]
+    public void AuthoredByMe_WhenStatusFlagSet_IsTrue()
+    {
+        // Act
+        var item = Build(
+            status: new QueueItemStatus(
+                MembershipState.AwaitingFirstReview,
+                hasUpdate: false,
+                authoredByMe: true
+            )
+        );
+
+        // Assert
+        Assert.True(item.AuthoredByMe);
+    }
+
+    [Fact]
+    public void AuthoredByMe_WhenStatusFlagClear_IsFalse()
+    {
+        // Act
+        var item = Build(
+            status: new QueueItemStatus(
+                MembershipState.AwaitingFirstReview,
+                hasUpdate: false,
+                authoredByMe: false
+            )
+        );
+
+        // Assert
+        Assert.False(item.AuthoredByMe);
     }
 
     [Fact]
@@ -142,14 +202,14 @@ public sealed class QueueItemTests
     }
 
     private static QueueItem Build(
+        QueueItemStatus? status = null,
         IReadOnlyList<ReviewerRosterEntry>? roster = null,
         IReadOnlyList<string>? coveredBy = null
     ) =>
         new(
             ValidIdentity(),
             ValidLastUpdate(),
-            MembershipState.AwaitingFirstReview,
-            hasUpdate: false,
+            status ?? ValidStatus(),
             roster ?? ValidRoster(),
             ValidEngagement(),
             coveredBy ?? ValidCoveredBy()
@@ -167,6 +227,9 @@ public sealed class QueueItemTests
         );
 
     private static LastUpdate ValidLastUpdate() => new(TestLogins.Author, TestTime.At(1));
+
+    private static QueueItemStatus ValidStatus() =>
+        new(MembershipState.AwaitingFirstReview, hasUpdate: false, authoredByMe: false);
 
     private static IReadOnlyList<ReviewerRosterEntry> ValidRoster() => [];
 

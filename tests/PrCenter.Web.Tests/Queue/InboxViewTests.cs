@@ -482,8 +482,11 @@ public sealed class InboxViewTests : BunitContext
                 "author"
             ),
             new LastUpdate("octocat", at ?? BaseInstant),
-            MembershipState.AwaitingFirstReview,
-            hasUpdate,
+            new QueueItemStatus(
+                MembershipState.AwaitingFirstReview,
+                hasUpdate,
+                authoredByMe: false
+            ),
             roster: [],
             new MyEngagement(lastReviewedAt: null),
             coveredBy: []
