@@ -1,0 +1,27 @@
+name: OpenSpec archive check
+
+# Blocks a PR that leaves a completed OpenSpec change unarchived. This project
+# archives a change in the same PR that ships it, so a change whose tasks are all
+# complete must already live under openspec/changes/archive/ by merge time.
+
+# Runs on every PR (no path filter) so it always reports a status and can be a
+# required check -- a required check that is skipped by a path filter would leave
+# unrelated PRs blocked waiting for a status that never arrives. The script exits
+# immediately when there is nothing to check.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  require-archived-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Require completed changes to be archived
+        run: bash .github/scripts/require-archived-changes.sh
