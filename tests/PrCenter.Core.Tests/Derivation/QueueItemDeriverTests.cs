@@ -159,9 +159,10 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(requested: [MyLogin], authorLogin: MyLogin);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.True(item.AuthoredByMe);
     }
@@ -173,9 +174,10 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(requested: [MyLogin], authorLogin: Other);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.False(item.AuthoredByMe);
     }
@@ -187,10 +189,11 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(authorLogin: MyLogin);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert -- membership is unchanged by authorship
-        Assert.Null(item);
+        Assert.Null(result.Item);
+        Assert.Equal(MembershipExclusion.Untracked, result.Exclusion);
     }
 
     [Theory]

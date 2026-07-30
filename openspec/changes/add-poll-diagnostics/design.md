@@ -33,7 +33,7 @@ Current state this builds on:
   one call site, no null guards.
 - `MembershipDeriver.Derive` already returns a `MembershipResult` carrying
   either a `MembershipState` or a `MembershipExclusion`.
-  `QueueItemDeriver.Derive` (`src/PrCenter.Core/Derivation/QueueItemDeriver.cs:32`)
+  `QueueItemDeriver.Derive` (`src/PrCenter.Core/Derivation/QueueItemDeriver.cs:28`)
   consumes it and discards the exclusion by returning `QueueItem?`.
 - `QueuePollingService.RunCycleAsync` wraps each poll in
   `await using var scope`, so any scoped `DbContext` is alive for the duration
