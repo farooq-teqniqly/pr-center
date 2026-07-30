@@ -151,13 +151,25 @@ OpenTelemetry traces/metrics/logs wired in the host across poll cycles,
 GitHub calls, and persistence.
 
 The poll diagnostics record produced in `RefreshQueue` is the instrumentation
-point, not a second one: this change adds an OpenTelemetry sink over the same
-record the SQLite diagnostics sink already consumes -- a span per refresh with a
-child span per owner, plus fetch counters and a duration histogram. Field names
-are already chosen to read as span attributes (`pr_center.poll.id`,
-`pr_center.owner`, `pr_center.search.requested.count`). The SQLite sink stays:
-with no collector configured, it is the only record that survives a restart.
-Spans leave the machine, so the no-response-body redaction rule holds here too.
+point, not a second one, and it now exists: `add-poll-diagnostics` shipped
+`PollDiagnostics` (Core), the write-only `IPollDiagnosticsSink` the refresh fans
+out over on every exit path, and `SqlitePollDiagnosticsSink` behind it. This
+change adds a second implementation of that same interface -- an OpenTelemetry
+sink over the same record -- rather than a new instrumentation point: a span per
+refresh with a child span per owner, plus fetch counters and a duration
+histogram.
+
+The record's fields map mechanically to span attributes: `PollRunDiagnostics.PollId`
+is `pr_center.poll.id`, `OwnerPollWindow.Owner` is `pr_center.owner`, and
+`FetchCounts.Requested` is `pr_center.search.requested.count`. `RateLimitReading.Cost`
+is already stored though the diagnostics view does not render it, precisely so
+this change can turn it into a metric without a hole where the polls before it
+would be.
+
+The SQLite sink stays: with no collector configured, it is the only record that
+survives a restart. Spans leave the machine, so the redaction rule holds here
+too -- and it holds by construction, since the record carries no title, body,
+comment, URL, or token to redact.
 
 ## Deliberately unscheduled
 

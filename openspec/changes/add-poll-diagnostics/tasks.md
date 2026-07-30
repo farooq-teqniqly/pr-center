@@ -63,7 +63,7 @@ it drives, and the implementation task is done when that test passes.
 
 ## 7. Invariant and cleanup
 
-- [ ] 7.1 Write a failing architecture test asserting no type under `PrCenter.Core.Queue` or `PrCenter.Core.Derivation` references `IPollDiagnosticsReader`, and that `IPollDiagnosticsSink` declares no read member.
-- [ ] 7.2 Run the full solution build and every test project; collect coverage per `CLAUDE.md` and confirm the new Core and Persistence types are covered, then delete `TestResults/`.
-- [ ] 7.3 Update `docs/pr-center-roadmap.md` item 9 to point at the shipped record rather than a planned one, and add the diagnostics table to `docs/pr-center-architecture.md` if it names the persistence schema.
-- [ ] 7.4 Stop and wait for explicit approval before committing.
+- [x] 7.1 Write a failing architecture test asserting no type under `PrCenter.Core.Queue` or `PrCenter.Core.Derivation` references `IPollDiagnosticsReader`, and that `IPollDiagnosticsSink` declares no read member.
+- [x] 7.2 Run the full solution build and every test project; collect coverage per `CLAUDE.md` and confirm the new Core and Persistence types are covered, then delete `TestResults/`.
+- [x] 7.3 Update `docs/pr-center-roadmap.md` item 9 to point at the shipped record rather than a planned one, and add the diagnostics table to `docs/pr-center-architecture.md` if it names the persistence schema.
+- [x] 7.4 Stop and wait for explicit approval before committing.
