@@ -42,15 +42,15 @@ it drives, and the implementation task is done when that test passes.
 
 ## 5. SQLite persistence
 
-- [ ] 5.1 Add `PrCenter.Persistence/PollRun.cs` (`Id` autoincrement, `PollId` Guid unique, `StartedAt`, `CompletedAt`, `Outcome`, nullable `ConfiguredOwners`, nullable `OwnerCount`, nullable `PublishedCount`) and `PrCenter.Persistence/PollOwnerDiagnostic.cs` (FK to `PollRun`, owner, resolved login, instants, status, detail, nullable counts, nullable exclusion counts, nullable rate-limit fields, `PullRequestIds`, `ForeignItemCount`). XML docs stating why each count is nullable.
-- [ ] 5.2 Map both in `PrCenterDbContext.OnModelCreating` with a cascade delete from `PollRun` to its children, and value converters for `PullRequestIds` and `ConfiguredOwners`. Add the `DbSet`s and update the context summary.
-- [ ] 5.3 Generate the EF migration (`AddPollDiagnostics`); confirm the `Up` is purely additive and touches no token or security column.
-- [ ] 5.4 Write failing `SqlitePollDiagnosticsSinkTests` against a real temporary SQLite file: a record round-trips with every field; `NotPolled` rows persist with null start instants and null counts; null counts and zero counts read back distinctly; identifiers and configured owners round-trip through their converters; foreign-item counts round-trip; a record with no owner rows persists.
-- [ ] 5.5 Write failing retention tests: writing while N polls are stored evicts exactly the oldest poll and all of its owner rows; eviction is by poll and not weighted by owner count; insert and eviction are one transaction, so a failure mid-write leaves neither the new poll nor a partial eviction.
-- [ ] 5.6 Implement `PrCenter.Persistence/SqlitePollDiagnosticsSink.cs` with the retention constant (200), insert-plus-trim in one transaction, and its `.Logging.cs` partial.
-- [ ] 5.7 Write failing `SqlitePollDiagnosticsReaderTests`: the most recent polls come back newest first, capped at the requested count, each with its owner rows; an empty table returns an empty list.
-- [ ] 5.8 Implement `PrCenter.Persistence/SqlitePollDiagnosticsReader.cs` as `AsNoTracking` projections of only the columns the view renders.
-- [ ] 5.9 Register the sink and the reader in `PersistenceServiceCollectionExtensions`.
+- [x] 5.1 Add `PrCenter.Persistence/PollRun.cs` (`Id` autoincrement, `PollId` Guid unique, `StartedAt`, `CompletedAt`, `Outcome`, nullable `ConfiguredOwners`, nullable `OwnerCount`, nullable `PublishedCount`) and `PrCenter.Persistence/PollOwnerDiagnostic.cs` (FK to `PollRun`, owner, resolved login, instants, status, detail, nullable counts, nullable exclusion counts, nullable rate-limit fields, `PullRequestIds`, `ForeignItemCount`). XML docs stating why each count is nullable.
+- [x] 5.2 Map both in `PrCenterDbContext.OnModelCreating` with a cascade delete from `PollRun` to its children, and value converters for `PullRequestIds` and `ConfiguredOwners`. Add the `DbSet`s and update the context summary.
+- [x] 5.3 Generate the EF migration (`AddPollDiagnostics`); confirm the `Up` is purely additive and touches no token or security column.
+- [x] 5.4 Write failing `SqlitePollDiagnosticsSinkTests` against a real temporary SQLite file: a record round-trips with every field; `NotPolled` rows persist with null start instants and null counts; null counts and zero counts read back distinctly; identifiers and configured owners round-trip through their converters; foreign-item counts round-trip; a record with no owner rows persists.
+- [x] 5.5 Write failing retention tests: writing while N polls are stored evicts exactly the oldest poll and all of its owner rows; eviction is by poll and not weighted by owner count; insert and eviction are one transaction, so a failure mid-write leaves neither the new poll nor a partial eviction.
+- [x] 5.6 Implement `PrCenter.Persistence/SqlitePollDiagnosticsSink.cs` with the retention constant (200), insert-plus-trim in one transaction, and its `.Logging.cs` partial.
+- [x] 5.7 Write failing `SqlitePollDiagnosticsReaderTests`: the most recent polls come back newest first, capped at the requested count, each with its owner rows; an empty table returns an empty list.
+- [x] 5.8 Implement `PrCenter.Persistence/SqlitePollDiagnosticsReader.cs` as `AsNoTracking` projections of only the columns the view renders.
+- [x] 5.9 Register the sink and the reader in `PersistenceServiceCollectionExtensions`.
 
 ## 6. Read surface (Web)
 

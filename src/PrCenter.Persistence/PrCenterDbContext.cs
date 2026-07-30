@@ -4,7 +4,8 @@ namespace PrCenter.Persistence;
 
 /// <summary>
 /// EF Core context for PR-Center's local SQLite state: the encrypted owner
-/// tokens, the single app-security row, and the single app-settings row.
+/// tokens, the single app-security row, the single app-settings row, and the
+/// bounded ring of recorded polls with their per-owner diagnostics rows.
 /// </summary>
 internal sealed class PrCenterDbContext : DbContext
 {
@@ -23,6 +24,12 @@ internal sealed class PrCenterDbContext : DbContext
 
     /// <summary>Gets the single app-settings row holding the poll interval.</summary>
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+
+    /// <summary>Gets the recorded polls, newest last by key.</summary>
+    public DbSet<PollRun> PollRuns => Set<PollRun>();
+
+    /// <summary>Gets the per-owner diagnostics rows, one per configured owner per poll.</summary>
+    public DbSet<PollOwnerDiagnostic> PollOwnerDiagnostics => Set<PollOwnerDiagnostic>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -61,6 +68,46 @@ internal sealed class PrCenterDbContext : DbContext
             security.Property(entity => entity.SentinelNonce).IsRequired();
             security.Property(entity => entity.SentinelCiphertext).IsRequired();
             security.Property(entity => entity.SentinelTag).IsRequired();
+        });
+
+        modelBuilder.Entity<PollRun>(run =>
+        {
+            run.HasKey(entity => entity.Id);
+
+            // Generated, unlike the single-row tables: the key both orders the
+            // retention trim and identifies a row to cascade from.
+            run.Property(entity => entity.Id).ValueGeneratedOnAdd();
+            run.HasIndex(entity => entity.PollId).IsUnique();
+            run.Property(entity => entity.StartedAt).IsRequired();
+            run.Property(entity => entity.CompletedAt).IsRequired();
+            run.Property(entity => entity.Outcome).IsRequired().HasMaxLength(32);
+
+            // Nullable through the converter, so a poll whose owner enumeration
+            // never completed stores SQL NULL rather than an empty list.
+            run.Property(entity => entity.ConfiguredOwners)
+                .HasConversion(DelimitedStringList.NullableConverter, DelimitedStringList.Comparer);
+
+            run.HasMany(entity => entity.Owners)
+                .WithOne(owner => owner.PollRun)
+                .HasForeignKey(owner => owner.PollRunId)
+                // Retention deletes whole polls; the children go with the parent
+                // rather than being trimmed by a second pass that could leave a
+                // partial poll behind.
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PollOwnerDiagnostic>(owner =>
+        {
+            owner.HasKey(entity => entity.Id);
+            owner.Property(entity => entity.Id).ValueGeneratedOnAdd();
+            owner.Property(entity => entity.Owner).IsRequired().HasMaxLength(255);
+            owner.Property(entity => entity.ResolvedLogin).HasMaxLength(255);
+            owner.Property(entity => entity.Status).IsRequired().HasMaxLength(32);
+
+            owner
+                .Property(entity => entity.PullRequestIds)
+                .IsRequired()
+                .HasConversion(DelimitedStringList.Converter, DelimitedStringList.Comparer);
         });
     }
 }

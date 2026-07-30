@@ -88,6 +88,41 @@ public sealed class PersistenceServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddPersistenceAdapter_ResolvesTheDiagnosticsSinkIntoTheFanOutEnumerable()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        // Act -- resolved as the enumerable the refresh fans out over, so a later
+        // telemetry sink joins this one rather than replacing it
+        var sinks = scope.ServiceProvider.GetServices<IPollDiagnosticsSink>();
+
+        // Assert
+        Assert.Single(sinks);
+    }
+
+    [Fact]
+    public void AddPersistenceAdapter_ResolvesTheDiagnosticsReader()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddPersistenceAdapter("Data Source=test.db", isDevelopment: false);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        // Act
+        var reader = scope.ServiceProvider.GetRequiredService<IPollDiagnosticsReader>();
+
+        // Assert
+        Assert.NotNull(reader);
+    }
+
+    [Fact]
     public void AddPersistenceAdapter_KeyHolder_IsSharedAcrossResolutions()
     {
         // Arrange
