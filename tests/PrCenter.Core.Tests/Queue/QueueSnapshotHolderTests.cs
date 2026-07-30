@@ -142,8 +142,11 @@ public sealed class QueueSnapshotHolderTests
                 TestLogins.Author
             ),
             new LastUpdate("octocat", PublishInstant),
-            MembershipState.AwaitingFirstReview,
-            hasUpdate: false,
+            new QueueItemStatus(
+                MembershipState.AwaitingFirstReview,
+                hasUpdate: false,
+                authoredByMe: false
+            ),
             roster: [],
             new MyEngagement(lastReviewedAt: null),
             coveredBy: []

@@ -130,6 +130,12 @@ Do not violate these without updating the idea/state docs first:
   never land on `main`. Before deleting one, confirm the content actually shipped with
   `git diff --stat main <branch>` (empty output) rather than trusting `-d` to refuse; `-d`
   will refuse a perfectly merged branch here, and `-D` alone proves nothing.
+- **Archive an OpenSpec change in the same PR that ships it.** A change whose `tasks.md`
+  items are all checked MUST already be archived (moved under `openspec/changes/archive/`
+  with its deltas folded into the main specs via `openspec archive <name> -y`) before the
+  PR merges -- do not defer archiving to a follow-up PR. The `openspec-archive-check.yml`
+  workflow enforces this: it fails the PR while any completed change is still active. A
+  change with open tasks or no `tasks.md` yet (proposal-only) is exempt while in progress.
 
 ## PowerShell authoring rules
 

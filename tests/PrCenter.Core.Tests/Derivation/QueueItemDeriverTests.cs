@@ -152,6 +152,47 @@ public sealed class QueueItemDeriverTests
         Assert.Equal([Other], item.CoveredBy);
     }
 
+    [Fact]
+    public void Derive_WhenIAuthoredTheShownPullRequest_AuthoredByMeIsTrue()
+    {
+        // Arrange -- I am requested to review a pull request I opened
+        var facts = TestFacts.Create(requested: [MyLogin], authorLogin: MyLogin);
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.True(item.AuthoredByMe);
+    }
+
+    [Fact]
+    public void Derive_WhenAnotherAuthoredTheShownPullRequest_AuthoredByMeIsFalse()
+    {
+        // Arrange
+        var facts = TestFacts.Create(requested: [MyLogin], authorLogin: Other);
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.False(item.AuthoredByMe);
+    }
+
+    [Fact]
+    public void Derive_AuthoredByMeDoesNotForceAnUntrackedPullRequestIntoTheQueue()
+    {
+        // Arrange -- I opened it but am neither requested nor a prior reviewer
+        var facts = TestFacts.Create(authorLogin: MyLogin);
+
+        // Act
+        var item = QueueItemDeriver.Derive(facts, MyLogin);
+
+        // Assert -- membership is unchanged by authorship
+        Assert.Null(item);
+    }
+
     [Theory]
     [InlineData(Draft, MembershipExclusion.Draft)]
     [InlineData(Closed, MembershipExclusion.ClosedOrMerged)]

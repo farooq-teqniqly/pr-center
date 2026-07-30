@@ -54,11 +54,18 @@ internal static class QueueItemDeriver
         // provably the same instant.
         var myLastReviewedAt = LastReviewedByMe(facts, myLogin);
 
+        // Authored-by-me is a display projection only -- membership above is
+        // already decided and unaffected by it.
+        var status = new QueueItemStatus(
+            state,
+            UpdateDetector.HasUpdate(facts, myLogin, myLastReviewedAt),
+            GitHubLogin.IsMe(facts.Identity.AuthorLogin, myLogin)
+        );
+
         return new QueueItem(
             facts.Identity,
             new LastUpdate(facts.Status.LastUpdatedBy, facts.Status.LastUpdatedAt),
-            state,
-            UpdateDetector.HasUpdate(facts, myLogin, myLastReviewedAt),
+            status,
             ReviewerRosterDeriver.Derive(facts, myLogin),
             new MyEngagement(myLastReviewedAt),
             CoveredFlag.CoveringLogins(facts, myLogin)

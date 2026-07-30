@@ -122,6 +122,76 @@ public sealed class QueueRowTests : BunitContext
     }
 
     [Fact]
+    public void QueueRow_WhenAuthoredByMe_ShowsTheMineBadge()
+    {
+        // Arrange
+        var item = Item(authoredByMe: true);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.Contains(
+            "mine",
+            cut.Find("[data-testid=mine-badge]").TextContent,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
+    public void QueueRow_WhenAuthoredByAnother_ShowsNoMineBadge()
+    {
+        // Arrange
+        var item = Item(authoredByMe: false);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.Empty(cut.FindAll("[data-testid=mine-badge]"));
+    }
+
+    [Fact]
+    public void QueueRow_WhenAuthoredByMe_AddsRowMineClass()
+    {
+        // Arrange
+        var item = Item(authoredByMe: true);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.Contains("row-mine", cut.Find("[data-testid=pr]").ClassList);
+    }
+
+    [Fact]
+    public void QueueRow_WhenAuthoredByAnother_DoesNotAddRowMineClass()
+    {
+        // Arrange
+        var item = Item(authoredByMe: false);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert
+        Assert.DoesNotContain("row-mine", cut.Find("[data-testid=pr]").ClassList);
+    }
+
+    [Fact]
+    public void QueueRow_WhenAuthoredByMeAndUpdated_StillShowsBothBadges()
+    {
+        // Arrange
+        var item = Item(authoredByMe: true, hasUpdate: true);
+
+        // Act
+        var cut = Render<QueueRow>(ps => ps.Add(p => p.Item, item));
+
+        // Assert -- an update never suppresses the mine badge, nor the reverse
+        Assert.NotNull(cut.Find("[data-testid=updated-badge]"));
+        Assert.NotNull(cut.Find("[data-testid=mine-badge]"));
+    }
+
+    [Fact]
     public void QueueRow_Title_IsPlainAnchorToIdentityUrlWithNoSideEffect()
     {
         // Arrange
@@ -185,6 +255,7 @@ public sealed class QueueRowTests : BunitContext
 
     private static QueueItem Item(
         bool hasUpdate = false,
+        bool authoredByMe = false,
         string lastUpdateBy = "octocat",
         DateTimeOffset? lastUpdateAt = null,
         DateTimeOffset? lastReviewedAt = null,
@@ -194,8 +265,7 @@ public sealed class QueueRowTests : BunitContext
         new(
             new PullRequestIdentity("pr-1", "owner", "repo", 1, "title", url, "author"),
             new LastUpdate(lastUpdateBy, lastUpdateAt ?? Now),
-            MembershipState.AwaitingFirstReview,
-            hasUpdate,
+            new QueueItemStatus(MembershipState.AwaitingFirstReview, hasUpdate, authoredByMe),
             roster: [],
             new MyEngagement(lastReviewedAt),
             coveredBy: coveredBy ?? []

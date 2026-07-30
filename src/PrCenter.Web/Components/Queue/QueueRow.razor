@@ -1,7 +1,7 @@
 @using PrCenter.Core.Derivation
 @inject TimeProvider TimeProvider
 
-<div class="row @(Item.HasUpdate ? "row-unseen" : null)" data-testid="pr" data-pr-id="@Item.Identity.Id">
+<div class="row @(Item.HasUpdate ? "row-unseen" : null) @(Item.AuthoredByMe ? "row-mine" : null)" data-testid="pr" data-pr-id="@Item.Identity.Id">
     <div class="stripe"></div>
     <div class="row-main">
         <div class="title-line">
@@ -23,6 +23,10 @@
             @if (Item.IsAlreadyCovered)
             {
                 <span class="covered" data-testid="covered-badge">covered &middot; @string.Join(", ", Item.CoveredBy)</span>
+            }
+            @if (Item.AuthoredByMe)
+            {
+                <span class="mine" data-testid="mine-badge">mine</span>
             }
         </div>
         <div class="byline" data-testid="byline">@Item.LastUpdate.By &middot; @RelativeTime.Format(Item.LastUpdate.At, _renderedAt)</div>
