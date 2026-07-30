@@ -182,6 +182,15 @@ Enumerating the ways a refresh can leave without reaching the end:
 | `_holder.Publish` throws | propagates | `Faulted`, `PublishedCount` null |
 | normal | -- | `Succeeded` |
 
+The publish row costs no code of its own: `outcome` starts at `Faulted` and
+`PublishedCount` is only assigned once `Publish` returns, so that path falls out
+of the ordinary control flow. It is also unreachable as written -- `QueueSnapshotHolder`
+is `sealed` and `Publish` throws only on null arguments the accumulator cannot
+produce -- so it carries no test. Driving it would mean faulting the holder's
+clock, a double coupled to an implementation detail of a collaborator, which
+would stop testing the intended path the moment the holder stamped snapshots
+differently.
+
 Three consequences:
 
 1. `ListOwnersAsync` moves inside the `try`, so its failure is recorded rather

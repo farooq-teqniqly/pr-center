@@ -16,4 +16,41 @@ public sealed record ExclusionCounts(int Draft, int ClosedOrMerged, int Approved
 {
     /// <summary>Gets the total pull requests hidden, across every reason.</summary>
     public int Total => Draft + ClosedOrMerged + Approved + Untracked;
+
+    /// <summary>
+    /// Tallies the exclusions a single owner's derivation produced.
+    /// </summary>
+    /// <param name="exclusions">One entry per hidden pull request.</param>
+    /// <returns>The per-reason counts.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exclusions"/> is null.</exception>
+    public static ExclusionCounts Tally(IEnumerable<MembershipExclusion> exclusions)
+    {
+        ArgumentNullException.ThrowIfNull(exclusions);
+
+        var draft = 0;
+        var closedOrMerged = 0;
+        var approved = 0;
+        var untracked = 0;
+
+        foreach (var exclusion in exclusions)
+        {
+            switch (exclusion)
+            {
+                case MembershipExclusion.Draft:
+                    draft++;
+                    break;
+                case MembershipExclusion.ClosedOrMerged:
+                    closedOrMerged++;
+                    break;
+                case MembershipExclusion.Approved:
+                    approved++;
+                    break;
+                default:
+                    untracked++;
+                    break;
+            }
+        }
+
+        return new ExclusionCounts(draft, closedOrMerged, approved, untracked);
+    }
 }

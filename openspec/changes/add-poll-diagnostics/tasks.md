@@ -1,4 +1,4 @@
-# Tasks: add-poll-diagnostics
+﻿# Tasks: add-poll-diagnostics
 
 Each group is red-green-refactor: the test task precedes the implementation task
 it drives, and the implementation task is done when that test passes.
@@ -30,15 +30,15 @@ it drives, and the implementation task is done when that test passes.
 
 ## 4. RefreshQueue produces and writes the record
 
-- [ ] 4.1 Write failing `RefreshQueueTests` for the happy path: a successful refresh writes exactly one record, with one owner row per configured owner, the published count equal to the snapshot's item count, and per-owner requested/reviewed/union/derived counts.
-- [ ] 4.2 Write failing tests for cross-owner deduplication: when two owners return the same pull request, both owner rows record it in their identifiers and their derived counts sum higher than the record's published count.
-- [ ] 4.3 Write failing tests for the exit paths: a vault lock mid-refresh writes an `AbortedByLock` record with `NotPolled` rows for the owners never reached and no published count; a shutdown cancellation writes a `Canceled` record; a throwing `ListOwnersAsync` writes a `Faulted` record with absent configured owners, a null owner count, and no owner rows; a refresh over no stored tokens writes a record with an owner count of zero and no owner rows; a throwing `Publish` writes a `Faulted` record with every owner row and no published count.
-- [ ] 4.4 Write failing tests for sink isolation: a throwing sink leaves a successful refresh successful and logs a warning; with two sinks, the first throwing does not prevent the second; a throwing sink does not replace the exception propagating from a faulting refresh.
-- [ ] 4.5 Write a failing test that the sink write is not made with the caller's token: a refresh canceled by an already-canceled token still writes.
-- [ ] 4.6 Extract `PrCenter.Core/Queue/RefreshPass.cs` grouping the queue-item accumulator, the owner statuses, and the diagnostics accumulator; reduce `RefreshOwnerAsync` to `(owner, previous, pass, cancellationToken)`.
-- [ ] 4.7 Inject `IEnumerable<IPollDiagnosticsSink>` and `TimeProvider` into `RefreshQueue` (constructor goes to 6 parameters). Move `ListOwnersAsync` inside the `try`. Add the `finally` that marks unreached owners, builds the record, and writes it through every sink under its own 2-second `CancellationTokenSource`, with a `try`/`catch` per sink logging at warning.
-- [ ] 4.8 Add the warning `[LoggerMessage]` declarations to `RefreshQueue.Logging.cs`.
-- [ ] 4.9 Update the `RefreshQueue` XML summary to state that diagnostics are written on every exit path and are never read.
+- [x] 4.1 Write failing `RefreshQueueTests` for the happy path: a successful refresh writes exactly one record, with one owner row per configured owner, the published count equal to the snapshot's item count, and per-owner requested/reviewed/union/derived counts.
+- [x] 4.2 Write failing tests for cross-owner deduplication: when two owners return the same pull request, both owner rows record it in their identifiers and their derived counts sum higher than the record's published count.
+- [x] 4.3 Write failing tests for the exit paths: a vault lock mid-refresh writes an `AbortedByLock` record with `NotPolled` rows for the owners never reached and no published count; a shutdown cancellation writes a `Canceled` record; a throwing `ListOwnersAsync` writes a `Faulted` record with absent configured owners, a null owner count, and no owner rows; a refresh over no stored tokens writes a record with an owner count of zero and no owner rows; a throwing `Publish` writes a `Faulted` record with every owner row and no published count.
+- [x] 4.4 Write failing tests for sink isolation: a throwing sink leaves a successful refresh successful and logs a warning; with two sinks, the first throwing does not prevent the second; a throwing sink does not replace the exception propagating from a faulting refresh.
+- [x] 4.5 Write a failing test that the sink write is not made with the caller's token: a refresh canceled by an already-canceled token still writes.
+- [x] 4.6 Extract `PrCenter.Core/Queue/RefreshPass.cs` grouping the queue-item accumulator, the owner statuses, and the diagnostics accumulator; reduce `RefreshOwnerAsync` to `(owner, previous, pass, cancellationToken)`.
+- [x] 4.7 Inject `IEnumerable<IPollDiagnosticsSink>` and `TimeProvider` into `RefreshQueue` (constructor goes to 6 parameters). Move `ListOwnersAsync` inside the `try`. Add the `finally` that marks unreached owners, builds the record, and writes it through every sink under its own 2-second `CancellationTokenSource`, with a `try`/`catch` per sink logging at warning.
+- [x] 4.8 Add the warning `[LoggerMessage]` declarations to `RefreshQueue.Logging.cs`.
+- [x] 4.9 Update the `RefreshQueue` XML summary to state that diagnostics are written on every exit path and are never read.
 
 ## 5. SQLite persistence
 

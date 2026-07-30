@@ -1,3 +1,4 @@
+using PrCenter.Core.Derivation;
 using PrCenter.Core.Diagnostics;
 
 namespace PrCenter.Core.Tests.Diagnostics;
@@ -21,5 +22,38 @@ public sealed class ExclusionCountsTests
 
         // Assert
         Assert.Equal(expected, counts.Total);
+    }
+
+    [Fact]
+    public void Tally_WithNullExclusions_Throws()
+    {
+        // Act / Assert
+        Assert.Throws<ArgumentNullException>(() => ExclusionCounts.Tally(null!));
+    }
+
+    [Fact]
+    public void Tally_CountsEachReasonSeparately()
+    {
+        // Act
+        var counts = ExclusionCounts.Tally([
+            MembershipExclusion.Draft,
+            MembershipExclusion.Draft,
+            MembershipExclusion.ClosedOrMerged,
+            MembershipExclusion.Approved,
+            MembershipExclusion.Untracked,
+        ]);
+
+        // Assert
+        Assert.Equal(new ExclusionCounts(2, 1, 1, 1), counts);
+    }
+
+    [Fact]
+    public void Tally_WithNoExclusions_CountsZeroForEveryReason()
+    {
+        // Act
+        var counts = ExclusionCounts.Tally([]);
+
+        // Assert
+        Assert.Equal(new ExclusionCounts(0, 0, 0, 0), counts);
     }
 }

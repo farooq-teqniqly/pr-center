@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using PrCenter.Core.Diagnostics;
 using PrCenter.Core.Facts;
 using PrCenter.Core.Locking;
 using PrCenter.Core.Ports;
@@ -20,6 +21,7 @@ public sealed class RefreshQueueTests
         NullLogger<QueueSnapshotHolder>.Instance
     );
     private readonly CapturingLogger<RefreshQueue> _logger = new();
+    private readonly RecordingPollDiagnosticsSink _sink = new();
 
     [Fact]
     public async Task ExecuteAsync_WithMultipleOwners_PublishesEveryOwnersItemsWithOkStatuses()
@@ -416,10 +418,364 @@ public sealed class RefreshQueueTests
         Assert.Equal(Instant, status.LastFreshAt);
     }
 
-    private RefreshQueue CreateRefreshQueue() => new(_vault, _facts, _holder, _logger);
+    [Fact]
+    public async Task ExecuteAsync_WhenRefreshSucceeds_WritesExactlyOneRecord()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(PollOutcome.Succeeded, record.Run.Outcome);
+        Assert.Equal(Instant, record.Run.StartedAt);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRefreshSucceeds_WritesOneOwnerRowPerConfiguredOwner()
+    {
+        // Arrange
+        _vault
+            .ListOwnersAsync(Arg.Any<CancellationToken>())
+            .Returns(["PerfectServe", "ps-unite", "farooq"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+        StubOwner("ps-unite", ShownFact("ps-unite", "ps-unite/repo#1"));
+        StubOwner("farooq", ShownFact("farooq", "farooq/repo#1"));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(
+            ["PerfectServe", "ps-unite", "farooq"],
+            record.Owners.Select(row => row.Window.Owner)
+        );
+        Assert.Equal(["PerfectServe", "ps-unite", "farooq"], record.Run.ConfiguredOwners);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRefreshSucceeds_RecordsThePublishedItemCount()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner(
+            "PerfectServe",
+            [
+                ShownFact("PerfectServe", "PerfectServe/repo#1"),
+                ShownFact("PerfectServe", "PerfectServe/repo#2"),
+            ]
+        );
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(_holder.Current!.Items.Count, record.Run.PublishedCount);
+        Assert.Equal(2, record.Run.PublishedCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRefreshSucceeds_RecordsPerOwnerFetchCounts()
+    {
+        // Arrange -- one shown pull request and one draft, from a search pair that
+        // returned four nodes before the union
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner(
+            "PerfectServe",
+            [
+                ShownFact("PerfectServe", "PerfectServe/repo#1"),
+                DraftFact("PerfectServe", "PerfectServe/repo#2"),
+            ],
+            new FetchDiagnostics(RequestedCount: 3, ReviewedCount: 1, RateLimit: null)
+        );
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var row = Assert.Single(Assert.Single(_sink.Records).Owners);
+        Assert.Equal(3, row.Counts!.Requested);
+        Assert.Equal(1, row.Counts.Reviewed);
+        Assert.Equal(2, row.Counts.Union);
+        Assert.Equal(1, row.Counts.Derived);
+        Assert.Equal(0, row.Counts.CarriedOver);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRefreshSucceeds_RecordsPerOwnerExclusionCountsAndRateLimit()
+    {
+        // Arrange
+        var rateLimit = new RateLimitReading(4987, Instant.AddHours(1), 13);
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner(
+            "PerfectServe",
+            [
+                ShownFact("PerfectServe", "PerfectServe/repo#1"),
+                DraftFact("PerfectServe", "PerfectServe/repo#2"),
+            ],
+            new FetchDiagnostics(2, 0, rateLimit)
+        );
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var row = Assert.Single(Assert.Single(_sink.Records).Owners);
+        Assert.Equal(1, row.Exclusions!.Draft);
+        Assert.Equal(1, row.Exclusions.Total);
+        Assert.Equal(rateLimit, row.RateLimit);
+        Assert.Equal(TestLogins.Me, row.Outcome.ResolvedLogin);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAnOwnerFails_RecordsItsCarryOverCountWithNoFetchCounts()
+    {
+        // Arrange -- fresh first, then the owner errors so its rows carry over
+        var clock = new AdvanceableTimeProvider(Instant);
+        var holder = new QueueSnapshotHolder(clock, NullLogger<QueueSnapshotHolder>.Instance);
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+        await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
+        clock.Now = Instant.AddMinutes(5);
+        StubOwnerError("PerfectServe", "boom");
+
+        // Act
+        await RefreshQueueWith(holder).ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var row = Assert.Single(_sink.Records[^1].Owners);
+        Assert.Equal(1, row.Counts!.CarriedOver);
+        Assert.Null(row.Counts.Union);
+        Assert.Null(row.Exclusions);
+        Assert.Equal(OwnerFetchStatus.Error, row.Outcome.Status);
+        Assert.Equal("boom", row.Outcome.Detail);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTwoOwnersReturnTheSamePullRequest_RecordsItUnderBoth()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe", "ps-unite"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+        StubOwner("ps-unite", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.All(
+            record.Owners,
+            row => Assert.Equal(["PerfectServe/repo#1"], row.Contributed.Ids)
+        );
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTwoOwnersReturnTheSamePullRequest_SumsDerivedAbovePublished()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe", "ps-unite"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+        StubOwner("ps-unite", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert -- the overlap is visible only as this difference
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(2, record.Owners.Sum(row => row.Counts!.Derived ?? 0));
+        Assert.Equal(1, record.Run.PublishedCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAnOwnerReachesIntoAnother_RecordsTheForeignItemCount()
+    {
+        // Arrange -- one token sees the other configured owner's repository
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe", "ps-unite"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+        StubOwner("ps-unite", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(0, Row(record, "PerfectServe").Contributed.ForeignCount);
+        Assert.Equal(1, Row(record, "ps-unite").Contributed.ForeignCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenVaultLocksMidPoll_WritesAnAbortedRecordWithNotPolledRows()
+    {
+        // Arrange -- the first owner locks, so the second is never reached
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["locks", "unreached"]);
+        _facts
+            .GetAuthenticatedUserLoginAsync("locks", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new VaultLockedException());
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(PollOutcome.AbortedByLock, record.Run.Outcome);
+        Assert.Null(record.Run.PublishedCount);
+        var unreached = Row(record, "unreached");
+        Assert.Equal(OwnerFetchStatus.NotPolled, unreached.Outcome.Status);
+        Assert.Null(unreached.Window.StartedAt);
+        Assert.Null(unreached.Counts);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenShutdownCancels_WritesACanceledRecord()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        _facts
+            .GetAuthenticatedUserLoginAsync("PerfectServe", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        // Act
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            CreateRefreshQueue().ExecuteAsync(cts.Token)
+        );
+
+        // Assert
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(PollOutcome.Canceled, record.Run.Outcome);
+        Assert.Null(record.Run.PublishedCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenOwnerEnumerationThrows_WritesAFaultedRecordWithNoOwners()
+    {
+        // Arrange
+        _vault
+            .ListOwnersAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("the vault is unreadable"));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateRefreshQueue().ExecuteAsync(CancellationToken.None)
+        );
+
+        // Assert -- absent owners, not zero: a broken vault must not read as an empty one
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(PollOutcome.Faulted, record.Run.Outcome);
+        Assert.Null(record.Run.ConfiguredOwners);
+        Assert.Empty(record.Owners);
+        Assert.Null(record.Run.PublishedCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithNoOwners_WritesARecordWithNoOwnerRowsAndAnEmptyOwnerList()
+    {
+        // Arrange
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns([]);
+
+        // Act
+        await CreateRefreshQueue().ExecuteAsync(CancellationToken.None);
+
+        // Assert -- an empty list is a real configuration, distinct from an unread one
+        var record = Assert.Single(_sink.Records);
+        Assert.Equal(PollOutcome.Succeeded, record.Run.Outcome);
+        Assert.NotNull(record.Run.ConfiguredOwners);
+        Assert.Empty(record.Run.ConfiguredOwners);
+        Assert.Empty(record.Owners);
+        Assert.Equal(0, record.Run.PublishedCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenASinkThrows_StillSucceedsAndLogsAWarning()
+    {
+        // Arrange
+        var throwing = new RecordingPollDiagnosticsSink(new InvalidOperationException("sink down"));
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        var outcome = await RefreshQueueWith(_holder, throwing)
+            .ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        Assert.IsType<RefreshSucceeded>(outcome);
+        Assert.NotNull(_holder.Current);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheFirstSinkThrows_StillWritesToTheSecond()
+    {
+        // Arrange
+        var throwing = new RecordingPollDiagnosticsSink(new InvalidOperationException("sink down"));
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await RefreshQueueWith(_holder, throwing, _sink).ExecuteAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Single(_sink.Records);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenASinkThrows_DoesNotReplaceThePropagatingException()
+    {
+        // Arrange
+        var throwing = new RecordingPollDiagnosticsSink(new InvalidOperationException("sink down"));
+        _vault
+            .ListOwnersAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new IOException("the vault is unreadable"));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<IOException>(() =>
+            RefreshQueueWith(_holder, throwing).ExecuteAsync(CancellationToken.None)
+        );
+
+        // Assert -- the refresh's own failure, not the sink's
+        Assert.Equal("the vault is unreadable", exception.Message);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheCallersTokenIsAlreadyCanceled_StillWritesTheRecord()
+    {
+        // Arrange -- the shutdown path is exactly the one the write must survive
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        _facts
+            .GetAuthenticatedUserLoginAsync("PerfectServe", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        // Act
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            CreateRefreshQueue().ExecuteAsync(cts.Token)
+        );
+
+        // Assert
+        Assert.Single(_sink.Records);
+        Assert.False(_sink.WriteWasCanceled);
+    }
+
+    private static OwnerPollDiagnostics Row(PollDiagnostics record, string owner) =>
+        Assert.Single(record.Owners, row => row.Window.Owner == owner);
+
+    private RefreshQueue CreateRefreshQueue() => RefreshQueueWith(_holder);
 
     private RefreshQueue RefreshQueueWith(QueueSnapshotHolder holder) =>
-        new(_vault, _facts, holder, _logger);
+        RefreshQueueWith(holder, _sink);
+
+    private RefreshQueue RefreshQueueWith(
+        QueueSnapshotHolder holder,
+        params IPollDiagnosticsSink[] sinks
+    ) => new(_vault, _facts, holder, _logger, sinks, new FixedTimeProvider(Instant));
 
     private void StubOwnerError(string owner, string detail)
     {
@@ -431,18 +787,44 @@ public sealed class RefreshQueueTests
             .Returns(new OwnerFactsResult(OwnerFetchStatus.Error, [], detail));
     }
 
-    private void StubOwner(string owner, PullRequestFacts facts)
+    private void StubOwner(string owner, PullRequestFacts facts) => StubOwner(owner, [facts]);
+
+    private void StubOwner(
+        string owner,
+        IReadOnlyList<PullRequestFacts> facts,
+        FetchDiagnostics? diagnostics = null
+    )
     {
         _facts
             .GetAuthenticatedUserLoginAsync(owner, Arg.Any<CancellationToken>())
             .Returns(TestLogins.Me);
         _facts
             .GetReviewQueueFactsAsync(owner, TestLogins.Me, Arg.Any<CancellationToken>())
-            .Returns(new OwnerFactsResult(OwnerFetchStatus.Ok, [facts]));
+            .Returns(new OwnerFactsResult(OwnerFetchStatus.Ok, facts, null, diagnostics));
     }
 
     private static PullRequestFacts ShownFact(string owner, string id) =>
         TitledFact(owner, id, "title");
+
+    private static PullRequestFacts DraftFact(string owner, string id) =>
+        new(
+            new PullRequestIdentity(
+                id,
+                owner,
+                "repo",
+                2,
+                "draft",
+                $"https://github.com/{owner}/repo/pull/2",
+                TestLogins.Author
+            ),
+            new PullRequestStatus(
+                isDraft: true,
+                isClosedOrMerged: false,
+                lastUpdatedBy: "author",
+                lastUpdatedAt: Instant
+            ),
+            new PullRequestActivity([TestLogins.Me], [], [], [])
+        );
 
     private static PullRequestFacts TitledFact(string owner, string id, string title) =>
         new(

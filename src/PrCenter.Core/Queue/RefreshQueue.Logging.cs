@@ -17,4 +17,11 @@ public sealed partial class RefreshQueue
         Message = "Queue refresh degraded owner '{Owner}' after an error; that owner's previous rows are carried over as stale."
     )]
     private partial void LogOwnerFetchFailed(string owner, Exception exception);
+
+    [LoggerMessage(
+        EventId = 3,
+        Level = LogLevel.Warning,
+        Message = "Poll diagnostics could not be written to sink '{Sink}'. The refresh itself is unaffected."
+    )]
+    private partial void LogDiagnosticsWriteFailed(string sink, Exception exception);
 }

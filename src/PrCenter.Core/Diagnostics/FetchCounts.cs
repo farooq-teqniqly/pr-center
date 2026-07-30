@@ -41,12 +41,15 @@ public sealed record FetchCounts(
     /// <summary>
     /// Counts for an owner that was fetched successfully, carrying nothing over.
     /// </summary>
-    /// <param name="requested">The review-requested search's node count.</param>
-    /// <param name="reviewed">The reviewed-by search's node count.</param>
+    /// <param name="requested">
+    /// The review-requested search's node count, or null when the adapter
+    /// reported no per-search counts for an otherwise successful fetch.
+    /// </param>
+    /// <param name="reviewed">The reviewed-by search's node count, or null as above.</param>
     /// <param name="union">The distinct pull requests the searches unioned to.</param>
     /// <param name="derived">The pull requests that survived derivation.</param>
     /// <returns>The fetch counts.</returns>
-    public static FetchCounts Fetched(int requested, int reviewed, int union, int derived) =>
+    public static FetchCounts Fetched(int? requested, int? reviewed, int union, int derived) =>
         new(requested, reviewed, union, derived, 0);
 
     /// <summary>
