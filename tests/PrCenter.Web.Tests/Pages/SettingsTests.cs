@@ -17,6 +17,7 @@ public sealed class SettingsTests : BunitContext
     [InlineData(AppLockState.Locked, "unlock-first")]
     [InlineData(AppLockState.Unlocked, "owner-tokens")]
     [InlineData(AppLockState.Unlocked, "poll-interval")]
+    [InlineData(AppLockState.Unlocked, "poll-diagnostics")]
     public void Settings_ForLockState_RendersTheMatchingView(
         AppLockState state,
         string expectedTestId
@@ -35,9 +36,11 @@ public sealed class SettingsTests : BunitContext
     [Theory]
     [InlineData(AppLockState.Uninitialized, "owner-tokens")]
     [InlineData(AppLockState.Uninitialized, "poll-interval")]
+    [InlineData(AppLockState.Uninitialized, "poll-diagnostics")]
     [InlineData(AppLockState.Locked, "setup-card")]
     [InlineData(AppLockState.Locked, "owner-tokens")]
     [InlineData(AppLockState.Locked, "poll-interval")]
+    [InlineData(AppLockState.Locked, "poll-diagnostics")]
     [InlineData(AppLockState.Locked, "reset-vault")]
     [InlineData(AppLockState.Unlocked, "setup-card")]
     [InlineData(AppLockState.Unlocked, "unlock-first")]
@@ -103,6 +106,8 @@ public sealed class SettingsTests : BunitContext
     {
         var vault = Substitute.For<ITokenVault>();
         var trigger = Substitute.For<IRefreshTrigger>();
+        var diagnostics = Substitute.For<IPollDiagnosticsReader>();
+        diagnostics.GetRecentPollsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([]);
         var settingsStore = Substitute.For<IAppSettingsStore>();
         settingsStore
             .GetPollIntervalAsync(Arg.Any<CancellationToken>())
@@ -121,6 +126,7 @@ public sealed class SettingsTests : BunitContext
         Services.AddSingleton(new SaveOwnerToken(vault, trigger));
         Services.AddSingleton(new RemoveOwner(vault, trigger));
         Services.AddSingleton(settingsStore);
+        Services.AddSingleton(diagnostics);
         Services.AddSingleton(new SavePollInterval(settingsStore, trigger));
     }
 }

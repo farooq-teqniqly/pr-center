@@ -1,0 +1,223 @@
+@using System.Globalization
+@using System.Text
+@using PrCenter.Core.Diagnostics
+@using PrCenter.Core.Ports
+@inject ILogger<PollDiagnosticsView> Logger
+@inject IPollDiagnosticsReader Reader
+@inject IJSRuntime JS
+
+@if (_readFailed)
+{
+    <div class="alert alert-warning mb-0" role="alert" data-testid="diagnostics-error">
+        The recorded polls could not be read. The queue itself is unaffected.
+    </div>
+}
+else if (_polls.Count == 0)
+{
+    <p class="text-body-secondary mb-0" data-testid="diagnostics-empty">
+        No polls have been recorded yet. The first one appears after the next refresh.
+    </p>
+}
+else
+{
+    <div class="d-flex justify-content-end mb-2">
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-testid="copy-diagnostics"
+                aria-label="Copy the recorded polls"
+                title="Copy the recorded polls"
+                @onclick="CopyAsync">
+            Copy
+        </button>
+    </div>
+
+    <ul class="list-unstyled mb-0">
+        @foreach (var summary in _polls)
+        {
+            var poll = summary.Poll;
+            <li class="border-bottom py-2" data-testid="poll-summary" data-poll-id="@poll.Run.PollId">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <button type="button"
+                            class="btn btn-link btn-sm p-0 text-decoration-none"
+                            data-testid="poll-toggle"
+                            aria-expanded="@(IsExpanded(poll) ? "true" : "false")"
+                            @onclick="() => Toggle(poll)">
+                        @(IsExpanded(poll) ? "v" : ">")
+                    </button>
+                    <span class="font-monospace" data-testid="poll-instant">@Instant(poll.Run.StartedAt)</span>
+                    <span class="@OutcomeClass(poll.Run.Outcome)" data-testid="poll-outcome">@OutcomeLabel(poll.Run.Outcome)</span>
+                    <span data-testid="poll-owner-ratio">@OwnerRatio(summary)</span>
+                    <span data-testid="poll-published">@PublishedText(poll.Run.PublishedCount)</span>
+
+                    @if (summary.HasOverlap)
+                    {
+                        <span class="badge text-bg-light border" data-testid="poll-overlap">
+                            owners derived @summary.DerivedTotal, published @poll.Run.PublishedCount --
+                            a pull request came from more than one owner
+                        </span>
+                    }
+                </div>
+
+                @if (summary.OwnersDisagree)
+                {
+                    <div class="text-danger small mt-1" data-testid="poll-disagreement">
+                        Owner rows disagree with the configured owners: @DisagreementText(summary)
+                    </div>
+                }
+
+                @if (IsExpanded(poll))
+                {
+                    <div class="mt-2 ps-4 small" data-testid="poll-owners">
+                        @foreach (var row in poll.Owners)
+                        {
+                            <div class="d-flex gap-3 flex-wrap py-1"
+                                 data-testid="diagnostics-owner-row"
+                                 data-owner="@row.Window.Owner">
+                                <span class="fw-semibold">@row.Window.Owner</span>
+                                <span data-testid="owner-status">@StatusLabel(row.Outcome.Status)</span>
+                                <span class="font-monospace" data-testid="owner-counts">@CountsText(row)</span>
+                                <span class="font-monospace" data-testid="owner-foreign">@ForeignText(row)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    // The reader can return more; this is what the page renders. A settings panel
+    // is for spotting a change across the last few polls, not for scrolling 200.
+    private const int RenderedPolls = 20;
+
+    private IReadOnlyList<PollSummaryView> _polls = [];
+    private readonly HashSet<Guid> _expanded = [];
+    private bool _readFailed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // One read for the whole graph: expanding a poll is display state, so it
+        // must not cost a second round-trip.
+        try
+        {
+            var polls = await Reader.GetRecentPollsAsync(RenderedPolls);
+            _polls = [.. polls.Select(PollSummaryView.For)];
+        }
+        catch (Exception ex)
+        {
+            // Diagnostics failing to load must not take the settings page with it,
+            // and an unreadable table has to look different from an empty one.
+            LogDiagnosticsReadFailed(Logger, ex);
+            _readFailed = true;
+        }
+    }
+
+    private bool IsExpanded(PollDiagnostics poll) => _expanded.Contains(poll.Run.PollId);
+
+    private void Toggle(PollDiagnostics poll)
+    {
+        if (!_expanded.Add(poll.Run.PollId))
+        {
+            _expanded.Remove(poll.Run.PollId);
+        }
+    }
+
+    private static string Instant(DateTimeOffset at) =>
+        at.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+
+    private static string OutcomeLabel(PollOutcome outcome) =>
+        outcome switch
+        {
+            PollOutcome.Succeeded => "ok",
+            PollOutcome.AbortedByLock => "aborted",
+            // A poll cut short by shutdown never finished; it did not fail, and
+            // presenting it as a failure would make every container stop look broken.
+            PollOutcome.Canceled => "incomplete",
+            _ => "failed",
+        };
+
+    private static string OutcomeClass(PollOutcome outcome) =>
+        outcome switch
+        {
+            PollOutcome.Succeeded => "text-success",
+            PollOutcome.Faulted => "text-danger",
+            _ => "text-body-secondary",
+        };
+
+    private static string StatusLabel(OwnerFetchStatus status) =>
+        status switch
+        {
+            OwnerFetchStatus.Ok => "ok",
+            OwnerFetchStatus.MisconfiguredToken => "token rejected",
+            // Never reached, so nothing was attempted -- a different claim from a
+            // fetch that came back with nothing.
+            OwnerFetchStatus.NotPolled => "not polled",
+            _ => "fetch failed",
+        };
+
+    // "-/-" rather than "0/0": the owner list could not be read, so the count is
+    // unknown, and zero is a real configuration this must not be confused with.
+    private static string OwnerRatio(PollSummaryView summary) =>
+        summary.Poll.Run.ConfiguredOwners is { } configured
+            ? $"{summary.PolledOwners}/{configured.Count} owners"
+            : "-/- owners";
+
+    private static string PublishedText(int? publishedCount) =>
+        publishedCount is { } published ? $"published {published}" : "published --";
+
+    private static string CountsText(OwnerPollDiagnostics row)
+    {
+        if (row.Counts is not { } counts)
+        {
+            return "--";
+        }
+
+        var text = new StringBuilder();
+        Append(text, "req", counts.Requested);
+        Append(text, "rev", counts.Reviewed);
+        Append(text, "union", counts.Union);
+        Append(text, "derived", counts.Derived);
+        text.Append(CultureInfo.InvariantCulture, $"carried {counts.CarriedOver}");
+
+        if (row.Exclusions is { } exclusions)
+        {
+            text.Append(
+                CultureInfo.InvariantCulture,
+                $" (draft {exclusions.Draft}, closed {exclusions.ClosedOrMerged}, approved {exclusions.Approved}, untracked {exclusions.Untracked})"
+            );
+        }
+
+        return text.ToString();
+    }
+
+    private static void Append(StringBuilder text, string label, int? value)
+    {
+        if (value is { } present)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"{label} {present} ");
+        }
+    }
+
+    private static string ForeignText(OwnerPollDiagnostics row) =>
+        $"foreign {row.Contributed.ForeignCount}";
+
+    private static string DisagreementText(PollSummaryView summary)
+    {
+        var parts = new List<string>();
+        if (summary.MissingOwners.Count > 0)
+        {
+            parts.Add($"no row for {string.Join(", ", summary.MissingOwners)}");
+        }
+
+        if (summary.UnconfiguredOwners.Count > 0)
+        {
+            parts.Add($"a row for unconfigured {string.Join(", ", summary.UnconfiguredOwners)}");
+        }
+
+        return string.Join("; ", parts);
+    }
+
+    private async Task CopyAsync() =>
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", PollDiagnosticsText.Compose(_polls));
+}
