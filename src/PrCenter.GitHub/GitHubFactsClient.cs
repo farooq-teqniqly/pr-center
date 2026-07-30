@@ -289,7 +289,17 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
             return Failure(OwnerFetchStatus.Error, "GitHub returned a response with no data.");
         }
 
-        return new OwnerFactsResult(OwnerFetchStatus.Ok, UnionFacts(data));
+        var union = UnionFacts(data);
+        return new OwnerFactsResult(
+            OwnerFetchStatus.Ok,
+            union.Facts,
+            detail: null,
+            diagnostics: new FetchDiagnostics(
+                union.RequestedCount,
+                union.ReviewedCount,
+                ReadRateLimit(data)
+            )
+        );
     }
 
     private static (OwnerFetchStatus Status, string Detail) ClassifyGraphQlErrors(
@@ -347,24 +357,87 @@ internal sealed partial class GitHubFactsClient : IGitHubFacts
     private static OwnerFactsResult Failure(OwnerFetchStatus status, string detail) =>
         new(status, [], detail);
 
-    private static IReadOnlyList<PullRequestFacts> UnionFacts(JsonElement data)
+    /// <summary>
+    /// Maps the query's `rateLimit` field, or returns null when the field is
+    /// absent or any member is missing or wrong-typed. Unreadable never means
+    /// failed: the rate limit is diagnostic, and losing it must not cost the
+    /// user their queue.
+    /// </summary>
+    private static RateLimitReading? ReadRateLimit(JsonElement data)
     {
-        var byId = new Dictionary<string, PullRequestFacts>(StringComparer.Ordinal);
-
-        foreach (var search in (ReadOnlySpan<string>)["requested", "reviewed"])
+        if (
+            !data.TryGetProperty("rateLimit", out var rateLimit)
+            || rateLimit.ValueKind != JsonValueKind.Object
+        )
         {
-            // Both aliases are guaranteed by the query; a missing one is a
-            // malformed response and throws, surfacing as an Error status.
-            foreach (var node in data.GetProperty(search).GetProperty("nodes").EnumerateArray())
-            {
-                var facts = PullRequestFactsMapper.MapPullRequest(node);
-
-                // Both searches return identical data for a shared PR, so the
-                // first search to yield an id wins and the duplicate is ignored.
-                byId.TryAdd(facts.Identity.Id, facts);
-            }
+            return null;
         }
 
-        return [.. byId.Values];
+        var remaining = ReadInt32(rateLimit, "remaining");
+        var resetAt = ReadInstant(rateLimit, "resetAt");
+        var cost = ReadInt32(rateLimit, "cost");
+
+        return remaining is not null && resetAt is not null && cost is not null
+            ? new RateLimitReading(remaining.Value, resetAt.Value, cost.Value)
+            : null;
+    }
+
+    private static int? ReadInt32(JsonElement parent, string name) =>
+        // The ValueKind check comes first because TryGetInt32 throws rather than
+        // returning false on a non-number, and a wrong-typed field must read as
+        // absent.
+        parent.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.Number
+        && value.TryGetInt32(out var number)
+            ? number
+            : null;
+
+    private static DateTimeOffset? ReadInstant(JsonElement parent, string name) =>
+        parent.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.String
+        && value.TryGetDateTimeOffset(out var instant)
+            ? instant
+            : null;
+
+    private static (
+        IReadOnlyList<PullRequestFacts> Facts,
+        int RequestedCount,
+        int ReviewedCount
+    ) UnionFacts(JsonElement data)
+    {
+        var byId = new Dictionary<string, PullRequestFacts>(StringComparer.Ordinal);
+        var requestedCount = CollectSearchNodes(data, "requested", byId);
+        var reviewedCount = CollectSearchNodes(data, "reviewed", byId);
+
+        return ([.. byId.Values], requestedCount, reviewedCount);
+    }
+
+    /// <summary>
+    /// Adds one search alias's nodes to the union, returning how many nodes it
+    /// returned. The count is taken before deduplication, so a pull request in
+    /// both searches is counted by both -- that overlap is the fact the count
+    /// exists to expose.
+    /// </summary>
+    private static int CollectSearchNodes(
+        JsonElement data,
+        string alias,
+        Dictionary<string, PullRequestFacts> byId
+    )
+    {
+        var nodeCount = 0;
+
+        // Both aliases are guaranteed by the query; a missing one is a malformed
+        // response and throws, surfacing as an Error status.
+        foreach (var node in data.GetProperty(alias).GetProperty("nodes").EnumerateArray())
+        {
+            nodeCount++;
+            var facts = PullRequestFactsMapper.MapPullRequest(node);
+
+            // Both searches return identical data for a shared PR, so the first
+            // search to yield an id wins and the duplicate is ignored.
+            byId.TryAdd(facts.Identity.Id, facts);
+        }
+
+        return nodeCount;
     }
 }

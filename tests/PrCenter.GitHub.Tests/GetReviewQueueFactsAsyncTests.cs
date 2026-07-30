@@ -33,6 +33,123 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
     }
 
     [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenFetchSucceeds_ReportsPerSearchNodeCounts()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.ReviewQueueResponse);
+
+        // Assert
+        Assert.NotNull(result.Diagnostics);
+        Assert.Equal(2, result.Diagnostics.RequestedCount);
+        Assert.Equal(2, result.Diagnostics.ReviewedCount);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenPullRequestMatchesBothSearches_CountsItInBoth()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.ReviewQueueResponse);
+
+        // Assert -- A is in both searches: the counts sum above the deduplicated facts
+        Assert.NotNull(result.Diagnostics);
+        Assert.Equal(4, result.Diagnostics.RequestedCount + result.Diagnostics.ReviewedCount);
+        Assert.Equal(3, result.Facts.Count);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenSearchesAreEmpty_ReportsZeroCountsNotAbsentOnes()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.EmptyResultsResponse);
+
+        // Assert
+        Assert.NotNull(result.Diagnostics);
+        Assert.Equal(0, result.Diagnostics.RequestedCount);
+        Assert.Equal(0, result.Diagnostics.ReviewedCount);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenResponseCarriesRateLimit_MapsTheReading()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.RateLimitResponse);
+
+        // Assert
+        Assert.NotNull(result.Diagnostics?.RateLimit);
+        Assert.Equal(4987, result.Diagnostics.RateLimit.Remaining);
+        Assert.Equal(
+            DateTimeOffset.Parse("2026-07-29T15:00:00Z", CultureInfo.InvariantCulture),
+            result.Diagnostics.RateLimit.ResetAt
+        );
+        Assert.Equal(13, result.Diagnostics.RateLimit.Cost);
+    }
+
+    [Theory]
+    [InlineData("omitted")]
+    [InlineData("malformed")]
+    [InlineData("wrong-typed")]
+    public async Task GetReviewQueueFactsAsync_WhenRateLimitIsUnreadable_StillReturnsOkWithoutIt(
+        string rateLimitShape
+    )
+    {
+        // Arrange
+        var body = rateLimitShape switch
+        {
+            "omitted" => GraphQlFixtures.ReviewQueueResponse,
+            "malformed" => GraphQlFixtures.MalformedRateLimitResponse,
+            _ => GraphQlFixtures.WrongTypedRateLimitResponse,
+        };
+
+        // Act
+        var result = await FetchQueueAsync(body);
+
+        // Assert
+        Assert.Equal(OwnerFetchStatus.Ok, result.Status);
+        Assert.NotNull(result.Diagnostics);
+        Assert.Null(result.Diagnostics.RateLimit);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_WhenRateLimitIsOmitted_StillReturnsFacts()
+    {
+        // Act
+        var result = await FetchQueueAsync(GraphQlFixtures.ReviewQueueResponse);
+
+        // Assert
+        Assert.Equal(3, result.Facts.Count);
+    }
+
+    [Fact]
+    public async Task GetReviewQueueFactsAsync_RequestsTheRateLimitInTheQueryDocument()
+    {
+        // Act
+        var run = await RunAsync(Ok(GraphQlFixtures.EmptyResultsResponse));
+
+        // Assert -- read from the document, never from the x-ratelimit-* headers
+        Assert.Contains("rateLimit", run.Body!, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("token-missing")]
+    [InlineData("unauthorized")]
+    [InlineData("graphql-forbidden")]
+    [InlineData("rate-limited")]
+    [InlineData("server-error")]
+    [InlineData("malformed-payload")]
+    [InlineData("no-data")]
+    [InlineData("wrong-shape")]
+    [InlineData("network-failure")]
+    public async Task GetReviewQueueFactsAsync_WhenFetchFails_ReportsNoDiagnostics(string failure)
+    {
+        // Act
+        var run = await RunFailureAsync(failure);
+
+        // Assert
+        Assert.NotEqual(OwnerFetchStatus.Ok, run.Result.Status);
+        Assert.Null(run.Result.Diagnostics);
+    }
+
+    [Fact]
     public async Task GetReviewQueueFactsAsync_IncludesReviewedOnlyPullRequest()
     {
         // Act
@@ -391,6 +508,20 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
         );
     }
 
+    private Task<Run> RunFailureAsync(string failure) =>
+        failure switch
+        {
+            "token-missing" => RunAsync(Ok(GraphQlFixtures.EmptyResultsResponse), token: null),
+            "unauthorized" => RunAsync(Status(HttpStatusCode.Unauthorized, "{}")),
+            "graphql-forbidden" => RunAsync(Ok(GraphQlFixtures.ForbiddenErrorsResponse)),
+            "rate-limited" => RunAsync(Ok(GraphQlFixtures.RateLimitedErrorsResponse)),
+            "server-error" => RunAsync(Status(HttpStatusCode.InternalServerError, "{}")),
+            "malformed-payload" => RunAsync(Ok("this is not json")),
+            "no-data" => RunAsync(Ok("{}")),
+            "wrong-shape" => RunAsync(Ok(GraphQlFixtures.WrongShapeReviewQueueResponse)),
+            _ => RunThrowingAsync(new HttpRequestException("boom")),
+        };
+
     private async Task<Run> RunThrowingAsync(Exception exception)
     {
         var logger = new CapturingLogger<GitHubFactsClient>();
@@ -454,10 +585,22 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
     private async Task<Run> RunAsync(HttpResponseMessage response, string? token = "token")
     {
         HttpRequestMessage? captured = null;
+        string? capturedBody = null;
         var handler = Substitute.For<FakeHttpMessageHandler>();
         handler
             .MockSendAsync(
-                Arg.Do<HttpRequestMessage>(request => captured = request),
+                Arg.Do<HttpRequestMessage>(request =>
+                {
+                    captured = request;
+
+                    // Read the body here, while the request is still alive: the
+                    // client disposes it before returning, so a later read on
+                    // the captured reference throws ObjectDisposedException.
+                    capturedBody = request
+                        .Content?.ReadAsStringAsync(CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                }),
                 Arg.Any<CancellationToken>()
             )
             .Returns(Task.FromResult(response));
@@ -479,13 +622,14 @@ public sealed class GetReviewQueueFactsAsyncTests : IDisposable
             CancellationToken.None
         );
 
-        return new Run(result, captured, logger.Messages);
+        return new Run(result, captured, logger.Messages, capturedBody);
     }
 
     private sealed record Run(
         OwnerFactsResult Result,
         HttpRequestMessage? Request,
-        IReadOnlyList<string> Logs
+        IReadOnlyList<string> Logs,
+        string? Body = null
     );
 
     private static ReviewFact Single(IEnumerable<ReviewFact> reviews, string login) =>

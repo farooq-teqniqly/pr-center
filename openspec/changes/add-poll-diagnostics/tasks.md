@@ -12,12 +12,12 @@ it drives, and the implementation task is done when that test passes.
 
 ## 2. Fetch diagnostics on the GitHub port
 
-- [ ] 2.1 Add `PrCenter.Core/Ports/RateLimitReading.cs` (`Remaining`, `ResetAt`, `Cost`) and `PrCenter.Core/Ports/FetchDiagnostics.cs` (`RequestedCount`, `ReviewedCount`, `RateLimit`), both `sealed record`, XML-documented. Document that the union count is deliberately absent -- it is `OwnerFactsResult.Facts.Count`.
-- [ ] 2.2 Add an optional `FetchDiagnostics?` property to `OwnerFactsResult`, defaulted to null so every failure path keeps its current construction. Document that null means "never asked", not "returned nothing".
-- [ ] 2.3 Write failing `GitHubFactsClientTests`: a successful fetch reports the node count of each search alias before deduplication; a pull request matching both aliases is counted in both while appearing once in the facts; each non-`Ok` status yields a null `FetchDiagnostics`.
-- [ ] 2.4 Capture the per-alias node counts in `GitHubFactsClient.UnionFacts` and thread them into the `Ok` result.
-- [ ] 2.5 Write failing tests for the rate limit: a response carrying `rateLimit` maps remaining, reset instant, and cost; a successful response omitting or malforming `rateLimit` still returns `Ok` with facts and a null rate-limit reading.
-- [ ] 2.6 Add `rateLimit { remaining resetAt cost }` to `GitHubGraphQlQueries.ReviewQueue` and map it in `GitHubFactsClient`. Do not read `x-ratelimit-*` headers.
+- [x] 2.1 Add `PrCenter.Core/Ports/RateLimitReading.cs` (`Remaining`, `ResetAt`, `Cost`) and `PrCenter.Core/Ports/FetchDiagnostics.cs` (`RequestedCount`, `ReviewedCount`, `RateLimit`), both `sealed record`, XML-documented. Document that the union count is deliberately absent -- it is `OwnerFactsResult.Facts.Count`.
+- [x] 2.2 Add an optional `FetchDiagnostics?` property to `OwnerFactsResult`, defaulted to null so every failure path keeps its current construction. Document that null means "never asked", not "returned nothing".
+- [x] 2.3 Write failing `GitHubFactsClientTests`: a successful fetch reports the node count of each search alias before deduplication; a pull request matching both aliases is counted in both while appearing once in the facts; each non-`Ok` status yields a null `FetchDiagnostics`.
+- [x] 2.4 Capture the per-alias node counts in `GitHubFactsClient.UnionFacts` and thread them into the `Ok` result.
+- [x] 2.5 Write failing tests for the rate limit: a response carrying `rateLimit` maps remaining, reset instant, and cost; a successful response omitting or malforming `rateLimit` still returns `Ok` with facts and a null rate-limit reading.
+- [x] 2.6 Add `rateLimit { remaining resetAt cost }` to `GitHubGraphQlQueries.ReviewQueue` and map it in `GitHubFactsClient`. Do not read `x-ratelimit-*` headers.
 
 ## 3. The diagnostics record (Core)
 

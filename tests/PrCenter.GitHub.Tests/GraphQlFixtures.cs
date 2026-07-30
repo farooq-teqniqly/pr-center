@@ -17,6 +17,39 @@ internal static class GraphQlFixtures
         { "data": { "requested": { "nodes": [] }, "reviewed": { "nodes": [] } } }
         """;
 
+    /// <summary>A successful empty response carrying a well-formed rate-limit field.</summary>
+    public const string RateLimitResponse = """
+        {
+          "data": {
+            "rateLimit": { "remaining": 4987, "resetAt": "2026-07-29T15:00:00Z", "cost": 13 },
+            "requested": { "nodes": [] },
+            "reviewed": { "nodes": [] }
+          }
+        }
+        """;
+
+    /// <summary>A successful response whose rate-limit field is the wrong shape (a string, not an object).</summary>
+    public const string MalformedRateLimitResponse = """
+        {
+          "data": {
+            "rateLimit": "nearly out",
+            "requested": { "nodes": [] },
+            "reviewed": { "nodes": [] }
+          }
+        }
+        """;
+
+    /// <summary>A successful response whose rate-limit object has wrong-typed members.</summary>
+    public const string WrongTypedRateLimitResponse = """
+        {
+          "data": {
+            "rateLimit": { "remaining": "lots", "resetAt": 17, "cost": null },
+            "requested": { "nodes": [] },
+            "reviewed": { "nodes": [] }
+          }
+        }
+        """;
+
     /// <summary>A 200 GraphQL payload carrying a FORBIDDEN error (token lacks permission).</summary>
     public const string ForbiddenErrorsResponse = """
         { "errors": [ { "type": "FORBIDDEN", "message": "Resource not accessible by personal access token" } ] }
