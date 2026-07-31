@@ -234,6 +234,40 @@ public sealed class SqlitePollDiagnosticsReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRecentPollsAsync_WhenADroppedPollIsInsideTheRequestedWindow_BacksFillFromOlderPolls()
+    {
+        // Arrange
+        var oldest = Guid.NewGuid();
+        var corrupted = Guid.NewGuid();
+        var newest = Guid.NewGuid();
+        await WriteAsync(PollDiagnosticsFactory.Full(oldest));
+        await WriteAsync(PollDiagnosticsFactory.Full(corrupted));
+        await WriteAsync(PollDiagnosticsFactory.Full(newest));
+        await CorruptAsync(corrupted, "poll outcome");
+
+        // Act
+        var polls = await ReadAsync(2);
+
+        // Assert
+        Assert.Equal([newest, oldest], polls.Select(poll => poll.Run.PollId));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task GetRecentPollsAsync_WithANonPositiveCount_ReturnsNoPolls(int count)
+    {
+        // Arrange
+        await WriteAsync(PollDiagnosticsFactory.Full());
+
+        // Act
+        var polls = await ReadAsync(count);
+
+        // Assert
+        Assert.Empty(polls);
+    }
+
+    [Fact]
     public async Task GetRecentPollsAsync_WhenAStoredEnumIsUnreadable_WarnsWithTheDroppedPollsId()
     {
         // Arrange

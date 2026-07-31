@@ -35,20 +35,58 @@ internal sealed partial class SqlitePollDiagnosticsReader : IPollDiagnosticsRead
         CancellationToken cancellationToken = default
     )
     {
-        var stored = await NewestPolls(count).ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (count <= 0)
+        {
+            return [];
+        }
 
-        return [.. stored.Select(ReadPoll).OfType<PollDiagnostics>()];
+        return await NewestReadablePollsAsync(count, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Walks the stored polls newest first and stops at the first
+    /// <paramref name="count"/> readable ones, so an unreadable poll is backfilled
+    /// from the polls behind it rather than shortening the result -- which is why
+    /// the cap lives here and not in the query. The walk reads past
+    /// <paramref name="count"/> rows only when a poll is dropped, and the ring
+    /// bounds it either way.
+    /// </summary>
+    private async Task<IReadOnlyList<PollDiagnostics>> NewestReadablePollsAsync(
+        int count,
+        CancellationToken cancellationToken
+    )
+    {
+        var polls = new List<PollDiagnostics>(count);
+
+        await foreach (
+            var stored in NewestPolls()
+                .AsAsyncEnumerable()
+                .WithCancellation(cancellationToken)
+                .ConfigureAwait(false)
+        )
+        {
+            if (ReadPoll(stored) is { } poll)
+            {
+                polls.Add(poll);
+            }
+
+            if (polls.Count == count)
+            {
+                break;
+            }
+        }
+
+        return polls;
     }
 
     // Newest first by key, which is also the insert order. Read-only, so nothing
     // belongs in the change tracker; the owner rows are ordered explicitly rather
     // than relying on the join's incidental order.
-    private IQueryable<PollRun> NewestPolls(int count) =>
+    private IQueryable<PollRun> NewestPolls() =>
         _context
             .PollRuns.AsNoTracking()
             .Include(run => run.Owners.OrderBy(owner => owner.Id))
-            .OrderByDescending(run => run.Id)
-            .Take(count);
+            .OrderByDescending(run => run.Id);
 
     /// <summary>
     /// Reads one stored poll, or null when a stored value cannot be read back --

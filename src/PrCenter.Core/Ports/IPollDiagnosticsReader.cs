@@ -13,7 +13,9 @@ public interface IPollDiagnosticsReader
     /// Gets the most recently recorded polls, newest first, each with its owner
     /// rows.
     /// </summary>
-    /// <param name="count">The maximum number of polls to return.</param>
+    /// <param name="count">
+    /// The maximum number of polls to return; a non-positive count returns none.
+    /// </param>
     /// <param name="cancellationToken">A token that cancels the read.</param>
     /// <returns>
     /// Up to <paramref name="count"/> whole poll records, newest first; empty
