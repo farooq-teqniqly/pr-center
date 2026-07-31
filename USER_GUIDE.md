@@ -35,7 +35,9 @@ mutates PR state.
 
 ![Review Inbox](docs/assets/screenshot-inbox.jpg)
 
-Every PR awaiting your review, grouped by org and repo:
+Every PR awaiting your review, grouped by org and repo. The PR title is a link
+that opens the PR on GitHub in a new tab -- clicking it doesn't change
+anything in PR-Center itself (it's not a "mark as seen" action, see below).
 
 - **Update badge** (the orange dot and "UPDATED" label) -- a new commit,
   comment, or another reviewer's review landed since *you* last reviewed the
