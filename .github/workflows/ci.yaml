@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore PrCenter.slnx
+
+      - name: Build solution
+        run: dotnet build PrCenter.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: dotnet test PrCenter.slnx --configuration Release --no-build --verbosity normal
+
+  sonarqube-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_PROJECT_KEY: farooq-teqniqly_pr-center
+      SONAR_ORGANIZATION: farooq-teqniqly
+      SONAR_EXCLUSIONS: "**/*.Tests/**,**/*.ArchitectureTests/**,**/samples/**,**/*.py,**/Scripts/*.sql,**/wwwroot/js/*.js"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Validate SONAR_TOKEN
+        run: |
+          if [ -z "${SONAR_TOKEN}" ]; then
+            echo "SONAR_TOKEN secret is not set; configure it in repository secrets." >&2
+            exit 1
+          fi
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Install SonarQube Scanner
+        run: dotnet tool install --global dotnet-sonarscanner --version 11.2.1
+
+      - name: Restore dependencies
+        run: dotnet restore PrCenter.slnx
+
+      - name: Begin SonarQube analysis
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{env.SONAR_PROJECT_KEY}}" \
+            /o:"${{env.SONAR_ORGANIZATION}}" \
+            /d:sonar.token="${{env.SONAR_TOKEN}}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.cobertura.reportsPaths="**/coverage.cobertura.xml" \
+            /d:sonar.security.enableProjectScan=true \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.coverage.exclusions="${{env.SONAR_EXCLUSIONS}}"
+
+      - name: Build solution
+        run: dotnet build PrCenter.slnx --configuration Release --no-restore
+
+      - name: Run tests with coverage
+        run: |
+          dotnet test PrCenter.slnx --configuration Release --no-build \
+            --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+
+      - name: End SonarQube analysis
+        run: dotnet sonarscanner end /d:sonar.token="${{env.SONAR_TOKEN}}"
