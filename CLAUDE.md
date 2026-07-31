@@ -17,7 +17,8 @@ Rules in this file are project-specific and override the baseline where they con
 
 A single-user, self-hosted "review inbox" for GitHub PRs awaiting the user's review across
 multiple orgs (PerfectServe, ps-unite) and a personal account (farooq-teqniqly). Read-only
-projection of GitHub state: it never mutates PRs. Runs in Podman/Docker on a workstation.
+projection of GitHub state: it never mutates PRs. Runs via xcopy install (self-contained
+publish) on a workstation -- no container runtime required.
 
 ## Stack
 
