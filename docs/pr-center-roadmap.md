@@ -20,8 +20,8 @@ remains [pr-center-idea.md](./pr-center-idea.md) and
 | 5c | `replace-marker-with-review-baseline` | 5b | Update baseline = my last review; remove last-seen marker + `MarkSeen` |
 | 6 | `add-review-queue-ui` | 5c | The review inbox list itself (presentation-only) |
 | 7 | `add-settings-and-onboarding` | 4 | PAT entry, owner list, poll interval UI |
-| 8 | `add-containerization` | 6, 7 | Podman/Docker image + volume |
-| 9 | `add-observability` | 8 | OpenTelemetry sink over the poll diagnostics record |
+| 8 | ~~`add-containerization`~~ | -- | Dropped -- deployment is xcopy install/run (self-contained publish), shipped via CI release workflow (#56/#57) |
+| 9 | `add-observability` | 7 | OpenTelemetry sink over the poll diagnostics record |
 
 ## Change summaries
 
@@ -140,10 +140,14 @@ experience (locked, no tokens yet). Owns the settings schema -- the
 owner-list and poll-interval rows and their migration -- on the persistence
 foundation from #3, designed here where the settings shape is understood.
 
-### 8. add-containerization
+### 8. ~~add-containerization~~ (dropped)
 
-Dockerfile, Podman/Docker compose, SQLite volume mount, localhost binding,
-container start = Locked state verified end to end.
+Superseded by a decision against containerization: deployment is xcopy
+install/run of a self-contained `dotnet publish` (win-x64/osx-x64), zipped and
+attached to GitHub Releases by the CI release workflow (`.github/workflows/release.yaml`,
+shipped in #56/#57). SQLite lives on disk next to the executable; localhost
+binding and Locked-state-on-start still apply, verified against the xcopy run
+instead of a container start.
 
 ### 9. add-observability
 
