@@ -33,7 +33,7 @@ mutates PR state.
 
 ### Review Inbox
 
-![Review Inbox](assets/screenshot-inbox.jpg)
+![Review Inbox](docs/assets/screenshot-inbox.jpg)
 
 Every PR awaiting your review, grouped by org and repo:
 
@@ -56,7 +56,7 @@ Every PR awaiting your review, grouped by org and repo:
 
 ### Poll diagnostics (Settings)
 
-![Poll diagnostics](assets/screenshot-poll-diagnostics.jpg)
+![Poll diagnostics](docs/assets/screenshot-poll-diagnostics.jpg)
 
 Every background poll is logged with a per-owner breakdown -- requests made,
 PRs reviewed/derived/carried over, and any owner-specific errors -- so a
@@ -65,7 +65,7 @@ debugger.
 
 ### Settings
 
-![Settings](assets/screenshot-settings.jpg)
+![Settings](docs/assets/screenshot-settings.jpg)
 
 - **Owner tokens** -- one GitHub personal access token per org/account you
   want PR-Center to watch, entered directly in the app (never in an env var or
