@@ -2,6 +2,7 @@ namespace PrCenter.Core.Tests.Queue;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using PrCenter.Core.Diagnostics;
@@ -723,6 +724,25 @@ public sealed class RefreshQueueTests
 
         // Assert
         Assert.Single(_sink.Records);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheFirstSinkSpendsTheWholeWriteBudget_StillWritesToTheSecond()
+    {
+        // Arrange -- the first sink takes longer than the budget the second is promised
+        var clock = new FakeTimeProvider(Instant);
+        var slow = new BudgetSpendingPollDiagnosticsSink(clock, TimeSpan.FromSeconds(5));
+        _vault.ListOwnersAsync(Arg.Any<CancellationToken>()).Returns(["PerfectServe"]);
+        StubOwner("PerfectServe", ShownFact("PerfectServe", "PerfectServe/repo#1"));
+
+        // Act
+        await new RefreshQueue(_vault, _facts, _holder, _logger, [slow, _sink], clock).ExecuteAsync(
+            CancellationToken.None
+        );
+
+        // Assert
+        Assert.Single(_sink.Records);
+        Assert.False(_sink.WriteWasCanceled);
     }
 
     [Fact]

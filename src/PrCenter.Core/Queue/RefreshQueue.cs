@@ -28,7 +28,7 @@ namespace PrCenter.Core.Queue;
 /// </remarks>
 public sealed partial class RefreshQueue : IRefreshQueue
 {
-    // The sink write gets its own bounded budget rather than the caller's token,
+    // Each sink write gets its own bounded budget rather than the caller's token,
     // which on the shutdown path is already canceled. Bounded rather than
     // unbounded because the host shutdown timeout is the only thing standing
     // between a blocked write and a killed container.
@@ -158,10 +158,14 @@ public sealed partial class RefreshQueue : IRefreshQueue
             record = pass.Diagnostics.Build(completedAt, outcome, publishedCount);
         }
 
-        using var writeBudget = new CancellationTokenSource(SinkWriteBudget);
-
         foreach (var sink in _sinks)
         {
+            // Per sink rather than one budget shared across the loop: the writes are
+            // sequential, so a shared timer would let a slow first sink spend the
+            // time the later sinks were promised and hand them an already-expired
+            // token.
+            using var writeBudget = new CancellationTokenSource(SinkWriteBudget, _timeProvider);
+
             try
             {
                 await sink.WriteAsync(record, writeBudget.Token).ConfigureAwait(false);
