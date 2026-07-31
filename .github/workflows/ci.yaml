@@ -13,13 +13,13 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Detect non-docs changes
         id: filter
         uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
