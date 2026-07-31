@@ -225,6 +225,11 @@ logged at warning or above and SHALL NOT fail the refresh, SHALL NOT prevent
 other sinks from being written, and SHALL NOT replace an exception already
 propagating out of the refresh.
 
+Each sink's write SHALL get its own bounded time budget. A budget shared across
+the sinks would let a slow one spend the time the sinks after it were promised
+and hand them an already-expired deadline, which is the same denial the per-sink
+isolation above forbids.
+
 #### Scenario: A throwing sink leaves the refresh outcome intact
 
 - **WHEN** a sink throws while writing the record for a successful refresh
@@ -239,6 +244,11 @@ propagating out of the refresh.
 
 - **WHEN** two sinks are configured and the first throws
 - **THEN** the second is still written
+
+#### Scenario: One slow sink does not spend another's budget
+
+- **WHEN** two sinks are configured and the first takes longer than the write budget
+- **THEN** the second is still written with a budget of its own rather than an expired one
 
 ### Requirement: Diagnostics are write-only to the refresh and derivation paths
 
@@ -285,6 +295,12 @@ owner count could not be read at all.
 A poll recorded with the canceled outcome SHALL be presented as an incomplete
 poll rather than as a failure, since a host shutdown mid-poll is routine.
 
+A stored value the reader cannot read back -- only reachable by editing the file
+by hand, since the sink is its sole writer -- SHALL drop that one poll from the
+result with a warning logged, and SHALL NOT fail the read of the polls around
+it. The reader still invents nothing: the unreadable poll is absent rather than
+shown with a made-up outcome.
+
 #### Scenario: The most recent polls are listed
 
 - **WHEN** the user opens the diagnostics view
@@ -314,6 +330,11 @@ poll rather than as a failure, since a host shutdown mid-poll is routine.
 
 - **WHEN** the user invokes the copy action for a poll
 - **THEN** that poll's identifiers, counts, and statuses are copied as text containing no GitHub payload
+
+#### Scenario: An unreadable stored poll drops out of the list
+
+- **WHEN** one stored poll carries a value the reader cannot read back and the polls around it are intact
+- **THEN** only that poll is missing from the list, the others are shown, and a warning naming it is logged
 
 #### Scenario: No polls recorded yet
 
@@ -354,11 +375,14 @@ since there is nothing to compare against.
 
 ### Requirement: A poll whose owners overlap is marked, not flagged as an error
 
-The read surface SHALL mark a poll whose owner rows together derived more items
-than the poll published, and SHALL show the across-owner derived total alongside
-the published count. Such a poll had at least one pull request reach the queue
-from more than one owner, and the mark explains the discrepancy where it is
-visible rather than leaving it to read as an arithmetic error.
+The read surface SHALL mark a poll whose owner rows together contributed more
+items than the poll published, and SHALL show the across-owner contributed total
+alongside the published count. An owner contributes what it derived when its
+fetch succeeded, and what it carried over from the last good snapshot when its
+fetch failed, since both reach the published snapshot. Such a poll had at least
+one pull request reach the queue from more than one owner, and the mark explains
+the discrepancy where it is visible rather than leaving it to read as an
+arithmetic error.
 
 The mark SHALL NOT be presented as a failure, an error, or a warning about the
 poll's health. Owner-queue discovery is not scoped to the owner, so a token that
@@ -369,11 +393,16 @@ and says why.
 #### Scenario: An overlapping poll is marked
 
 - **WHEN** two owners in one poll each derived the same pull request and the poll published it once
-- **THEN** that poll is marked as having overlapping owners, showing both the across-owner derived total and the published count
+- **THEN** that poll is marked as having overlapping owners, showing both the across-owner contributed total and the published count
+
+#### Scenario: An overlap involving a carried-over owner is marked
+
+- **WHEN** one owner derived a pull request that a failed owner also carried over from the last good snapshot, and the poll published it once
+- **THEN** that poll is marked as having overlapping owners, the failed owner's carried rows counting toward the contributed total
 
 #### Scenario: A non-overlapping poll is not marked
 
-- **WHEN** every pull request in a poll was derived by exactly one owner
+- **WHEN** every pull request in a poll reached the queue from exactly one owner
 - **THEN** the poll carries no overlap mark
 
 #### Scenario: The mark is not an error state
