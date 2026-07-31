@@ -78,7 +78,7 @@ PR-Center ships as a self-contained, xcopy-install app -- no container
 runtime, no separate .NET install required.
 
 1. Download the zip for your OS from the
-   [latest release](../releases/latest):
+   [latest release](https://github.com/farooq-teqniqly/pr-center/releases/latest):
    - Windows: `PrCenter.Web-<version>-win-x64.zip`
    - macOS: `PrCenter.Web-<version>-osx-x64.zip`
 2. Unzip it anywhere on your machine.
