@@ -6,9 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -35,6 +32,8 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -60,6 +59,8 @@ jobs:
     timeout-minutes: 30
     needs: [changes, build]
     if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    permissions:
+      contents: read
 
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
