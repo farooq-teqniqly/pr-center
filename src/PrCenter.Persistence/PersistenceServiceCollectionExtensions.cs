@@ -15,7 +15,9 @@ public static class PersistenceServiceCollectionExtensions
     /// <summary>
     /// Registers the SQLite context and the persistence adapter's
     /// implementations of <see cref="ITokenVault"/>, <see cref="IAppLock"/>
-    /// (with its singleton key holder), and <see cref="IAppSettingsStore"/>.
+    /// (with its singleton key holder), <see cref="IAppSettingsStore"/>, and the
+    /// poll diagnostics <see cref="IPollDiagnosticsSink"/> and
+    /// <see cref="IPollDiagnosticsReader"/>.
     /// </summary>
     /// <param name="services">The service collection to add the adapter to.</param>
     /// <param name="connectionString">The SQLite connection string.</param>
@@ -63,6 +65,13 @@ public static class PersistenceServiceCollectionExtensions
         // Settings touch no vault key, so this one is scoped only because it
         // reads the scoped context.
         services.AddScoped<IAppSettingsStore, AppSettingsStore>();
+
+        // The sink is registered into the enumerable the refresh fans out over, so
+        // a later telemetry sink joins it rather than replacing it. Both are scoped
+        // because they read the scoped context; the refresh writes inside its own
+        // per-poll scope, so the context outlives the write.
+        services.AddScoped<IPollDiagnosticsSink, SqlitePollDiagnosticsSink>();
+        services.AddScoped<IPollDiagnosticsReader, SqlitePollDiagnosticsReader>();
         return services;
     }
 }

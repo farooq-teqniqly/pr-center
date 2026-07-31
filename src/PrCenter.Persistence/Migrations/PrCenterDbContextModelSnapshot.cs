@@ -93,6 +93,141 @@ namespace PrCenter.Persistence.Migrations
 
                     b.ToTable("OwnerTokens");
                 });
+
+            modelBuilder.Entity("PrCenter.Persistence.PollOwnerDiagnostic", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ApprovedExclusions")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CarriedOverCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ClosedOrMergedExclusions")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DerivedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DraftExclusions")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ForeignItemCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PollRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PullRequestIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RateLimitCost")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("RateLimitRemaining")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("RateLimitResetAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RequestedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResolvedLogin")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ReviewedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("UnionCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("UntrackedExclusions")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PollRunId");
+
+                    b.ToTable("PollOwnerDiagnostics");
+                });
+
+            modelBuilder.Entity("PrCenter.Persistence.PollRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConfiguredOwners")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OwnerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("PollId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PublishedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PollId")
+                        .IsUnique();
+
+                    b.ToTable("PollRuns");
+                });
+
+            modelBuilder.Entity("PrCenter.Persistence.PollOwnerDiagnostic", b =>
+                {
+                    b.HasOne("PrCenter.Persistence.PollRun", "PollRun")
+                        .WithMany("Owners")
+                        .HasForeignKey("PollRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PollRun");
+                });
+
+            modelBuilder.Entity("PrCenter.Persistence.PollRun", b =>
+                {
+                    b.Navigation("Owners");
+                });
 #pragma warning restore 612, 618
         }
     }

@@ -16,11 +16,36 @@ closed-or-merged indicator set) so a caller holding its identity can observe
 that it is no longer open. All string parameters SHALL be guarded against null
 or whitespace.
 
+`OwnerFactsResult` SHALL additionally carry fetch diagnostics on a successful
+fetch: the node count returned by each of the two discovery searches before they
+are unioned, and the rate-limit reading for the request. These are the only
+facts about a fetch that exist solely inside the adapter and are otherwise
+unobservable to the caller that records them.
+
+The fetch diagnostics SHALL NOT carry the post-union count: that is already the
+length of the returned facts, and duplicating it would create a second source of
+truth for one number.
+
+The fetch diagnostics SHALL be absent on every failure path, so a caller can
+distinguish a search that returned nothing from a search that never ran.
+
 #### Scenario: Owner queue returns facts plus status
 
 - **WHEN** `GetReviewQueueFactsAsync` succeeds for an owner
 - **THEN** the result carries status `Ok` and one `PullRequestFacts` per
   discovered pull request (possibly zero -- an empty queue is still `Ok`)
+
+#### Scenario: A successful fetch carries per-search counts
+
+- **WHEN** `GetReviewQueueFactsAsync` succeeds
+- **THEN** the result carries the node count of the review-requested search and
+  the node count of the reviewed-by search, each counted before deduplication
+
+#### Scenario: A failed fetch carries no diagnostics
+
+- **WHEN** `GetReviewQueueFactsAsync` returns any non-`Ok` status
+- **THEN** the result carries no fetch diagnostics, so the counts read as absent
+  rather than as zero
 
 #### Scenario: Single-PR fetch of a merged pull request
 
@@ -43,6 +68,10 @@ request id. A requested-only search misses every awaiting-re-review candidate
 (the user reviewed, GitHub cleared the request), so both sets are required
 for correct membership derivation downstream.
 
+The adapter SHALL count the nodes each qualifier returned before deduplication
+and report both counts in the result's fetch diagnostics, so a caller can tell
+which search contributed a pull request and how much the union removed.
+
 #### Scenario: Re-review candidate is discovered
 
 - **WHEN** the user has a non-approved review on an open PR and is no longer
@@ -54,6 +83,12 @@ for correct membership derivation downstream.
 - **WHEN** a PR matches both search qualifiers (e.g. re-requested after a
   review)
 - **THEN** exactly one `PullRequestFacts` is produced for it
+
+#### Scenario: Overlap is visible in the counts
+
+- **WHEN** a pull request matches both search qualifiers
+- **THEN** it is counted in both per-search counts, while the returned facts
+  contain it once
 
 ### Requirement: Payload mapping follows the verified rules
 
@@ -142,4 +177,29 @@ payloads. There SHALL be no SSO-specific status.
 
 - **WHEN** owner A's fetch fails and owner B's succeeds in the same poll
 - **THEN** A yields a failure status and B yields `Ok` facts, independently
+
+### Requirement: The review-queue query requests the rate limit from GitHub
+
+The review-queue query document SHALL request GitHub's `rateLimit` field --
+remaining, reset instant, and the cost of the query -- and the adapter SHALL map
+it into the result's fetch diagnostics.
+
+The rate limit SHALL be read from the response body rather than from the
+`x-ratelimit-*` response headers. The GraphQL API bills in points rather than
+requests, so a header count does not describe what the query actually consumed,
+and the cost field is what predicts when the limit will be reached.
+
+A response that omits or malforms the rate-limit field SHALL yield an absent
+rate-limit reading and SHALL NOT fail the fetch: the rate limit is diagnostic,
+and losing it must not cost the user their queue.
+
+#### Scenario: Rate limit is reported with a successful fetch
+
+- **WHEN** `GetReviewQueueFactsAsync` succeeds and the response carries a rate-limit field
+- **THEN** the result's fetch diagnostics carry the remaining allowance, the reset instant, and the query cost
+
+#### Scenario: A missing rate limit does not fail the fetch
+
+- **WHEN** a successful response omits the rate-limit field
+- **THEN** the status is still `Ok`, the facts are still returned, and the rate-limit reading is absent
 

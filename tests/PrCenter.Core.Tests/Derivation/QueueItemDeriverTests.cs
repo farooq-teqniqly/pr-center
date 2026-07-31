@@ -24,9 +24,11 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        Assert.True(result.IsShown);
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.Same(facts.Identity, item.Identity);
         Assert.Equal(facts.Status.LastUpdatedBy, item.LastUpdate.By);
@@ -42,9 +44,10 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(requested: [MyLogin]);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.Equal(MembershipState.AwaitingFirstReview, item.State);
         Assert.False(item.HasUpdate);
@@ -62,9 +65,10 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.False(item.HasUpdate);
     }
@@ -79,9 +83,10 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.False(item.HasUpdate);
     }
@@ -101,9 +106,10 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.Equal(TestTime.At(3), item.MyEngagement.LastReviewedAt);
     }
@@ -118,9 +124,10 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.Null(item.MyEngagement.LastReviewedAt);
     }
@@ -135,9 +142,10 @@ public sealed class QueueItemDeriverTests
         );
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.Contains(item.Roster, entry => entry.Login == MyLogin && entry.IsMe);
         Assert.Contains(item.Roster, entry => entry.Login == Other);
@@ -151,9 +159,10 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(requested: [MyLogin], authorLogin: MyLogin);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.True(item.AuthoredByMe);
     }
@@ -165,9 +174,10 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(requested: [MyLogin], authorLogin: Other);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
+        var item = result.Item;
         Assert.NotNull(item);
         Assert.False(item.AuthoredByMe);
     }
@@ -179,27 +189,33 @@ public sealed class QueueItemDeriverTests
         var facts = TestFacts.Create(authorLogin: MyLogin);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert -- membership is unchanged by authorship
-        Assert.Null(item);
+        Assert.Null(result.Item);
+        Assert.Equal(MembershipExclusion.Untracked, result.Exclusion);
     }
 
     [Theory]
-    [InlineData(Draft)]
-    [InlineData(Closed)]
-    [InlineData(Approved)]
-    [InlineData(Untracked)]
-    public void Derive_WhenHidden_ReturnsNull(string scenario)
+    [InlineData(Draft, MembershipExclusion.Draft)]
+    [InlineData(Closed, MembershipExclusion.ClosedOrMerged)]
+    [InlineData(Approved, MembershipExclusion.Approved)]
+    [InlineData(Untracked, MembershipExclusion.Untracked)]
+    public void Derive_WhenHidden_ReportsTheExclusionThatHidIt(
+        string scenario,
+        MembershipExclusion expected
+    )
     {
         // Arrange
         var facts = HiddenFacts(scenario);
 
         // Act
-        var item = QueueItemDeriver.Derive(facts, MyLogin);
+        var result = QueueItemDeriver.Derive(facts, MyLogin);
 
         // Assert
-        Assert.Null(item);
+        Assert.False(result.IsShown);
+        Assert.Null(result.Item);
+        Assert.Equal(expected, result.Exclusion);
     }
 
     [Fact]

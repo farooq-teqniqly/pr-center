@@ -91,6 +91,12 @@ Ports (defined in Core, implemented by adapters):
   per-owner tokens, reset).
 - **IAppLock** -- the lock-state gate: derives `Uninitialized`/`Locked`/`Unlocked`
   and performs unlock, holding the decrypted key in a process-wide singleton.
+- **IPollDiagnosticsSink** -- write-only destination for one poll's diagnostics
+  record, written on every refresh exit path. It declares no read member, and that absence is the enforcement of the invariant that no
+  derivation path reads diagnostics.
+- **IPollDiagnosticsReader** -- the separate read side, for the settings view
+  only. Nothing under `PrCenter.Core.Queue` or `PrCenter.Core.Derivation`
+  references it; an architecture test asserts that, since the compiler cannot.
 
 ## PrCenter.GitHub -- adapter
 
@@ -100,10 +106,19 @@ HTTPS. Implements `IGitHubFacts`.
 
 ## PrCenter.Persistence -- adapter
 
-EF Core + SQLite for tokens and settings; token-vault crypto
+EF Core + SQLite for tokens, settings, and recorded polls; token-vault crypto
 (Argon2id KDF + AES-GCM at rest). Writes to a SQLite file on a mounted host
 volume. Implements `ITokenVault` and `IAppLock` (the latter backed by a
-process-wide singleton key holder).
+process-wide singleton key holder), plus `IPollDiagnosticsSink` and
+`IPollDiagnosticsReader`.
+
+Tables: `OwnerTokens` (one encrypted PAT per owner), `AppSecurity` and
+`AppSettings` (single-row), and the diagnostics pair -- `PollRuns`, one row per
+poll, with `PollOwnerDiagnostics` cascading from it, one row per configured
+owner per poll. The diagnostics pair is a bounded ring: writing trims to the
+most recent 200 polls, by poll rather than by row, in the same transaction as
+the insert. It stores identifiers, counts, and instants only -- never a pull
+request title, body, comment, or URL.
 
 ## Crosscutting
 

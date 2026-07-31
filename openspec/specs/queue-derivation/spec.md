@@ -208,10 +208,22 @@ cohesive sub-records (identity, last update, derived status, engagement, roster,
 covered-by) rather than a flat parameter list. Hidden pull requests SHALL NOT
 produce a `QueueItem`. The derivation SHALL NOT sort or group the items.
 
+`QueueItemDeriver.Derive` SHALL return a result carrying either the `QueueItem`
+for a shown pull request or the `MembershipExclusion` for a hidden one, rather
+than a nullable `QueueItem`. The exclusion reason is already computed by
+`MembershipDeriver`, and discarding it forces any caller that wants to explain
+why a pull request is absent to re-derive it. The result SHALL follow the same
+shape as `MembershipResult`: factory methods for the shown and hidden cases, so
+an invalid combination cannot form.
+
+This SHALL NOT change what is shown. A hidden pull request still produces no
+`QueueItem`, and the exclusion reason is reporting only -- no membership,
+update, or covered decision reads it.
+
 #### Scenario: Shown pull request yields a queue item
 
 - **WHEN** a pull request derives to a shown membership state
-- **THEN** a `QueueItem` is produced carrying that state plus the has-update
+- **THEN** a shown result is produced carrying that state plus the has-update
   flag, the authored-by-me flag, the last-reviewed instant, the roster, and the
   covering reviewers
 
@@ -220,6 +232,13 @@ produce a `QueueItem`. The derivation SHALL NOT sort or group the items.
 - **WHEN** a pull request derives to any hidden result (draft, closed,
   approved, or untracked)
 - **THEN** no `QueueItem` is produced for it
+
+#### Scenario: Hidden pull request reports why
+
+- **WHEN** a pull request is hidden
+- **THEN** the result carries the exclusion reason that hid it -- draft, closed
+  or merged, approved, or untracked -- matching the reason `MembershipDeriver`
+  produced
 
 #### Scenario: Never reviewed is explicit
 

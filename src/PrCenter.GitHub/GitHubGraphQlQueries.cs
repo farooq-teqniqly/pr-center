@@ -51,10 +51,14 @@ internal static class GitHubGraphQlQueries
     /// <summary>
     /// Discovery query: two aliased searches (`requested`, `reviewed`) whose
     /// values are supplied as variables, each returning the nested pull-request
-    /// facts. The union and dedupe happen client-side.
+    /// facts. The union and dedupe happen client-side. The `rateLimit` field is
+    /// requested here rather than read from the `x-ratelimit-*` response
+    /// headers: GraphQL bills in points rather than requests, so only the
+    /// in-document field describes what this query actually cost.
     /// </summary>
     public const string ReviewQueue = $$"""
         query($requested: String!, $reviewed: String!) {
+          rateLimit { remaining resetAt cost }
           requested: search(query: $requested, type: ISSUE, first: 50) {
             nodes { ...prFacts }
           }
