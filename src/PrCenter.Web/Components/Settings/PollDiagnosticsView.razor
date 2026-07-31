@@ -40,9 +40,10 @@ else
                     <button type="button"
                             class="btn btn-link btn-sm p-0 text-decoration-none"
                             data-testid="poll-toggle"
+                            aria-label="Toggle this poll's owner rows"
                             aria-expanded="@(IsExpanded(poll) ? "true" : "false")"
                             @onclick="() => Toggle(poll)">
-                        @(IsExpanded(poll) ? "v" : ">")
+                        <span aria-hidden="true">@(IsExpanded(poll) ? "v" : ">")</span>
                     </button>
                     <span class="font-monospace" data-testid="poll-instant">@Instant(poll.Run.StartedAt)</span>
                     <span class="@OutcomeClass(poll.Run.Outcome)" data-testid="poll-outcome">@OutcomeLabel(poll.Run.Outcome)</span>
@@ -52,7 +53,7 @@ else
                     @if (summary.HasOverlap)
                     {
                         <span class="badge text-bg-light border" data-testid="poll-overlap">
-                            owners derived @summary.DerivedTotal, published @poll.Run.PublishedCount --
+                            owners contributed @summary.ContributedTotal, published @poll.Run.PublishedCount --
                             a pull request came from more than one owner
                         </span>
                     }
@@ -150,8 +151,8 @@ else
         {
             OwnerFetchStatus.Ok => "ok",
             OwnerFetchStatus.MisconfiguredToken => "token rejected",
-            // Never reached, so nothing was attempted -- a different claim from a
-            // fetch that came back with nothing.
+            // The poll never completed this owner, so there is no result -- a
+            // different claim from a fetch that came back with nothing.
             OwnerFetchStatus.NotPolled => "not polled",
             _ => "fetch failed",
         };

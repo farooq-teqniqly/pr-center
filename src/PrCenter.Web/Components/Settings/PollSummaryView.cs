@@ -17,14 +17,14 @@ internal sealed record PollSummaryView
         int polledOwners,
         IReadOnlyList<string> missingOwners,
         IReadOnlyList<string> unconfiguredOwners,
-        int derivedTotal
+        int contributedTotal
     )
     {
         Poll = poll;
         PolledOwners = polledOwners;
         MissingOwners = missingOwners;
         UnconfiguredOwners = unconfiguredOwners;
-        DerivedTotal = derivedTotal;
+        ContributedTotal = contributedTotal;
     }
 
     /// <summary>Gets the recorded poll this summarizes.</summary>
@@ -39,8 +39,12 @@ internal sealed record PollSummaryView
     /// <summary>Gets the owners with a row that were never configured, which should be none.</summary>
     public IReadOnlyList<string> UnconfiguredOwners { get; }
 
-    /// <summary>Gets the sum of the owner rows' derived counts.</summary>
-    public int DerivedTotal { get; }
+    /// <summary>
+    /// Gets the rows every owner contributed to the poll: what a fetched owner
+    /// derived, and what a failed owner carried over from the last good snapshot,
+    /// since both reach the published snapshot.
+    /// </summary>
+    public int ContributedTotal { get; }
 
     /// <summary>
     /// Gets a value indicating whether the owner rows disagree with the configured
@@ -51,8 +55,8 @@ internal sealed record PollSummaryView
     public bool OwnersDisagree => MissingOwners.Count > 0 || UnconfiguredOwners.Count > 0;
 
     /// <summary>
-    /// Gets a value indicating whether the owner rows derived more items than the
-    /// poll published, meaning at least one pull request reached the queue from
+    /// Gets a value indicating whether the owner rows contributed more items than
+    /// the poll published, meaning at least one pull request reached the queue from
     /// more than one owner.
     /// </summary>
     /// <remarks>
@@ -62,7 +66,8 @@ internal sealed record PollSummaryView
     /// up as expected -- a tell that reads as an alarm on a healthy install is a tell
     /// that gets ignored on a broken one.
     /// </remarks>
-    public bool HasOverlap => Poll.Run.PublishedCount is { } published && DerivedTotal > published;
+    public bool HasOverlap =>
+        Poll.Run.PublishedCount is { } published && ContributedTotal > published;
 
     /// <summary>
     /// Summarizes one recorded poll.
@@ -86,9 +91,17 @@ internal sealed record PollSummaryView
             poll.Owners.Count(row => row.Outcome.Status is not OwnerFetchStatus.NotPolled),
             missing,
             unconfigured,
-            poll.Owners.Sum(row => row.Counts?.Derived ?? 0)
+            poll.Owners.Sum(Contributed)
         );
     }
+
+    // A failed owner's carried rows are published alongside the fresh owners' rows,
+    // so they count toward the total the published count is compared against;
+    // counting only what was derived would hide every overlap involving a
+    // carried-over owner. An owner never reached has no counts and contributes
+    // nothing.
+    private static int Contributed(OwnerPollDiagnostics row) =>
+        row.Counts is { } counts ? counts.Derived ?? counts.CarriedOver : 0;
 
     // Owner logins are case-insensitive identifiers, so a casing difference between
     // the enumeration and a row is the same owner, not a disagreement.

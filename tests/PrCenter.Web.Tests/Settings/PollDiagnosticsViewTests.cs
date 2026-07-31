@@ -136,6 +136,23 @@ public sealed class PollDiagnosticsViewTests : BunitContext
     }
 
     [Fact]
+    public void PollDiagnosticsView_ExpandControl_NamesWhatItExpands()
+    {
+        // Arrange -- the glyph is not a name, and aria-expanded states without naming
+        Returns(DiagnosticsRecords.Poll());
+
+        // Act
+        var toggle = RenderView().Find("[data-testid=poll-toggle]");
+
+        // Assert
+        Assert.Contains(
+            "poll",
+            toggle.GetAttribute("aria-label") ?? string.Empty,
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    [Fact]
     public async Task PollDiagnosticsView_WhenAPollIsExpanded_IssuesNoFurtherRead()
     {
         // Arrange
@@ -340,6 +357,31 @@ public sealed class PollDiagnosticsViewTests : BunitContext
                 [
                     DiagnosticsRecords.Polled("acme", derived: 1),
                     DiagnosticsRecords.Polled("ps-unite", derived: 1),
+                ]
+            )
+        );
+
+        // Act
+        var cut = RenderView();
+
+        // Assert
+        var mark = Text(cut, "poll-overlap");
+        Assert.Contains("2", mark, StringComparison.Ordinal);
+        Assert.Contains("1", mark, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PollDiagnosticsView_WhenACarriedOverOwnerOverlapsAFreshOne_MarksTheOverlap()
+    {
+        // Arrange -- the failed owner's carried row is the fresh owner's row too
+        Returns(
+            DiagnosticsRecords.Poll(
+                publishedCount: 1,
+                configuredOwners: ["acme", "ps-unite"],
+                owners:
+                [
+                    DiagnosticsRecords.Polled("acme", derived: 1),
+                    DiagnosticsRecords.Failed("ps-unite", carriedOver: 1),
                 ]
             )
         );

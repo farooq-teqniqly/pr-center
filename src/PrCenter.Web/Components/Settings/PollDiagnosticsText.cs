@@ -41,7 +41,7 @@ internal static class PollDiagnosticsText
         var run = summary.Poll.Run;
         text.AppendLine(
             CultureInfo.InvariantCulture,
-            $"poll {run.PollId} {Instant(run.StartedAt)} -> {Instant(run.CompletedAt)} {run.Outcome} owners {summary.PolledOwners}/{Configured(run)} published {Number(run.PublishedCount)} derived-total {summary.DerivedTotal}"
+            $"poll {run.PollId} {Instant(run.StartedAt)} -> {Instant(run.CompletedAt)} {run.Outcome} owners {summary.PolledOwners}/{Configured(run)} published {Number(run.PublishedCount)} contributed-total {summary.ContributedTotal}"
         );
 
         foreach (var row in summary.Poll.Owners)
