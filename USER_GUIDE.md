@@ -93,10 +93,15 @@ runtime, no separate .NET install required.
    the only gate in front of your decrypted GitHub tokens and is required
    every time the app (re)starts. There's no password recovery -- forgetting
    it means resetting (wiping) stored tokens and re-adding them.
+
+   ![Unlock screen](docs/assets/screenshot-unlock.jpg)
+
 2. **Add an owner token** in Settings for each GitHub org or personal account
    you want reviewed PRs from -- a
    [fine-grained personal access token](https://github.com/settings/tokens?type=beta)
    scoped to that owner, with read access to pull requests.
+
+   ![Add owner token](docs/assets/screenshot-add-owner-token.png)
 3. Go to **Inbox**. PR-Center polls immediately and then on the interval set
    in Settings.
 
