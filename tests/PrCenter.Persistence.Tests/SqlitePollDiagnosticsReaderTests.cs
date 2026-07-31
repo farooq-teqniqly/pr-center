@@ -267,6 +267,26 @@ public sealed class SqlitePollDiagnosticsReaderTests : IDisposable
         Assert.Empty(polls);
     }
 
+    [Theory]
+    [InlineData("closed or merged")]
+    [InlineData("approved")]
+    [InlineData("untracked")]
+    public async Task GetRecentPollsAsync_WhenOnlySomeExclusionTalliesAreStored_ReturnsAbsentExclusions(
+        string tally
+    )
+    {
+        // Arrange
+        var pollId = Guid.NewGuid();
+        await WriteAsync(PollDiagnosticsFactory.Full(pollId));
+        await ClearExclusionAsync(pollId, tally);
+
+        // Act
+        var row = Row(Assert.Single(await ReadAsync(10)), "acme");
+
+        // Assert -- absent, so a half-written row does not read as zero exclusions
+        Assert.Null(row.Exclusions);
+    }
+
     [Fact]
     public async Task GetRecentPollsAsync_WhenAStoredEnumIsUnreadable_WarnsWithTheDroppedPollsId()
     {
@@ -319,6 +339,36 @@ public sealed class SqlitePollDiagnosticsReaderTests : IDisposable
                 update => update.SetProperty(owner => owner.Status, "nonsense"),
                 CancellationToken.None
             );
+    }
+
+    // Nulls out one exclusion tally while the others stay written, which is what
+    // a hand-edited file looks like to the reader -- the sink writes all four
+    // together or none.
+    private async Task ClearExclusionAsync(Guid pollId, string tally)
+    {
+        await using var context = _database.CreateContext();
+        var owners = context.PollOwnerDiagnostics.Where(owner =>
+            owner.PollRun.PollId == pollId && owner.Owner == "acme"
+        );
+
+        await (
+            tally switch
+            {
+                "closed or merged" => owners.ExecuteUpdateAsync(
+                    update =>
+                        update.SetProperty(owner => owner.ClosedOrMergedExclusions, (int?)null),
+                    CancellationToken.None
+                ),
+                "approved" => owners.ExecuteUpdateAsync(
+                    update => update.SetProperty(owner => owner.ApprovedExclusions, (int?)null),
+                    CancellationToken.None
+                ),
+                _ => owners.ExecuteUpdateAsync(
+                    update => update.SetProperty(owner => owner.UntrackedExclusions, (int?)null),
+                    CancellationToken.None
+                ),
+            }
+        );
     }
 
     private async Task WriteAsync(PollDiagnostics record)

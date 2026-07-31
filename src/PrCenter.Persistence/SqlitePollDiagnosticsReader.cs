@@ -145,15 +145,19 @@ internal sealed partial class SqlitePollDiagnosticsReader : IPollDiagnosticsRead
             )
             : null;
 
-    // The four tallies are written together, so one present means all are.
+    // The sink writes the four tallies together or not at all, so a half-written
+    // set only exists in a hand-edited file. Read it as absent rather than
+    // defaulting the missing ones to zero, which would invent exclusions that
+    // were never counted.
     private static ExclusionCounts? ReadExclusions(PollOwnerDiagnostic stored) =>
-        stored.DraftExclusions is { } draft
-            ? new ExclusionCounts(
-                draft,
-                stored.ClosedOrMergedExclusions ?? 0,
-                stored.ApprovedExclusions ?? 0,
-                stored.UntrackedExclusions ?? 0
-            )
+        stored
+            is {
+                DraftExclusions: { } draft,
+                ClosedOrMergedExclusions: { } closedOrMerged,
+                ApprovedExclusions: { } approved,
+                UntrackedExclusions: { } untracked
+            }
+            ? new ExclusionCounts(draft, closedOrMerged, approved, untracked)
             : null;
 
     private static RateLimitReading? ReadRateLimit(PollOwnerDiagnostic stored) =>
