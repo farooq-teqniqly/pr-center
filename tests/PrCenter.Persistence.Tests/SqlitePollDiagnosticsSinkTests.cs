@@ -174,7 +174,7 @@ public sealed class SqlitePollDiagnosticsSinkTests : IDisposable
     public async Task WriteAsync_WhenTheRingIsFull_EvictsExactlyTheOldestPollAndItsOwnerRows()
     {
         // Arrange
-        var oldest = await FillRingAsync();
+        var oldest = (await FillRingAsync())[0];
 
         // Act
         await WriteAsync(PollDiagnosticsFactory.Full());
@@ -194,6 +194,27 @@ public sealed class SqlitePollDiagnosticsSinkTests : IDisposable
                 CancellationToken.None
             )
         );
+    }
+
+    [Fact]
+    public async Task WriteAsync_WhenTheStoreIsFarAboveTheRing_KeepsExactlyTheNewestRetainedPolls()
+    {
+        // Arrange -- fifty polls past the limit, so the trim is a bulk delete
+        // against real SQLite rather than the single-row eviction of the steady state
+        var seeded = await FillRingAsync(polls: SqlitePollDiagnosticsSink.RetainedPolls + 50);
+        var newest = Guid.NewGuid();
+
+        // Act
+        await WriteAsync(PollDiagnosticsFactory.Full(newest));
+
+        // Assert
+        await using var read = _database.CreateContext();
+        var surviving = await read
+            .PollRuns.AsNoTracking()
+            .OrderBy(run => run.Id)
+            .Select(run => run.PollId)
+            .ToListAsync(CancellationToken.None);
+        Assert.Equal([.. seeded.Skip(51), newest], surviving);
     }
 
     [Fact]
@@ -217,7 +238,7 @@ public sealed class SqlitePollDiagnosticsSinkTests : IDisposable
     public async Task WriteAsync_WhenTheWriteFails_LeavesNeitherTheNewPollNorAnEviction()
     {
         // Arrange -- a duplicate poll id violates the unique index mid-write
-        var oldest = await FillRingAsync();
+        var oldest = (await FillRingAsync())[0];
         var duplicated = await FirstStoredPollIdAsync();
 
         // Act
@@ -248,21 +269,27 @@ public sealed class SqlitePollDiagnosticsSinkTests : IDisposable
         Assert.Equal(2, await read.PollRuns.CountAsync(CancellationToken.None));
     }
 
-    // Seeds the store to exactly the retention limit, bypassing the sink so the
-    // setup is one insert rather than N transactions. Returns the oldest poll's id.
-    private async Task<Guid> FillRingAsync(int oldestOwnerRows = 1)
+    // Seeds the store to the retention limit (or beyond), bypassing the sink so the
+    // setup is one insert rather than N transactions. Returns the seeded poll ids,
+    // oldest first.
+    private async Task<IReadOnlyList<Guid>> FillRingAsync(
+        int oldestOwnerRows = 1,
+        int polls = SqlitePollDiagnosticsSink.RetainedPolls
+    )
     {
         await using var context = _database.CreateContext();
-        var oldest = Guid.NewGuid();
+        var seeded = new List<Guid>(polls);
 
-        for (var index = 0; index < SqlitePollDiagnosticsSink.RetainedPolls; index++)
+        for (var index = 0; index < polls; index++)
         {
             var isOldest = index == 0;
             var owners = isOldest ? oldestOwnerRows : 1;
+            var pollId = Guid.NewGuid();
+            seeded.Add(pollId);
             context.PollRuns.Add(
                 new PollRun
                 {
-                    PollId = isOldest ? oldest : Guid.NewGuid(),
+                    PollId = pollId,
                     StartedAt = PollDiagnosticsFactory.StartedAt.AddMinutes(index),
                     CompletedAt = PollDiagnosticsFactory.StartedAt.AddMinutes(index).AddSeconds(2),
                     Outcome = nameof(PollOutcome.Succeeded),
@@ -285,7 +312,7 @@ public sealed class SqlitePollDiagnosticsSinkTests : IDisposable
         }
 
         await context.SaveChangesAsync(CancellationToken.None);
-        return oldest;
+        return seeded;
     }
 
     private async Task<Guid> FirstStoredPollIdAsync()

@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PrCenter.Core.Diagnostics;
 using PrCenter.Core.Ports;
 
@@ -6,6 +8,7 @@ namespace PrCenter.Persistence.Tests;
 public sealed class SqlitePollDiagnosticsReaderTests : IDisposable
 {
     private readonly SqliteTestDatabase _database = new();
+    private readonly CapturingLogger<SqlitePollDiagnosticsReader> _logger = new();
 
     [Fact]
     public async Task GetRecentPollsAsync_WithAnEmptyStore_ReturnsNoPolls()
@@ -209,16 +212,79 @@ public sealed class SqlitePollDiagnosticsReaderTests : IDisposable
         Assert.Equal(outcome, poll.Run.Outcome);
     }
 
+    [Theory]
+    [InlineData("poll outcome")]
+    [InlineData("owner status")]
+    public async Task GetRecentPollsAsync_WhenAStoredEnumIsUnreadable_DropsOnlyThatPoll(
+        string column
+    )
+    {
+        // Arrange
+        var corrupted = Guid.NewGuid();
+        var intact = Guid.NewGuid();
+        await WriteAsync(PollDiagnosticsFactory.Full(corrupted));
+        await WriteAsync(PollDiagnosticsFactory.Full(intact));
+        await CorruptAsync(corrupted, column);
+
+        // Act
+        var polls = await ReadAsync(10);
+
+        // Assert
+        Assert.Equal(intact, Assert.Single(polls).Run.PollId);
+    }
+
+    [Fact]
+    public async Task GetRecentPollsAsync_WhenAStoredEnumIsUnreadable_WarnsWithTheDroppedPollsId()
+    {
+        // Arrange
+        var corrupted = Guid.NewGuid();
+        await WriteAsync(PollDiagnosticsFactory.Full(corrupted));
+        await CorruptAsync(corrupted, "poll outcome");
+
+        // Act
+        await ReadAsync(10);
+
+        // Assert
+        var entry = Assert.Single(_logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Contains(corrupted.ToString(), entry.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static OwnerPollDiagnostics Row(PollDiagnostics poll, string owner) =>
         Assert.Single(poll.Owners, row => row.Window.Owner == owner);
 
     private async Task<IReadOnlyList<PollDiagnostics>> ReadAsync(int count)
     {
         await using var context = _database.CreateContext();
-        return await new SqlitePollDiagnosticsReader(context).GetRecentPollsAsync(
+        return await new SqlitePollDiagnosticsReader(context, _logger).GetRecentPollsAsync(
             count,
             CancellationToken.None
         );
+    }
+
+    // Writes a value into a stored enum column that no version of the sink could
+    // have written, which is what a hand-edited file looks like to the reader.
+    private async Task CorruptAsync(Guid pollId, string column)
+    {
+        await using var context = _database.CreateContext();
+
+        if (column == "poll outcome")
+        {
+            await context
+                .PollRuns.Where(run => run.PollId == pollId)
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(run => run.Outcome, "nonsense"),
+                    CancellationToken.None
+                );
+            return;
+        }
+
+        await context
+            .PollOwnerDiagnostics.Where(owner => owner.PollRun.PollId == pollId)
+            .ExecuteUpdateAsync(
+                update => update.SetProperty(owner => owner.Status, "nonsense"),
+                CancellationToken.None
+            );
     }
 
     private async Task WriteAsync(PollDiagnostics record)

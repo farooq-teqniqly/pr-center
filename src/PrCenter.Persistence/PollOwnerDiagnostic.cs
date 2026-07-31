@@ -29,7 +29,7 @@ internal sealed class PollOwnerDiagnostic
     /// <summary>
     /// Gets or sets when the refresh began this owner.
     /// </summary>
-    /// <value>Null when the refresh never reached the owner -- nothing was attempted.</value>
+    /// <value>Null when the refresh did not complete the owner -- there is no result.</value>
     public DateTimeOffset? StartedAt { get; set; }
 
     /// <summary>Gets or sets when the refresh finished this owner, or null as above.</summary>
